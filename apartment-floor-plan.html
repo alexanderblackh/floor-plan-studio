@@ -556,7 +556,10 @@ function buildStagingSVG() {
 
 // ===== FURNITURE =====
 function renderFurniture() {
-  const g = document.getElementById('furnitureGroup');
+  // Safari compatibility: query from parent SVG
+  const svg = document.getElementById('svgPlan');
+  if (!svg) return;
+  const g = svg.querySelector('#furnitureGroup');
   if (!g) return;
   g.innerHTML = placedFurniture.filter(p => p.x >= 0 && p.y >= 0).map((p, i) => {
     const actualIdx = placedFurniture.indexOf(p);
@@ -583,7 +586,10 @@ function renderFurniture() {
 }
 
 function renderStagingFurniture() {
-  const g = document.getElementById('furnitureGroupStaging');
+  // Safari compatibility: query from parent SVG instead of document
+  const svg = document.getElementById('svgStaging');
+  if (!svg) return;
+  const g = svg.querySelector('#furnitureGroupStaging');
   if (!g) return;
 
   let c = '';
@@ -1070,7 +1076,10 @@ function fitToView() {
 
 // ===== MEASUREMENT TOOL =====
 function renderMeasurement() {
-  const g = document.getElementById('measurementGroup');
+  // Safari compatibility: query from parent SVG
+  const svg = document.getElementById('svgPlan');
+  if (!svg) return;
+  const g = svg.querySelector('#measurementGroup');
   if (!g) return;
 
   if (!measureStart && !measureEnd) {
