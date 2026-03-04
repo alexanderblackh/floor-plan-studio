@@ -410,8 +410,8 @@ function buildSVG() {
   // Opposite wall (facing entry): Oven and Fridge with 13" between - flush to entry side
   const applianceDepth = 28;
 
-  // Oven (left side, 30" wide)
-  const ovenX = UPPER_IWX + 3;
+  // Oven (left side, 30" wide) - flush to left wall
+  const ovenX = UPPER_IWX;
   const ovenY = M.kitchenL - applianceDepth;
   c += `<rect x="${wx(ovenX)}" y="${wy(ovenY)}" width="${S(30)}" height="${S(applianceDepth)}" fill="#3a3a3a" stroke="#555" stroke-width="1" rx="1"/>`;
   c += `<text x="${wx(ovenX + 15)}" y="${wy(ovenY + applianceDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#888" text-anchor="middle" dominant-baseline="central">OVEN</text>`;
@@ -444,14 +444,15 @@ function buildSVG() {
   c += `<rect x="${wx(LOWER_IWX)}" y="${wy(bedTopY)}" width="${S(lcW)}" height="${S(M.closetDepth)}" fill="#2a2a3a55" stroke="#33334488" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
   c += `<text x="${wx(LOWER_IWX + lcW/2)}" y="${wy(bedTopY + M.closetDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#3a3a4a" text-anchor="middle" dominant-baseline="central">Closet</text>`;
 
-  // Left closet doors: 16" wide double doors opening outward
+  // Left closet doors: 16" wide double doors opening outward from center
   const leftDoorW = 16;
   const leftDoorX = LOWER_IWX + (lcW - leftDoorW) / 2; // Center doors on closet
   const leftDoorY = bedTopY + M.closetDepth;
+  const leftDoorCenter = leftDoorX + leftDoorW / 2;
   c += doorOpen(leftDoorX, leftDoorY, leftDoorX + leftDoorW, leftDoorY);
-  // Double doors opening outward (into bedroom) - left door swings left, right door swings right
-  c += doorArc(leftDoorX, leftDoorY, leftDoorW / 2, 90, 175); // Left door
-  c += doorArc(leftDoorX + leftDoorW, leftDoorY, leftDoorW / 2, 5, 90); // Right door
+  // Double doors hinged at center, opening outward - left door swings left, right door swings right
+  c += doorArc(leftDoorCenter, leftDoorY, leftDoorW / 2, 90, 175); // Left door (from center)
+  c += doorArc(leftDoorCenter, leftDoorY, leftDoorW / 2, 5, 90); // Right door (from center)
 
   // Right closet
   const rcX = bHallX + M.hallwayW;
@@ -459,14 +460,15 @@ function buildSVG() {
   c += `<rect x="${wx(rcX)}" y="${wy(bedTopY)}" width="${S(rcW)}" height="${S(M.closetDepth)}" fill="#2a2a3a55" stroke="#33334488" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
   c += `<text x="${wx(rcX + rcW/2)}" y="${wy(bedTopY + M.closetDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#3a3a4a" text-anchor="middle" dominant-baseline="central">Closet</text>`;
 
-  // Right closet doors: 21" wide double doors opening outward
+  // Right closet doors: 21" wide double doors opening outward from center
   const rightDoorW = 21;
   const rightDoorX = rcX + (rcW - rightDoorW) / 2; // Center doors on closet
   const rightDoorY = bedTopY + M.closetDepth;
+  const rightDoorCenter = rightDoorX + rightDoorW / 2;
   c += doorOpen(rightDoorX, rightDoorY, rightDoorX + rightDoorW, rightDoorY);
-  // Double doors opening outward (into bedroom) - left door swings left, right door swings right
-  c += doorArc(rightDoorX, rightDoorY, rightDoorW / 2, 90, 175); // Left door
-  c += doorArc(rightDoorX + rightDoorW, rightDoorY, rightDoorW / 2, 5, 90); // Right door
+  // Double doors hinged at center, opening outward - left door swings left, right door swings right
+  c += doorArc(rightDoorCenter, rightDoorY, rightDoorW / 2, 90, 175); // Left door (from center)
+  c += doorArc(rightDoorCenter, rightDoorY, rightDoorW / 2, 5, 90); // Right door (from center)
 
   // Closet front walls (with door gaps)
   c += thinWall(LOWER_IWX, bedTopY + M.closetDepth, leftDoorX, bedTopY + M.closetDepth); // Left side of left closet
