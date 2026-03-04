@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Apartment Floor Plan — Wizard Study Layout Planner</title>
+<!--
+  WIZARD STUDY APARTMENT FLOOR PLAN — Interactive Layout Tool
+
+  Features:
+  ✓ Accurate L-shaped living room (83" upper, 127" lower with 42" heater jog)
+  ✓ All doors with correct swing directions (bedroom/bathroom inward, kitchen sliding)
+  ✓ Closets span full bedroom back wall with hallway gap to bathroom
+  ✓ Drag-and-drop furniture with rotation (double-click) and removal (right-click)
+  ✓ Collision detection (walls, closets, other furniture) with visual warnings
+  ✓ Staging area for furniture planning
+  ✓ localStorage persistence (works in standalone HTML, not Claude.ai artifacts)
+  ✓ Sidebar click highlights corresponding piece on canvas
+  ✓ Strong zoom (0.15x-15x), pan, grid, dimensions
+  ✓ SVG export for documentation
+
+  See wizard-study-project-state.md for measurements and design direction.
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  body {
+    background: #0f0f14;
+    color: #d4c9b8;
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  .app-header {
+    background: linear-gradient(135deg, #1a1a24 0%, #12121a 100%);
+    border-bottom: 1px solid #2a2a3a;
+    padding: 12px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100; height: 52px;
+  }
+  .app-title { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: #c5975b; }
+  .app-subtitle { font-size: 11px; color: #666; margin-top: 2px; letter-spacing: 2px; text-transform: uppercase; }
+  .header-controls { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    background: #1e1e2e; border: 1px solid #333; color: #aaa;
+    padding: 6px 14px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; cursor: pointer; border-radius: 4px; transition: all 0.2s; user-select: none;
+  }
+  .btn:hover { background: #2a2a3a; color: #c5975b; border-color: #c5975b55; }
+  .btn.active { background: #c5975b22; color: #c5975b; border-color: #c5975b; }
+  .main-layout { display: flex; height: calc(100vh - 52px); margin-top: 52px; }
+  .staging-panel {
+    width: 280px; background: #141420; border-right: 1px solid #2a2a3a;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .staging-header {
+    padding: 14px; border-bottom: 1px solid #2a2a3a;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #666;
+  }
+  .staging-scroll {
+    flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0;
+    background: radial-gradient(circle at 50% 50%, #16161f 0%, #0d0d12 100%);
+  }
+  .staging-canvas {
+    width: 100%; min-height: 1400px; position: relative;
+  }
+  .furniture-piece-staging {
+    cursor: grab;
+  }
+  .furniture-piece-staging:active {
+    cursor: grabbing;
+  }
+  .sidebar {
+    width: 220px; background: #141420; border-right: 1px solid #2a2a3a;
+    overflow-y: auto; padding: 14px; flex-shrink: 0;
+  }
+  .sidebar-section { margin-bottom: 18px; }
+  .sidebar-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 2px;
+    color: #555; margin-bottom: 8px; padding-bottom: 4px; border-bottom: 1px solid #222;
+  }
+  .furniture-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 8px; margin-bottom: 3px; border-radius: 4px;
+    cursor: grab; transition: background 0.15s; font-size: 11px;
+  }
+  .furniture-item:hover { background: #1e1e2e; }
+  .furniture-item.placed { opacity: 0.45; }
+  .furniture-item.highlighted { background: #c5975b22; border: 1px solid #c5975b55; }
+  .furniture-swatch { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+  .furniture-name { font-size: 11px; color: #bbb; }
+  .furniture-dims { font-size: 9px; color: #555; }
+  .canvas-container {
+    flex: 1; overflow: hidden; position: relative;
+    background: radial-gradient(circle at 50% 50%, #16161f 0%, #0d0d12 100%);
+    cursor: grab;
+  }
+  .canvas-container.panning { cursor: grabbing; }
+  svg.floor-plan { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+  .info-bar {
+    position: fixed; bottom: 0; left: 280px; right: 0;
+    background: #141420ee; border-top: 1px solid #2a2a3a;
+    padding: 6px 20px; display: flex; gap: 24px; font-size: 10px; color: #555; z-index: 50;
+  }
+  .info-item span { color: #888; }
+  .zoom-controls {
+    position: fixed; bottom: 40px; right: 20px; display: flex; flex-direction: column; gap: 4px; z-index: 60;
+  }
+  .zoom-btn {
+    width: 36px; height: 36px; background: #1e1e2e; border: 1px solid #333;
+    color: #aaa; font-size: 18px; cursor: pointer; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; transition: all 0.2s;
+  }
+  .zoom-btn:hover { background: #2a2a3a; color: #c5975b; border-color: #c5975b55; }
+  .controls-help { font-size: 10px; color: #555; line-height: 1.7; padding: 2px 0; }
+  .controls-help kbd {
+    background: #1e1e2e; border: 1px solid #333; padding: 1px 5px;
+    border-radius: 3px; font-size: 9px; color: #888;
+  }
+  /* Collision indicator */
+  .collision-indicator {
+    stroke: #ff4444 !important;
+    stroke-width: 2 !important;
+    stroke-dasharray: 4 2;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div>
+    <div class="app-title">Wizard Study Layout Planner</div>
+    <div class="app-subtitle">Santa Barbara Apartment — To Scale</div>
+  </div>
+  <div class="header-controls">
+    <button class="btn active" id="btnGrid" onclick="toggleGrid()">Grid</button>
+    <button class="btn active" id="btnDims" onclick="toggleDims()">Dims</button>
+    <button class="btn" id="btnMeasure" onclick="toggleMeasure()">Measure (M)</button>
+    <button class="btn" onclick="clearAllFurniture()">Clear All</button>
+    <button class="btn" onclick="resetFurniture()">Reset</button>
+    <button class="btn" onclick="fitToView()">Fit</button>
+    <button class="btn" onclick="exportSVG()">Export SVG</button>
+  </div>
+</div>
+
+<div class="main-layout">
+  <div class="staging-panel">
+    <div class="staging-header">
+      Furniture Staging
+      <div style="font-size:8px;color:#444;margin-top:4px;text-transform:none;letter-spacing:0;">Drag furniture onto floor plan • Right-click to return here</div>
+    </div>
+    <div class="staging-scroll" id="stagingScroll">
+      <div class="staging-canvas">
+        <svg id="svgStaging" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+    <div style="padding:10px;border-top:1px solid #2a2a3a;font-size:9px;color:#555;">
+      <div style="margin-bottom:4px;"><kbd style="background:#1e1e2e;border:1px solid #333;padding:1px 4px;border-radius:2px;font-size:8px;">M</kbd> Measure mode (edge snap)</div>
+      <div style="margin-bottom:4px;"><kbd style="background:#1e1e2e;border:1px solid #333;padding:1px 4px;border-radius:2px;font-size:8px;">Dbl-click</kbd> Rotate 90°</div>
+      <div style="margin-bottom:4px;"><kbd style="background:#1e1e2e;border:1px solid #333;padding:1px 4px;border-radius:2px;font-size:8px;">+</kbd> / <kbd style="background:#1e1e2e;border:1px solid #333;padding:1px 4px;border-radius:2px;font-size:8px;">-</kbd> / <kbd style="background:#1e1e2e;border:1px solid #333;padding:1px 4px;border-radius:2px;font-size:8px;">0</kbd> Zoom</div>
+      <div style="margin-top:6px;padding-top:6px;border-top:1px solid #222;color:#666;font-size:8px;line-height:1.4;">
+        Measure: Click near furniture edge to snap. Auto-locks to straight lines.
+      </div>
+    </div>
+  </div>
+
+  <div class="canvas-container" id="canvasContainer">
+    <svg class="floor-plan" id="svgPlan" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+</div>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="zoomIn()">+</button>
+  <button class="zoom-btn" onclick="zoomOut()">−</button>
+  <button class="zoom-btn" onclick="fitToView()" style="font-size:12px">⊡</button>
+</div>
+
+<div class="info-bar">
+  <div class="info-item">Zoom: <span id="zoomLevel">100%</span></div>
+  <div class="info-item">Scale: <span>1" = 2px</span></div>
+  <div class="info-item">Cursor: <span id="cursorPos">—</span></div>
+  <div class="info-item" id="selectedInfo">Selected: <span>none</span></div>
+</div>
+
+<script>
+const PPI = 2;
+const S = (i) => i * PPI;
+const PAD = S(30);
+
+// ===== MEASUREMENTS (inches) =====
+// The interior wall X for the UPPER portion (kitchen side)
+const UPPER_IWX = 83;
+// After the 42" heater wall jog, the lower wall is at:
+const LOWER_IWX = UPPER_IWX + 42; // = 125
+
+const M = {
+  leftWall: 255,
+  livingWUpper: 83,       // upper LR width (back door to kitchen wall)
+  livingWLower: 127,      // lower LR width (front door wall)
+  heaterWall: 42,         // perpendicular jog
+  heaterToWall: 21,       // heater to corner
+  heaterWallToDoorFrame: 15,
+  kitchenL: 93,
+  kitchenW: 75,
+  kitchenEntryDoor: 30,   // sliding door
+  kitchenEntryL: 32,      // wall above kitchen entry
+  bedroomL: 121,
+  bedroomW: 162,
+  bathL: 53,
+  bathW: 59,
+  hallwayW: 34,
+  hallwayD: 27,
+  bedW: 72,               // Cal King
+  bedL: 84,
+  frontDoor: 39,
+  frontDoorFrameToWall: 85,
+  closetDepth: 24,
+};
+
+// ===== DERIVED POSITIONS =====
+// Bedroom top Y
+const bedTopY = M.leftWall - M.bedroomW;
+
+// The heater wall Y position (where the jog happens)
+// Aligned with the FRONT of the closet (same as bedTopY)
+const jogY = bedTopY; // Parallel with closet front edge
+
+// Hallway center in bedroom
+const hallCenterX = LOWER_IWX + M.bedroomL / 2;
+const hallX = hallCenterX - M.hallwayW / 2;
+
+// ===== FURNITURE =====
+const furnitureDefs = [
+  // Living room — all start in staging (dx/dy = null)
+  { id:'bar', name:'Vintage Bar', w:62, h:22, color:'#8B6914', stroke:'#a07d1c', room:'living', label:'BAR', dx:null, dy:null },
+  { id:'tv', name:'58" TV', w:52, h:4, color:'#1a1a2a', stroke:'#2a2a3a', room:'living', label:'TV 58"', dx:null, dy:null },
+  { id:'couch', name:'Couch', w:80, h:38, color:'#4a6741', stroke:'#5a7a51', room:'living', label:'COUCH', dx:null, dy:null },
+  { id:'coffee', name:'Coffee Table', w:48, h:24, color:'#5a4a3a', stroke:'#6a5a4a', room:'living', label:'COFFEE', dx:null, dy:null },
+  { id:'bakers', name:"Baker's Rack", w:72, h:24, color:'#555566', stroke:'#666677', room:'living', label:"BAKER'S", dx:null, dy:null },
+  { id:'console', name:'Console Table', w:31.5, h:9.8, color:'#6a5a44', stroke:'#7a6a54', room:'living', label:'CONSOLE', dx:null, dy:null },
+  { id:'tv_lift', name:'TV Lift (VEVOR)', w:20, h:8, color:'#333399', stroke:'#4444bb', room:'living', label:'LIFT', dx:null, dy:null },
+  { id:'hp_l', name:'HomePod L', w:7, h:7, color:'#1a1a1a', stroke:'#444', room:'living', label:'HP', dx:null, dy:null },
+  { id:'hp_r', name:'HomePod R', w:7, h:7, color:'#1a1a1a', stroke:'#444', room:'living', label:'HP', dx:null, dy:null },
+  { id:'valet', name:'Valet/Cubicles', w:48, h:24, color:'#9a8a3a', stroke:'#aa9a4a', room:'living', label:'VALET', dx:null, dy:null },
+  // Bedroom
+  { id:'bed', name:'Cal King Bed', w:72, h:84, color:'#3a5a6a', stroke:'#4a6a7a', room:'bedroom', label:'BED', dx:null, dy:null },
+  { id:'standing_desk', name:'Standing Desk', w:24, h:48, color:'#6a5a7a', stroke:'#7a6a8a', room:'bedroom', label:'STAND', dx:null, dy:null },
+  { id:'zigzag', name:'Zigzag Stand', w:24, h:12, color:'#7a5a8a', stroke:'#8a6a9a', room:'bedroom', label:'ZIGZAG', dx:null, dy:null },
+  { id:'desk', name:'Rolling Desk', w:34, h:24, color:'#5a5a44', stroke:'#6a6a54', room:'bedroom', label:'DESK', dx:null, dy:null },
+  { id:'dresser', name:'Dresser', w:34, h:17, color:'#5a4a6a', stroke:'#6a5a7a', room:'bedroom', label:'DRESSER', dx:null, dy:null },
+  { id:'bookstand', name:'Book Stand', w:36, h:12, color:'#4a5a3a', stroke:'#5a6a4a', room:'bedroom', label:'BOOKS', dx:null, dy:null },
+  { id:'nightstand', name:'Night Stand', w:16, h:16, color:'#4a3a2a', stroke:'#5a4a3a', room:'bedroom', label:'NSTAND', dx:null, dy:null },
+  // Kitchen items (can go in kitchen or elsewhere)
+  { id:'microwave', name:'Microwave', w:20, h:15, color:'#4a4a4a', stroke:'#5a5a5a', room:'kitchen', label:'MICRO', dx:null, dy:null },
+  { id:'pantry', name:'Pantry', w:24, h:24, color:'#3a3a5a', stroke:'#4a4a6a', room:'kitchen', label:'PANTRY', dx:null, dy:null },
+];
+
+let placedFurniture = [];
+let showGrid = true;
+let showDims = true;
+let zoom = 1, panX = 0, panY = 0;
+let isPanning = false, panStart = {x:0,y:0};
+let dragging = null, dragOffset = {x:0,y:0};
+let measureMode = false, measureStart = null, measureEnd = null;
+
+// ===== SVG HELPERS =====
+const wx = (x) => PAD + S(x);
+const wy = (y) => PAD + S(y);
+
+function wallLine(x1,y1,x2,y2) {
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#555" stroke-width="5" stroke-linecap="round"/>`;
+}
+function thinWall(x1,y1,x2,y2) {
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#444" stroke-width="3" stroke-linecap="round"/>`;
+}
+function windowMark(x1,y1,x2,y2) {
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#4a9eff22" stroke-width="10"/>` +
+    `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#4a9eff" stroke-width="3"/>`;
+}
+function doorOpen(x1,y1,x2,y2) {
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#c5975b" stroke-width="2.5"/>`;
+}
+function slidingDoor(x1,y1,x2,y2) {
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#c5975b" stroke-width="2" stroke-dasharray="6 3"/>`;
+}
+function doorArc(cx,cy,r,startAngle,endAngle) {
+  const sa = startAngle * Math.PI / 180, ea = endAngle * Math.PI / 180;
+  const x1 = cx + r * Math.cos(sa), y1 = cy + r * Math.sin(sa);
+  const x2 = cx + r * Math.cos(ea), y2 = cy + r * Math.sin(ea);
+  const sweep = endAngle > startAngle ? 1 : 0;
+  return `<path d="M ${wx(x1)} ${wy(y1)} A ${S(r)} ${S(r)} 0 0 ${sweep} ${wx(x2)} ${wy(y2)}" fill="none" stroke="#c5975b33" stroke-width="1" stroke-dasharray="3 2"/>`;
+}
+function labelText(x,y,text,size=8,color='#444',rot=0) {
+  const tr = rot ? `transform="rotate(${rot} ${wx(x)} ${wy(y)})"` : '';
+  return `<text x="${wx(x)}" y="${wy(y)}" font-family="JetBrains Mono" font-size="${size}" fill="${color}" text-anchor="middle" ${tr}>${text}</text>`;
+}
+
+// ===== BUILD SVG =====
+function buildSVG() {
+  const svgW = S(340);
+  const svgH = S(310);
+  const svg = document.getElementById('svgPlan');
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', svgH);
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+
+  let c = '';
+
+  // Grid
+  c += `<g id="gridGroup" ${showGrid?'':'style="display:none"'}>`;
+  for (let x = PAD; x < svgW; x += S(12))
+    c += `<line x1="${x}" y1="${PAD}" x2="${x}" y2="${svgH-PAD}" stroke="#ffffff06" stroke-width="0.5"/>`;
+  for (let y = PAD; y < svgH; y += S(12))
+    c += `<line x1="${PAD}" y1="${y}" x2="${svgW-PAD}" y2="${y}" stroke="#ffffff06" stroke-width="0.5"/>`;
+  c += `</g>`;
+
+  // === ROOM FILLS ===
+  // Living room L-shape: upper rectangle + lower rectangle
+  c += `<rect x="${wx(0)}" y="${wy(0)}" width="${S(UPPER_IWX)}" height="${S(jogY)}" fill="#18182288" rx="1"/>`;
+  c += `<rect x="${wx(0)}" y="${wy(jogY)}" width="${S(LOWER_IWX)}" height="${S(M.leftWall - jogY)}" fill="#18182288" rx="1"/>`;
+
+  // Kitchen
+  c += `<rect x="${wx(UPPER_IWX)}" y="${wy(0)}" width="${S(M.kitchenW)}" height="${S(M.kitchenL)}" fill="#1a1a2088" rx="1"/>`;
+
+  // Bathroom — sits behind the closets, accessed via hallway between closets
+  const bathX = UPPER_IWX + M.kitchenW;
+  c += `<rect x="${wx(bathX)}" y="${wy(0)}" width="${S(M.bathW)}" height="${S(M.bathL + 30)}" fill="#15151d88" rx="1"/>`;
+
+  // Bedroom
+  c += `<rect x="${wx(LOWER_IWX)}" y="${wy(bedTopY)}" width="${S(M.bedroomL)}" height="${S(M.bedroomW)}" fill="#16161e88" rx="1"/>`;
+
+  // === EXTERIOR WALLS ===
+  // Left wall (full 255")
+  c += wallLine(0, 0, 0, M.leftWall);
+
+  // Back Door Wall (top, 83") — ~2/3 window, ~1/3 door
+  c += wallLine(0, 0, UPPER_IWX, 0);
+  const backWinEnd = Math.round(UPPER_IWX * 0.63);
+  c += windowMark(3, 0, backWinEnd, 0);
+  c += doorOpen(backWinEnd + 3, 0, UPPER_IWX - 3, 0);
+  c += doorArc(UPPER_IWX - 3, 0, UPPER_IWX - backWinEnd - 6, 90, 175);
+  c += labelText(UPPER_IWX / 2, -12, 'BACK DOOR WALL', 7, '#555');
+
+  // Front Door Wall (bottom, 127")
+  c += wallLine(0, M.leftWall, LOWER_IWX + M.bedroomL, M.leftWall);
+  // Front door: 39" wide. Door frame to wall (including window) = 85"
+  // So window+frame is on the LEFT, door is on the RIGHT
+  const fdStart = M.livingWLower - M.frontDoor; // door starts here
+  c += windowMark(3, M.leftWall, fdStart - 5, M.leftWall);
+  c += doorOpen(fdStart, M.leftWall, fdStart + M.frontDoor, M.leftWall);
+  c += doorArc(fdStart, M.leftWall, M.frontDoor, -90, -5);
+  c += labelText(LOWER_IWX / 2, M.leftWall + 12, 'FRONT DOOR WALL', 7, '#555');
+
+  // === INTERIOR WALL — L-SHAPED ===
+  // Upper section: straight down from top to jog point
+  const kitEntryTop = M.kitchenEntryL;
+  const kitEntryBot = kitEntryTop + M.kitchenEntryDoor;
+  c += wallLine(UPPER_IWX, 0, UPPER_IWX, kitEntryTop);
+  // Kitchen entry (SLIDING door)
+  c += slidingDoor(UPPER_IWX, kitEntryTop, UPPER_IWX, kitEntryBot);
+  // Continue to jog point
+  c += wallLine(UPPER_IWX, kitEntryBot, UPPER_IWX, jogY);
+
+  // Heater wall — 42" perpendicular, going RIGHT
+  c += wallLine(UPPER_IWX, jogY, LOWER_IWX, jogY);
+  // Heater on BOTTOM (lower) side of this wall, on the left side (starts at corner, 21" long)
+  const htrStart = UPPER_IWX;
+  const htrLength = 21;
+  c += `<rect x="${wx(htrStart)}" y="${wy(jogY)}" width="${S(htrLength)}" height="${S(4)}" fill="#ff634733" stroke="#ff6347" stroke-width="1" rx="1"/>`;
+  c += `<text x="${wx(htrStart + htrLength/2)}" y="${wy(jogY) + S(2)}" font-family="JetBrains Mono" font-size="6" fill="#ff634799" text-anchor="middle">HTR</text>`;
+
+  // Bedroom door: 15" space between the 90-degree corner (heater wall) and the TOP of door frame
+  const bedDoorTop = jogY + M.heaterWallToDoorFrame; // 15" below heater wall
+  const bedDoorBot = bedDoorTop + 32;
+  // Wall section from heater wall down to bedroom door
+  c += wallLine(LOWER_IWX, jogY, LOWER_IWX, bedDoorTop);
+  // Bedroom door (swings INWARD into bedroom, hits closet wall directly at 90 degrees)
+  c += doorOpen(LOWER_IWX, bedDoorTop, LOWER_IWX, bedDoorBot);
+  c += doorArc(LOWER_IWX, bedDoorTop, 32, 0, 90); // swings exactly 90 degrees right into closet wall
+  // Continue to bottom
+  c += wallLine(LOWER_IWX, bedDoorBot, LOWER_IWX, M.leftWall);
+
+  // === KITCHEN WALLS ===
+  c += wallLine(UPPER_IWX, 0, UPPER_IWX + M.kitchenW, 0); // top
+  c += wallLine(UPPER_IWX + M.kitchenW, 0, UPPER_IWX + M.kitchenW, M.kitchenL); // right (divider to bath)
+  // Bottom wall removed - it's interior space, not an exterior wall
+
+  // === KITCHEN FIXTURES ===
+  // Back wall (with window): counters on each side of sink - all flush to top wall
+  const counterDepth = 22;
+
+  // Left counter: 24" long × 22" deep
+  const leftCounterX = UPPER_IWX + 3;
+  c += `<rect x="${wx(leftCounterX)}" y="${wy(0)}" width="${S(24)}" height="${S(counterDepth)}" fill="#4a4a3a" stroke="#5a5a4a" stroke-width="1" rx="1"/>`;
+  c += `<text x="${wx(leftCounterX + 12)}" y="${wy(counterDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#888" text-anchor="middle" dominant-baseline="central">COUNTER</text>`;
+
+  // Sink in middle
+  const sinkX = leftCounterX + 24 + 1;
+  const sinkW = 20;
+  c += `<rect x="${wx(sinkX)}" y="${wy(0)}" width="${S(sinkW)}" height="${S(counterDepth)}" fill="#3a3a4a" stroke="#555" stroke-width="1" rx="1"/>`;
+  c += `<text x="${wx(sinkX + sinkW/2)}" y="${wy(counterDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#888" text-anchor="middle" dominant-baseline="central">SINK</text>`;
+
+  // Right counter: 24" long × 22" deep
+  const rightCounterX = sinkX + sinkW + 1;
+  c += `<rect x="${wx(rightCounterX)}" y="${wy(0)}" width="${S(24)}" height="${S(counterDepth)}" fill="#4a4a3a" stroke="#5a5a4a" stroke-width="1" rx="1"/>`;
+  c += `<text x="${wx(rightCounterX + 12)}" y="${wy(counterDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#888" text-anchor="middle" dominant-baseline="central">COUNTER</text>`;
+
+  // Opposite wall (facing entry): Oven and Fridge with 13" between - flush to entry side
+  const applianceDepth = 28;
+
+  // Oven (left side, 30" wide)
+  const ovenX = UPPER_IWX + 3;
+  const ovenY = M.kitchenL - applianceDepth;
+  c += `<rect x="${wx(ovenX)}" y="${wy(ovenY)}" width="${S(30)}" height="${S(applianceDepth)}" fill="#3a3a3a" stroke="#555" stroke-width="1" rx="1"/>`;
+  c += `<text x="${wx(ovenX + 15)}" y="${wy(ovenY + applianceDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#888" text-anchor="middle" dominant-baseline="central">OVEN</text>`;
+
+  // 13" gap, then Fridge (30" wide)
+  const fridgeX = ovenX + 30 + 13;
+  c += `<rect x="${wx(fridgeX)}" y="${wy(ovenY)}" width="${S(30)}" height="${S(applianceDepth)}" fill="#3a3a3a" stroke="#555" stroke-width="1" rx="1"/>`;
+  c += `<text x="${wx(fridgeX + 15)}" y="${wy(ovenY + applianceDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#888" text-anchor="middle" dominant-baseline="central">FRIDGE</text>`;
+
+  // === BATHROOM WALLS ===
+  const bathR = bathX + M.bathW;
+  c += wallLine(bathX, 0, bathR, 0); // top
+  c += wallLine(bathR, 0, bathR, M.bathL + 30); // right
+  c += wallLine(bathX, M.bathL + 30, bathR, M.bathL + 30); // bottom
+  // Bathroom window (on top wall)
+  c += windowMark(bathX + 10, 0, bathX + 34, 0);
+
+  // === BEDROOM WALLS ===
+  // Right wall
+  c += wallLine(LOWER_IWX + M.bedroomL, bedTopY, LOWER_IWX + M.bedroomL, M.leftWall);
+  // Top wall (behind closets)
+  c += wallLine(LOWER_IWX, bedTopY, LOWER_IWX + M.bedroomL, bedTopY);
+
+  // === CLOSETS (span full top wall of bedroom) ===
+  // Hallway gap centered
+  const bHallX = LOWER_IWX + (M.bedroomL - M.hallwayW) / 2;
+  // Left closet
+  const lcW = bHallX - LOWER_IWX;
+  c += `<rect x="${wx(LOWER_IWX)}" y="${wy(bedTopY)}" width="${S(lcW)}" height="${S(M.closetDepth)}" fill="#2a2a3a55" stroke="#33334488" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
+  c += `<text x="${wx(LOWER_IWX + lcW/2)}" y="${wy(bedTopY + M.closetDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#3a3a4a" text-anchor="middle" dominant-baseline="central">Closet</text>`;
+  // Right closet
+  const rcX = bHallX + M.hallwayW;
+  const rcW = LOWER_IWX + M.bedroomL - rcX;
+  c += `<rect x="${wx(rcX)}" y="${wy(bedTopY)}" width="${S(rcW)}" height="${S(M.closetDepth)}" fill="#2a2a3a55" stroke="#33334488" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
+  c += `<text x="${wx(rcX + rcW/2)}" y="${wy(bedTopY + M.closetDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#3a3a4a" text-anchor="middle" dominant-baseline="central">Closet</text>`;
+
+  // Closet front walls
+  c += thinWall(LOWER_IWX, bedTopY + M.closetDepth, bHallX, bedTopY + M.closetDepth);
+  c += thinWall(rcX, bedTopY + M.closetDepth, LOWER_IWX + M.bedroomL, bedTopY + M.closetDepth);
+
+  // Hallway walls (closet side walls)
+  c += thinWall(bHallX, bedTopY, bHallX, bedTopY - M.hallwayD);
+  c += thinWall(bHallX + M.hallwayW, bedTopY, bHallX + M.hallwayW, bedTopY - M.hallwayD);
+
+  // Bathroom door at end of hallway (opens INWARD into bathroom)
+  const bathDoorY = bedTopY - M.hallwayD;
+  c += doorOpen(bHallX, bathDoorY, bHallX + M.hallwayW, bathDoorY);
+  // Door swings upward into bathroom (from right hinge)
+  c += doorArc(bHallX + M.hallwayW, bathDoorY, M.hallwayW, 180, 265);
+
+  // === DIMENSION LABELS ===
+  c += `<g id="dimGroup" ${showDims?'':'style="display:none"'}>`;
+  c += labelText(-12, M.leftWall/2, `${M.leftWall}"`, 8, '#444', -90);
+  c += labelText(UPPER_IWX/2, -8, `${UPPER_IWX}"`, 8);
+  c += labelText(LOWER_IWX/2 + 20, M.leftWall + 20, `${M.livingWLower}"`, 8);
+  // Heater wall dimension
+  c += labelText(UPPER_IWX + M.heaterWall/2, jogY - 8, `${M.heaterWall}" jog`, 7, '#666');
+  c += labelText(UPPER_IWX + M.kitchenW/2, -8, `${M.kitchenW}"`, 7);
+  c += labelText(LOWER_IWX + M.bedroomL/2, M.leftWall + 20, `${M.bedroomL}"`, 7);
+  c += labelText(LOWER_IWX + M.bedroomL + 10, bedTopY + M.bedroomW/2, `${M.bedroomW}"`, 7, '#444', -90);
+  c += `</g>`;
+
+  // === ROOM LABELS ===
+  c += `<text x="${wx(UPPER_IWX/2)}" y="${wy(M.leftWall/2 + 30)}" font-family="Cormorant Garamond" font-size="16" fill="#33335544" text-anchor="middle">Living Room</text>`;
+  c += `<text x="${wx(UPPER_IWX + M.kitchenW/2)}" y="${wy(M.kitchenL/2)}" font-family="Cormorant Garamond" font-size="12" fill="#33335544" text-anchor="middle">Kitchen</text>`;
+  c += `<text x="${wx(bathX + M.bathW/2)}" y="${wy((M.bathL+30)/2)}" font-family="Cormorant Garamond" font-size="11" fill="#33335544" text-anchor="middle">Bathroom</text>`;
+  c += `<text x="${wx(LOWER_IWX + M.bedroomL/2)}" y="${wy(bedTopY + M.closetDepth + 45)}" font-family="Cormorant Garamond" font-size="14" fill="#33335544" text-anchor="middle">Bedroom</text>`;
+
+  // Scale bar
+  const sbY = M.leftWall + 28;
+  c += `<line x1="${wx(0)}" y1="${wy(sbY)}" x2="${wx(48)}" y2="${wy(sbY)}" stroke="#444" stroke-width="1"/>`;
+  c += `<line x1="${wx(0)}" y1="${wy(sbY)-3}" x2="${wx(0)}" y2="${wy(sbY)+3}" stroke="#444"/>`;
+  c += `<line x1="${wx(48)}" y1="${wy(sbY)-3}" x2="${wx(48)}" y2="${wy(sbY)+3}" stroke="#444"/>`;
+  c += labelText(24, sbY - 4, '4 ft', 7);
+
+  // Furniture group
+  c += `<g id="furnitureGroup"></g>`;
+
+  // Measurement group (on top)
+  c += `<g id="measurementGroup"></g>`;
+
+  svg.innerHTML = c;
+  renderFurniture();
+  renderMeasurement();
+}
+
+// ===== STAGING SVG =====
+function buildStagingSVG() {
+  const svg = document.getElementById('svgStaging');
+  const svgW = 260; // Slightly wider to prevent cutoff
+  const svgH = 1400; // Taller for more items
+  svg.setAttribute('width', svgW);
+  svg.setAttribute('height', svgH);
+  svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
+
+  let c = '';
+
+  // Background grid
+  for (let x = 0; x < svgW; x += S(12)) {
+    c += `<line x1="${x}" y1="0" x2="${x}" y2="${svgH}" stroke="#ffffff06" stroke-width="0.5"/>`;
+  }
+  for (let y = 0; y < svgH; y += S(12)) {
+    c += `<line x1="0" y1="${y}" x2="${svgW}" y2="${y}" stroke="#ffffff06" stroke-width="0.5"/>`;
+  }
+
+  // Furniture group
+  c += `<g id="furnitureGroupStaging"></g>`;
+
+  svg.innerHTML = c;
+  renderStagingFurniture();
+}
+
+// ===== FURNITURE =====
+function renderFurniture() {
+  const g = document.getElementById('furnitureGroup');
+  if (!g) return;
+  g.innerHTML = placedFurniture.filter(p => p.x >= 0 && p.y >= 0).map((p, i) => {
+    const actualIdx = placedFurniture.indexOf(p);
+    const d = furnitureDefs.find(f => f.id === p.id);
+    const w = p.rotated ? S(d.h) : S(d.w);
+    const h = p.rotated ? S(d.w) : S(d.h);
+    const hasCollision = checkCollision(p, actualIdx);
+    const strokeColor = hasCollision ? '#ff4444' : d.stroke;
+    const extra = hasCollision ? 'stroke-dasharray="4 2"' : '';
+
+    // Calculate dimensions to display (actual or rotated)
+    const displayW = p.rotated ? d.h : d.w;
+    const displayH = p.rotated ? d.w : d.h;
+    const dimText = `${displayW}" × ${displayH}"`;
+
+    return `<g class="furniture-piece" data-idx="${actualIdx}" style="cursor:grab">
+      <rect x="${PAD+S(p.x)}" y="${PAD+S(p.y)}" width="${w}" height="${h}" fill="${d.color}" stroke="${strokeColor}" stroke-width="${hasCollision?2:1}" ${extra} rx="2" opacity="0.85"/>
+      ${hasCollision ? `<text x="${PAD+S(p.x)+w-6}" y="${PAD+S(p.y)+10}" font-family="JetBrains Mono" font-size="8" fill="#ff4444">⚠</text>` : ''}
+      <text x="${PAD+S(p.x)+w/2}" y="${PAD+S(p.y)+h/2-4}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${d.label}</text>
+      <text x="${PAD+S(p.x)+w/2}" y="${PAD+S(p.y)+h/2+6}" font-family="JetBrains Mono" font-size="6" fill="#ffffff88" text-anchor="middle" dominant-baseline="central" pointer-events="none">${dimText}</text>
+    </g>`;
+  }).join('');
+  attachFurnitureEvents();
+}
+
+function renderStagingFurniture() {
+  const g = document.getElementById('furnitureGroupStaging');
+  if (!g) return;
+
+  let c = '';
+
+  // Group by room
+  const livingPieces = placedFurniture.filter(p => (p.x < 0 || p.y < 0) && furnitureDefs.find(f => f.id === p.id).room === 'living');
+  const bedroomPieces = placedFurniture.filter(p => (p.x < 0 || p.y < 0) && furnitureDefs.find(f => f.id === p.id).room === 'bedroom');
+  const kitchenPieces = placedFurniture.filter(p => (p.x < 0 || p.y < 0) && furnitureDefs.find(f => f.id === p.id).room === 'kitchen');
+
+  let offsetY = 20;
+  const SCALE = 1.3; // Slightly smaller to prevent cutoff
+  const CANVAS_WIDTH = 260;
+  const MAX_WIDTH = CANVAS_WIDTH - 20; // Leave 10px padding on each side
+
+  if (livingPieces.length > 0) {
+    c += `<text x="10" y="${offsetY}" font-family="JetBrains Mono" font-size="9" fill="#666" text-transform="uppercase" letter-spacing="2">Living Room</text>`;
+    c += `<line x1="10" y1="${offsetY + 3}" x2="250" y2="${offsetY + 3}" stroke="#333" stroke-width="1"/>`;
+    offsetY += 15;
+
+    livingPieces.forEach(p => {
+      const actualIdx = placedFurniture.indexOf(p);
+      const d = furnitureDefs.find(f => f.id === p.id);
+      let w = (p.rotated ? S(d.h) : S(d.w)) * SCALE;
+      let h = (p.rotated ? S(d.w) : S(d.h)) * SCALE;
+
+      // Scale down if too wide
+      if (w > MAX_WIDTH) {
+        const ratio = MAX_WIDTH / w;
+        w = MAX_WIDTH;
+        h = h * ratio;
+      }
+
+      const sx = (CANVAS_WIDTH - w) / 2; // Center horizontally
+      const sy = offsetY;
+
+      c += `<g class="furniture-piece-staging" data-idx="${actualIdx}">
+        <rect x="${sx}" y="${sy}" width="${w}" height="${h}" fill="${d.color}" stroke="${d.stroke}" stroke-width="1.5" rx="3" opacity="0.85"/>
+        <text x="${sx+w/2}" y="${sy+h/2-4}" font-family="JetBrains Mono" font-size="9" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${d.label}</text>
+        <text x="${sx+w/2}" y="${sy+h/2+6}" font-family="JetBrains Mono" font-size="7" fill="#ffffff88" text-anchor="middle" pointer-events="none">${d.w}" × ${d.h}"</text>
+      </g>`;
+
+      // Update actual position for proper tracking
+      p.x = -(sx / (PPI * SCALE));
+      p.y = sy / (PPI * SCALE);
+
+      offsetY += h + 8;
+    });
+
+    offsetY += 15;
+  }
+
+  if (bedroomPieces.length > 0) {
+    c += `<text x="10" y="${offsetY}" font-family="JetBrains Mono" font-size="9" fill="#666" text-transform="uppercase" letter-spacing="2">Bedroom</text>`;
+    c += `<line x1="10" y1="${offsetY + 3}" x2="250" y2="${offsetY + 3}" stroke="#333" stroke-width="1"/>`;
+    offsetY += 15;
+
+    bedroomPieces.forEach(p => {
+      const actualIdx = placedFurniture.indexOf(p);
+      const d = furnitureDefs.find(f => f.id === p.id);
+      let w = (p.rotated ? S(d.h) : S(d.w)) * SCALE;
+      let h = (p.rotated ? S(d.w) : S(d.h)) * SCALE;
+
+      // Scale down if too wide
+      if (w > MAX_WIDTH) {
+        const ratio = MAX_WIDTH / w;
+        w = MAX_WIDTH;
+        h = h * ratio;
+      }
+
+      const sx = (CANVAS_WIDTH - w) / 2; // Center horizontally
+      const sy = offsetY;
+
+      c += `<g class="furniture-piece-staging" data-idx="${actualIdx}">
+        <rect x="${sx}" y="${sy}" width="${w}" height="${h}" fill="${d.color}" stroke="${d.stroke}" stroke-width="1.5" rx="3" opacity="0.85"/>
+        <text x="${sx+w/2}" y="${sy+h/2-4}" font-family="JetBrains Mono" font-size="9" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${d.label}</text>
+        <text x="${sx+w/2}" y="${sy+h/2+6}" font-family="JetBrains Mono" font-size="7" fill="#ffffff88" text-anchor="middle" pointer-events="none">${d.w}" × ${d.h}"</text>
+      </g>`;
+
+      // Update actual position for proper tracking
+      p.x = -(sx / (PPI * SCALE));
+      p.y = sy / (PPI * SCALE);
+
+      offsetY += h + 8;
+    });
+
+    offsetY += 15;
+  }
+
+  if (kitchenPieces.length > 0) {
+    c += `<text x="10" y="${offsetY}" font-family="JetBrains Mono" font-size="9" fill="#666" text-transform="uppercase" letter-spacing="2">Kitchen</text>`;
+    c += `<line x1="10" y1="${offsetY + 3}" x2="250" y2="${offsetY + 3}" stroke="#333" stroke-width="1"/>`;
+    offsetY += 15;
+
+    kitchenPieces.forEach(p => {
+      const actualIdx = placedFurniture.indexOf(p);
+      const d = furnitureDefs.find(f => f.id === p.id);
+      let w = (p.rotated ? S(d.h) : S(d.w)) * SCALE;
+      let h = (p.rotated ? S(d.w) : S(d.h)) * SCALE;
+
+      // Scale down if too wide
+      if (w > MAX_WIDTH) {
+        const ratio = MAX_WIDTH / w;
+        w = MAX_WIDTH;
+        h = h * ratio;
+      }
+
+      const sx = (CANVAS_WIDTH - w) / 2; // Center horizontally
+      const sy = offsetY;
+
+      c += `<g class="furniture-piece-staging" data-idx="${actualIdx}">
+        <rect x="${sx}" y="${sy}" width="${w}" height="${h}" fill="${d.color}" stroke="${d.stroke}" stroke-width="1.5" rx="3" opacity="0.85"/>
+        <text x="${sx+w/2}" y="${sy+h/2-4}" font-family="JetBrains Mono" font-size="9" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${d.label}</text>
+        <text x="${sx+w/2}" y="${sy+h/2+6}" font-family="JetBrains Mono" font-size="7" fill="#ffffff88" text-anchor="middle" pointer-events="none">${d.w}" × ${d.h}"</text>
+      </g>`;
+
+      // Update actual position for proper tracking
+      p.x = -(sx / (PPI * SCALE));
+      p.y = sy / (PPI * SCALE);
+
+      offsetY += h + 8;
+    });
+  }
+
+  g.innerHTML = c;
+  attachStagingFurnitureEvents();
+}
+
+// ===== COLLISION DETECTION (basic) =====
+// Wall segments as lines for collision checking
+function getWallSegments() {
+  return [
+    // Left wall
+    {x1:0, y1:0, x2:0, y2:M.leftWall},
+    // Back door wall
+    {x1:0, y1:0, x2:UPPER_IWX, y2:0},
+    // Upper interior wall
+    {x1:UPPER_IWX, y1:0, x2:UPPER_IWX, y2:jogY},
+    // Heater wall (jog)
+    {x1:UPPER_IWX, y1:jogY, x2:LOWER_IWX, y2:jogY},
+    // Lower interior wall
+    {x1:LOWER_IWX, y1:jogY, x2:LOWER_IWX, y2:M.leftWall},
+    // Front door wall
+    {x1:0, y1:M.leftWall, x2:LOWER_IWX, y2:M.leftWall},
+  ];
+}
+
+function checkCollision(piece, idx) {
+  const def = furnitureDefs.find(d => d.id === piece.id);
+  const pw = piece.rotated ? def.h : def.w;
+  const ph = piece.rotated ? def.w : def.h;
+  const px = piece.x, py = piece.y;
+
+  // If in staging area (negative coords), no collision
+  if (px < 0 || py < 0) return false;
+
+  // If currently dragging this piece, don't show collision yet
+  if (dragging === idx) return false;
+
+  // Check if furniture extends outside the L-shaped living room
+  // Upper region: 0 to UPPER_IWX, 0 to jogY
+  // Lower region: 0 to LOWER_IWX, jogY to leftWall
+  const inUpper = px >= 0 && px + pw <= UPPER_IWX && py >= 0 && py + ph <= jogY;
+  const inLower = px >= 0 && px + pw <= LOWER_IWX && py >= jogY && py + ph <= M.leftWall;
+  const spansJog = px >= 0 && py < jogY && py + ph > jogY;
+
+  // If it spans the jog, check both sections
+  if (spansJog) {
+    const upperOk = px + pw <= UPPER_IWX;
+    const lowerOk = px + pw <= LOWER_IWX;
+    if (!upperOk || !lowerOk) return true;
+    if (py < 0 || py + ph > M.leftWall) return true;
+    return checkFurnitureOverlap(piece, idx, pw, ph);
+  }
+
+  // Check if furniture is in kitchen area (not allowed)
+  const bathX = UPPER_IWX + M.kitchenW;
+  if (px < bathX && px + pw > UPPER_IWX && py < M.kitchenL && py + ph > 0) {
+    return true; // Kitchen is off-limits for furniture placement
+  }
+
+  // Check if furniture is in bathroom area (not allowed)
+  if (px < bathX + M.bathW && px + pw > bathX && py < M.bathL + 30 && py + ph > 0) {
+    return true; // Bathroom is off-limits for furniture placement
+  }
+
+  // If in bedroom, check bedroom bounds and closets
+  if (px >= LOWER_IWX && py >= bedTopY) {
+    // Check basic bedroom bounds (must be below closets)
+    const bedOk = px + pw <= LOWER_IWX + M.bedroomL && py + ph <= M.leftWall && py >= bedTopY + M.closetDepth;
+    if (!bedOk) return true;
+
+    // Check collision with closet areas (should not overlap even partially)
+    const bHallX = LOWER_IWX + (M.bedroomL - M.hallwayW) / 2;
+    const rcX = bHallX + M.hallwayW;
+    const leftCloset = {x: LOWER_IWX, y: bedTopY, w: bHallX - LOWER_IWX, h: M.closetDepth};
+    const rightCloset = {x: rcX, y: bedTopY, w: LOWER_IWX + M.bedroomL - rcX, h: M.closetDepth};
+
+    // Check if furniture overlaps closets
+    if ((px < leftCloset.x + leftCloset.w && px + pw > leftCloset.x &&
+         py < leftCloset.y + leftCloset.h && py + ph > leftCloset.y) ||
+        (px < rightCloset.x + rightCloset.w && px + pw > rightCloset.x &&
+         py < rightCloset.y + rightCloset.h && py + ph > rightCloset.y)) {
+      return true;
+    }
+
+    return checkFurnitureOverlap(piece, idx, pw, ph);
+  }
+
+  if (!inUpper && !inLower && !spansJog) {
+    // Might be in an okay cross-jog position
+    if (px >= 0 && px + pw <= UPPER_IWX && py >= 0 && py + ph <= M.leftWall) {
+      return checkFurnitureOverlap(piece, idx, pw, ph);
+    }
+    return true;
+  }
+
+  return checkFurnitureOverlap(piece, idx, pw, ph);
+}
+
+function checkFurnitureOverlap(piece, idx, pw, ph) {
+  for (let i = 0; i < placedFurniture.length; i++) {
+    if (i === idx) continue;
+    const other = placedFurniture[i];
+    const od = furnitureDefs.find(d => d.id === other.id);
+    const ow = other.rotated ? od.h : od.w;
+    const oh = other.rotated ? od.w : od.h;
+    if (piece.x < other.x + ow && piece.x + pw > other.x &&
+        piece.y < other.y + oh && piece.y + ph > other.y) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function returnToStaging(idx) {
+  placedFurniture[idx].x = -10;
+  placedFurniture[idx].y = -10; // Trigger re-layout in renderStagingFurniture
+  placedFurniture[idx].rotated = false;
+  renderFurniture();
+  renderStagingFurniture();
+  saveToCache();
+}
+
+// ===== DEFAULTS — all in staging area =====
+function initDefaults() {
+  placedFurniture = [];
+  let stagingX = 10;
+  let stagingY = 10;
+  furnitureDefs.forEach(d => {
+    placedFurniture.push({id: d.id, x: -stagingX - d.w, y: stagingY, rotated: false});
+    stagingY += d.h + 8;
+    if (stagingY > 700) { // Wrap to next column
+      stagingY = 10;
+      stagingX += 90;
+    }
+  });
+}
+
+// ===== CACHE (localStorage) =====
+function saveToCache() {
+  try { localStorage.setItem('wizard-study-layout', JSON.stringify(placedFurniture)); } catch(e) {}
+}
+function loadFromCache() {
+  try {
+    const data = localStorage.getItem('wizard-study-layout');
+    if (data) { placedFurniture = JSON.parse(data); return true; }
+  } catch(e) {}
+  return false;
+}
+
+// ===== FURNITURE EVENTS =====
+function getEdgeSnapPoint(p, d, clickX, clickY) {
+  // Get furniture bounds
+  const pw = p.rotated ? d.h : d.w;
+  const ph = p.rotated ? d.w : d.h;
+  const left = p.x;
+  const right = p.x + pw;
+  const top = p.y;
+  const bottom = p.y + ph;
+  const centerX = p.x + pw / 2;
+  const centerY = p.y + ph / 2;
+
+  // Calculate distances to each edge
+  const distToLeft = Math.abs(clickX - left);
+  const distToRight = Math.abs(clickX - right);
+  const distToTop = Math.abs(clickY - top);
+  const distToBottom = Math.abs(clickY - bottom);
+
+  // Find closest edge
+  const minDist = Math.min(distToLeft, distToRight, distToTop, distToBottom);
+
+  // Snap to closest edge (center of that edge)
+  if (minDist === distToLeft) return {x: left, y: centerY, edge: 'left'};
+  if (minDist === distToRight) return {x: right, y: centerY, edge: 'right'};
+  if (minDist === distToTop) return {x: centerX, y: top, edge: 'top'};
+  if (minDist === distToBottom) return {x: centerX, y: bottom, edge: 'bottom'};
+
+  return {x: centerX, y: centerY, edge: 'center'};
+}
+
+function attachFurnitureEvents() {
+  document.querySelectorAll('.furniture-piece').forEach(el => {
+    el.addEventListener('mousedown', e => {
+      if (e.button===2) return;
+      e.stopPropagation();
+
+      // If in measure mode, don't drag - snap to nearest edge
+      if (measureMode) {
+        const idx = parseInt(el.dataset.idx);
+        const p = placedFurniture[idx];
+        const d = furnitureDefs.find(f => f.id === p.id);
+
+        // Get click position in inches
+        const r = document.getElementById('canvasContainer').getBoundingClientRect();
+        const clickX = ((e.clientX - r.left - panX) / zoom - PAD) / PPI;
+        const clickY = ((e.clientY - r.top - panY) / zoom - PAD) / PPI;
+
+        // Snap to nearest edge
+        const snapPoint = getEdgeSnapPoint(p, d, clickX, clickY);
+
+        if (!measureStart) {
+          measureStart = {x: Math.round(snapPoint.x), y: Math.round(snapPoint.y), edge: snapPoint.edge};
+          measureEnd = null;
+        } else if (!measureEnd) {
+          measureEnd = {x: Math.round(snapPoint.x), y: Math.round(snapPoint.y), edge: snapPoint.edge};
+        } else {
+          measureStart = {x: Math.round(snapPoint.x), y: Math.round(snapPoint.y), edge: snapPoint.edge};
+          measureEnd = null;
+        }
+        renderMeasurement();
+        return;
+      }
+
+      dragging = parseInt(el.dataset.idx);
+      const r = document.getElementById('canvasContainer').getBoundingClientRect();
+      const mx = (e.clientX-r.left-panX)/zoom;
+      const my = (e.clientY-r.top-panY)/zoom;
+      const p = placedFurniture[dragging];
+      dragOffset.x = (mx-PAD)/PPI - p.x;
+      dragOffset.y = (my-PAD)/PPI - p.y;
+    });
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      if (measureMode) return; // Don't rotate in measure mode
+      const i = parseInt(el.dataset.idx);
+      placedFurniture[i].rotated = !placedFurniture[i].rotated;
+      renderFurniture(); renderStagingFurniture(); saveToCache();
+    });
+    el.addEventListener('contextmenu', e => {
+      e.preventDefault(); e.stopPropagation();
+      returnToStaging(parseInt(el.dataset.idx));
+    });
+  });
+}
+
+function attachStagingFurnitureEvents() {
+  document.querySelectorAll('.furniture-piece-staging').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.button===2) return;
+      e.stopPropagation();
+
+      const idx = parseInt(el.dataset.idx);
+      const p = placedFurniture[idx];
+
+      // Place at a default location in the living room (center-left area)
+      p.x = 40;
+      p.y = 120;
+
+      renderFurniture();
+      renderStagingFurniture();
+      saveToCache();
+    });
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      const i = parseInt(el.dataset.idx);
+      placedFurniture[i].rotated = !placedFurniture[i].rotated;
+      renderFurniture(); renderStagingFurniture(); saveToCache();
+    });
+  });
+}
+
+// ===== CANVAS EVENTS =====
+function attachCanvasEvents() {
+  const ctr = document.getElementById('canvasContainer');
+  const svg = document.getElementById('svgPlan');
+
+  ctr.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = ctr.getBoundingClientRect();
+    const mx = e.clientX-r.left, my = e.clientY-r.top;
+    const oz = zoom;
+    zoom = Math.max(0.15, Math.min(15, zoom * (e.deltaY>0?0.88:1.12)));
+    panX = mx-(mx-panX)*(zoom/oz);
+    panY = my-(my-panY)*(zoom/oz);
+    applyTransform();
+  }, {passive:false});
+
+  ctr.addEventListener('mousedown', e => {
+    if (e.target.closest('.furniture-piece')) return;
+
+    if (measureMode && e.button===0) {
+      e.stopPropagation();
+      const r = ctr.getBoundingClientRect();
+      const x = Math.round(((e.clientX - r.left - panX) / zoom - PAD) / PPI);
+      const y = Math.round(((e.clientY - r.top - panY) / zoom - PAD) / PPI);
+
+      if (!measureStart) {
+        measureStart = {x, y, edge: 'floor'};
+        measureEnd = null;
+      } else if (!measureEnd) {
+        measureEnd = {x, y, edge: 'floor'};
+      } else {
+        // Reset if both points are set
+        measureStart = {x, y, edge: 'floor'};
+        measureEnd = null;
+      }
+      renderMeasurement();
+      return;
+    }
+
+    if (e.button===0) { isPanning=true; panStart={x:e.clientX-panX,y:e.clientY-panY}; ctr.classList.add('panning'); }
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (isPanning && !measureMode) { panX=e.clientX-panStart.x; panY=e.clientY-panStart.y; applyTransform(); }
+    if (dragging!==null) {
+      const r = ctr.getBoundingClientRect();
+      const ix = ((e.clientX-r.left-panX)/zoom-PAD)/PPI - dragOffset.x;
+      const iy = ((e.clientY-r.top-panY)/zoom-PAD)/PPI - dragOffset.y;
+      placedFurniture[dragging].x = Math.round(ix);
+      placedFurniture[dragging].y = Math.round(iy);
+      renderFurniture();
+      renderStagingFurniture();
+      const d = furnitureDefs.find(f=>f.id===placedFurniture[dragging].id);
+      document.querySelector('#selectedInfo span').textContent = `${d.name} @ ${placedFurniture[dragging].x}", ${placedFurniture[dragging].y}"`;
+    }
+    const r2 = ctr.getBoundingClientRect();
+    const cx = Math.round(((e.clientX-r2.left-panX)/zoom-PAD)/PPI);
+    const cy = Math.round(((e.clientY-r2.top-panY)/zoom-PAD)/PPI);
+    document.getElementById('cursorPos').textContent = `${cx}", ${cy}"`;
+  });
+
+  document.addEventListener('mouseup', () => {
+    isPanning=false; ctr.classList.remove('panning');
+    if (dragging!==null) { dragging=null; document.querySelector('#selectedInfo span').textContent='none'; saveToCache(); }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key==='='||e.key==='+') { zoomIn(); e.preventDefault(); }
+    if (e.key==='-') { zoomOut(); e.preventDefault(); }
+    if (e.key==='0') { fitToView(); e.preventDefault(); }
+    if (e.key==='m' || e.key==='M') { toggleMeasure(); e.preventDefault(); }
+    if (e.key==='Escape' && measureMode) {
+      measureStart = null;
+      measureEnd = null;
+      renderMeasurement();
+      e.preventDefault();
+    }
+  });
+}
+
+// ===== ZOOM/PAN =====
+function applyTransform() {
+  document.getElementById('svgPlan').style.transform = `translate(${panX}px,${panY}px) scale(${zoom})`;
+  document.getElementById('zoomLevel').textContent = `${Math.round(zoom*100)}%`;
+}
+function zoomIn() {
+  const r=document.getElementById('canvasContainer').getBoundingClientRect();
+  const cx=r.width/2,cy=r.height/2,oz=zoom;
+  zoom=Math.min(15,zoom*1.3);panX=cx-(cx-panX)*(zoom/oz);panY=cy-(cy-panY)*(zoom/oz);applyTransform();
+}
+function zoomOut() {
+  const r=document.getElementById('canvasContainer').getBoundingClientRect();
+  const cx=r.width/2,cy=r.height/2,oz=zoom;
+  zoom=Math.max(0.15,zoom*0.77);panX=cx-(cx-panX)*(zoom/oz);panY=cy-(cy-panY)*(zoom/oz);applyTransform();
+}
+function fitToView() {
+  const ctr=document.getElementById('canvasContainer'),svg=document.getElementById('svgPlan');
+  const cw=ctr.clientWidth,ch=ctr.clientHeight;
+  const sw=parseFloat(svg.getAttribute('width')),sh=parseFloat(svg.getAttribute('height'));
+  zoom=Math.min(cw/sw,ch/sh)*0.92;
+  panX=(cw-sw*zoom)/2;panY=(ch-sh*zoom)/2;applyTransform();
+}
+
+// ===== MEASUREMENT TOOL =====
+function renderMeasurement() {
+  const g = document.getElementById('measurementGroup');
+  if (!g) return;
+
+  if (!measureStart && !measureEnd) {
+    g.innerHTML = '';
+    return;
+  }
+
+  let c = '';
+
+  if (measureStart && measureEnd) {
+    let x1 = measureStart.x;
+    let y1 = measureStart.y;
+    let x2 = measureEnd.x;
+    let y2 = measureEnd.y;
+
+    // Auto-lock to horizontal or vertical if close (within 3 inches)
+    const dx = Math.abs(x2 - x1);
+    const dy = Math.abs(y2 - y1);
+
+    if (dx < 3) {
+      // Near vertical - lock to vertical
+      x2 = x1;
+    } else if (dy < 3) {
+      // Near horizontal - lock to horizontal
+      y2 = y1;
+    }
+
+    const sx1 = PAD + S(x1);
+    const sy1 = PAD + S(y1);
+    const sx2 = PAD + S(x2);
+    const sy2 = PAD + S(y2);
+
+    const actualDx = x2 - x1;
+    const actualDy = y2 - y1;
+    const dist = Math.sqrt(actualDx*actualDx + actualDy*actualDy);
+    const midX = (sx1 + sx2) / 2;
+    const midY = (sy1 + sy2) / 2;
+
+    // Line
+    c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="#c5975b" stroke-width="2" stroke-dasharray="5 3"/>`;
+
+    // End points with edge indicators
+    c += `<circle cx="${sx1}" cy="${sy1}" r="5" fill="#c5975b" stroke="#fff" stroke-width="2"/>`;
+    if (measureStart.edge) {
+      const edgeLabel = measureStart.edge[0].toUpperCase();
+      c += `<text x="${sx1}" y="${sy1 - 10}" font-family="JetBrains Mono" font-size="8" fill="#c5975b" text-anchor="middle">${edgeLabel}</text>`;
+    }
+
+    c += `<circle cx="${sx2}" cy="${sy2}" r="5" fill="#c5975b" stroke="#fff" stroke-width="2"/>`;
+    if (measureEnd.edge) {
+      const edgeLabel = measureEnd.edge[0].toUpperCase();
+      c += `<text x="${sx2}" y="${sy2 - 10}" font-family="JetBrains Mono" font-size="8" fill="#c5975b" text-anchor="middle">${edgeLabel}</text>`;
+    }
+
+    // Distance label with background
+    const label = `${Math.round(dist)}"`;
+    const labelWidth = label.length * 7 + 10;
+    c += `<rect x="${midX - labelWidth/2}" y="${midY - 12}" width="${labelWidth}" height="22" fill="#1a1a24ee" stroke="#c5975b" stroke-width="1.5" rx="4"/>`;
+    c += `<text x="${midX}" y="${midY + 3}" font-family="JetBrains Mono" font-size="11" font-weight="bold" fill="#c5975b" text-anchor="middle" dominant-baseline="central">${label}</text>`;
+  } else if (measureStart) {
+    const sx1 = PAD + S(measureStart.x);
+    const sy1 = PAD + S(measureStart.y);
+    c += `<circle cx="${sx1}" cy="${sy1}" r="5" fill="#c5975b" stroke="#fff" stroke-width="2"/>`;
+    if (measureStart.edge) {
+      const edgeLabel = measureStart.edge[0].toUpperCase();
+      c += `<text x="${sx1}" y="${sy1 - 10}" font-family="JetBrains Mono" font-size="8" fill="#c5975b" text-anchor="middle">${edgeLabel}</text>`;
+    }
+  }
+
+  g.innerHTML = c;
+}
+
+function toggleMeasure() {
+  measureMode = !measureMode;
+  document.getElementById('btnMeasure').classList.toggle('active', measureMode);
+  const ctr = document.getElementById('canvasContainer');
+
+  if (!measureMode) {
+    measureStart = null;
+    measureEnd = null;
+    renderMeasurement();
+    ctr.style.cursor = 'grab';
+  } else {
+    ctr.style.cursor = 'crosshair';
+  }
+}
+
+// ===== CONTROLS =====
+function toggleGrid() { showGrid=!showGrid; document.getElementById('btnGrid').classList.toggle('active',showGrid); const g=document.getElementById('gridGroup'); if(g) g.style.display=showGrid?'':'none'; }
+function toggleDims() { showDims=!showDims; document.getElementById('btnDims').classList.toggle('active',showDims); const g=document.getElementById('dimGroup'); if(g) g.style.display=showDims?'':'none'; }
+function clearAllFurniture() {
+  if (!confirm('Remove all furniture from the floor plan? This will move everything back to staging.')) return;
+  initDefaults(); renderFurniture(); renderStagingFurniture(); saveToCache();
+}
+function resetFurniture() { initDefaults(); renderFurniture(); renderStagingFurniture(); saveToCache(); }
+function exportSVG() {
+  const cl=document.getElementById('svgPlan').cloneNode(true);cl.style.transform='';
+  const b=new Blob([new XMLSerializer().serializeToString(cl)],{type:'image/svg+xml'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='wizard-study-floor-plan.svg';a.click();
+}
+
+// ===== INIT =====
+if (!loadFromCache()) initDefaults();
+buildSVG();
+buildStagingSVG();
+attachCanvasEvents();
+requestAnimationFrame(fitToView);
+</script>
+</body>
+</html>
