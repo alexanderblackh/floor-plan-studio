@@ -330,7 +330,8 @@ export function renderElevation() {
     const x = ELEV_PAD + ES(item.projX);
     const w = ES(item.projW);
     const h = ES(item.height);
-    const y = floorY - h; // Fixtures sit on floor at their surface height
+    const elevation = item.fixture.elevation || 0;
+    const y = floorY - ES(elevation) - h; // Position from floor based on elevation
 
     // Opacity based on depth (closer = more opaque)
     const opacity = Math.max(0.3, 1 - item.depth / DEPTH_THRESHOLD * 0.7);
@@ -343,6 +344,11 @@ export function renderElevation() {
     c += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${item.fixture.color}" stroke="${item.fixture.stroke}" stroke-width="1" rx="2" opacity="${opacity}"/>`;
     c += `<text x="${x + w/2}" y="${y + h/2}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(item.fixture.label)}</text>`;
     c += `</g>`;
+
+    // Elevation label if elevated
+    if (elevation > 0) {
+      c += `<text x="${x + w + 3}" y="${floorY - ES(elevation/2)}" font-family="JetBrains Mono" font-size="6" fill="#c5975b88" text-anchor="start">↑${formatDist(elevation)}</text>`;
+    }
 
     // Height label
     c += `<text x="${x + w + 8}" y="${y + h/2}" font-family="JetBrains Mono" font-size="6" fill="#66666699" text-anchor="start">H:${formatDist(item.height)}</text>`;
@@ -553,11 +559,13 @@ function attachElevationFixtureEvents() {
         if (!isDragging) return;
 
         const deltaY = moveEvent.clientY - dragStartY;
-        // Convert screen pixels to inches (inverted because Y goes down but height goes up)
-        const heightChange = -Math.round(deltaY / ELEV_PPI);
-        const newHeight = Math.max(0, initialHeight + heightChange);
+        // Convert screen pixels to inches (inverted because Y goes down but elevation goes up)
+        const elevationChange = -Math.round(deltaY / ELEV_PPI);
+        const newElevation = Math.max(0, initialHeight + elevationChange);
 
-        fixture.surfaceHeight = newHeight;
+        // Set elevation (position from floor), not surfaceHeight (object height)
+        if (!fixture.elevation) fixture.elevation = 0;
+        fixture.elevation = newElevation;
         renderElevation();
         // Also update the main plan view if render function exists
         if (window._renderPlan) window._renderPlan();

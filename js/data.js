@@ -169,7 +169,7 @@ export const DEFAULT_FLOOR_PLAN = {
     { id: "bathroom-sink", type: "sink",
       x: 158, y: 0, w: 24, h: 24,
       color: "#3a3a4a", stroke: "#555", label: "SINK",
-      obstacle: false, surfaceHeight: 36 }
+      obstacle: false, surfaceHeight: 12 }
   ],
 
   dimensions: [
@@ -315,6 +315,7 @@ export const state = {
   anchorTarget: null, // Selected target for anchor creation
   anchorTargetPoint: null, // Which anchor point on target
   anchorHoverTarget: null, // Currently hovered target for anchor creation
+  editingAnchor: null, // { furnitureIdx, anchorIdx, editingPoint: 'source' | 'target' }
   selectedFurniture: new Set(),
   selectedMeasurement: null, // { type: 'locked', idx: number } | { type: 'anchor', furnitureIdx: number, anchorIdx: number }
   selectedDivider: null, // index of selected divider

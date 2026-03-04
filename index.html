@@ -361,8 +361,22 @@
 </div>
 
 <div class="align-toolbar" id="anchorSaveToolbar" style="top: 100px;">
-  <button class="align-btn" onclick="saveAnchor()" id="btnSaveAnchor" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
+  <button class="align-btn" onclick="saveAnchor(false)" id="btnSaveAnchor" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
+    Save Anchor
+  </button>
+  <div class="sep"></div>
+  <button class="align-btn" onclick="saveAnchor(true)" id="btnSaveAdaptive" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
     Save Adaptive
+  </button>
+</div>
+
+<div class="align-toolbar" id="anchorEditToolbar" style="top: 100px;">
+  <button class="align-btn" onclick="saveEditedAnchor()" id="btnSaveEditedAnchor" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
+    Save Changes
+  </button>
+  <div class="sep"></div>
+  <button class="align-btn" onclick="switchAnchorToAdaptive()" id="btnSwitchAdaptive" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
+    Switch to Adaptive
   </button>
 </div>
 

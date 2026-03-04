@@ -322,33 +322,122 @@ function renderAnchorPoints(x, y, w, h, isSource = false, objectType = null) {
 }
 
 /**
- * Update anchor save toolbar visibility and text
+ * Update anchor save toolbar visibility
  */
 export function updateAnchorSaveToolbar() {
   const toolbar = document.getElementById('anchorSaveToolbar');
-  const btn = document.getElementById('btnSaveAnchor');
 
-  if (!toolbar || !btn) return;
+  if (!toolbar) return;
 
-  // Show toolbar only when both source and target are selected
-  if (state.anchorMode && state.anchorSource !== null && state.anchorTarget !== null) {
+  // Show toolbar only when both source and target are selected AND not editing
+  if (state.anchorMode && state.anchorSource !== null && state.anchorTarget !== null && !state.editingAnchor) {
     toolbar.classList.add('visible');
-
-    // Update button text based on whether points are selected
-    if (state.anchorSourcePoint || state.anchorTargetPoint) {
-      btn.textContent = 'Save Anchor';
-    } else {
-      btn.textContent = 'Save Adaptive';
-    }
   } else {
     toolbar.classList.remove('visible');
   }
 }
 
 /**
+ * Update anchor edit toolbar visibility
+ */
+export function updateAnchorEditToolbar() {
+  const toolbar = document.getElementById('anchorEditToolbar');
+
+  if (!toolbar) return;
+
+  // Show toolbar only when editing an anchor
+  if (state.editingAnchor && state.anchorSource !== null && state.anchorTarget !== null) {
+    toolbar.classList.add('visible');
+  } else {
+    toolbar.classList.remove('visible');
+  }
+}
+
+/**
+ * Save changes to edited anchor
+ */
+window.saveEditedAnchor = function() {
+  if (!state.editingAnchor) return;
+
+  const { furnitureIdx, anchorIdx } = state.editingAnchor;
+  const piece = state.placedFurniture[furnitureIdx];
+  const anchor = piece?.anchors?.[anchorIdx];
+
+  if (!anchor) return;
+
+  // Update the anchor with new points
+  if (state.anchorSourcePoint && state.anchorTargetPoint) {
+    anchor.sourcePoint = state.anchorSourcePoint;
+    anchor.targetPoint = state.anchorTargetPoint;
+    anchor.locked = true;
+  } else {
+    alert('Please select both anchor points, or use "Switch to Adaptive"');
+    return;
+  }
+
+  // Clear edit state
+  state.editingAnchor = null;
+  state.anchorSource = null;
+  state.anchorSourcePoint = null;
+  state.anchorTarget = null;
+  state.anchorTargetPoint = null;
+
+  saveToCache();
+  renderAnchors();
+  if (window._renderFurniture) window._renderFurniture();
+};
+
+/**
+ * Switch anchor to adaptive mode
+ */
+window.switchAnchorToAdaptive = function() {
+  if (!state.editingAnchor) return;
+
+  const { furnitureIdx, anchorIdx } = state.editingAnchor;
+  const piece = state.placedFurniture[furnitureIdx];
+  const anchor = piece?.anchors?.[anchorIdx];
+
+  if (!anchor || anchor.type !== 'furniture') return;
+
+  const src = piece;
+  const target = state.placedFurniture.find(p => p.id === anchor.id);
+
+  if (!src || !target) return;
+
+  const srcDef = getFurnitureDef(src.id);
+  const targetDef = getFurnitureDef(target.id);
+
+  if (!srcDef || !targetDef) return;
+
+  const srcW = src.rotated ? srcDef.h : srcDef.w;
+  const srcH = src.rotated ? srcDef.w : srcDef.h;
+  const targetW = target.rotated ? targetDef.h : targetDef.w;
+  const targetH = target.rotated ? targetDef.w : targetDef.h;
+
+  // Find closest points automatically
+  const result = findClosestAnchorPointsBetween(src.x, src.y, srcW, srcH, target.x, target.y, targetW, targetH);
+
+  // Update anchor to adaptive
+  anchor.sourcePoint = result.sourcePoint;
+  anchor.targetPoint = result.targetPoint;
+  anchor.locked = false; // Mark as adaptive
+
+  // Clear edit state
+  state.editingAnchor = null;
+  state.anchorSource = null;
+  state.anchorSourcePoint = null;
+  state.anchorTarget = null;
+  state.anchorTargetPoint = null;
+
+  saveToCache();
+  renderAnchors();
+  if (window._renderFurniture) window._renderFurniture();
+};
+
+/**
  * Save the anchor with selected points or adaptive
  */
-window.saveAnchor = function() {
+window.saveAnchor = function(forceAdaptive = false) {
   if (state.anchorSource === null || state.anchorTarget === null) return;
 
   const src = state.placedFurniture[state.anchorSource];
@@ -375,55 +464,21 @@ window.saveAnchor = function() {
   }
 
   let sourcePoint, targetPoint;
-  const hasManualPoints = state.anchorSourcePoint || state.anchorTargetPoint;
+  const hasManualPoints = state.anchorSourcePoint && state.anchorTargetPoint;
 
-  if (hasManualPoints) {
-    // Use selected points, or find closest if one is missing
-    if (state.anchorSourcePoint && state.anchorTargetPoint) {
-      sourcePoint = state.anchorSourcePoint;
-      targetPoint = state.anchorTargetPoint;
-    } else if (state.anchorSourcePoint && !state.anchorTargetPoint) {
-      // Source selected, find closest target point
-      const srcPts = getAnchorPoints(src.x, src.y, srcW, srcH);
-      const srcPt = srcPts[state.anchorSourcePoint];
-      const tgtPts = getAnchorPoints(target.x, target.y, targetW, targetH);
-
-      let closestName = 'center';
-      let minDist = Infinity;
-      for (const [name, pt] of Object.entries(tgtPts)) {
-        const dist = Math.sqrt((pt.x - srcPt.x)**2 + (pt.y - srcPt.y)**2);
-        if (dist < minDist) {
-          minDist = dist;
-          closestName = name;
-        }
-      }
-
-      sourcePoint = state.anchorSourcePoint;
-      targetPoint = closestName;
-    } else {
-      // Target selected, find closest source point
-      const tgtPts = getAnchorPoints(target.x, target.y, targetW, targetH);
-      const tgtPt = tgtPts[state.anchorTargetPoint];
-      const srcPts = getAnchorPoints(src.x, src.y, srcW, srcH);
-
-      let closestName = 'center';
-      let minDist = Infinity;
-      for (const [name, pt] of Object.entries(srcPts)) {
-        const dist = Math.sqrt((pt.x - tgtPt.x)**2 + (pt.y - tgtPt.y)**2);
-        if (dist < minDist) {
-          minDist = dist;
-          closestName = name;
-        }
-      }
-
-      sourcePoint = closestName;
-      targetPoint = state.anchorTargetPoint;
-    }
-  } else {
+  if (forceAdaptive || !hasManualPoints) {
     // Adaptive mode - find closest points automatically
     const result = findClosestAnchorPointsBetween(src.x, src.y, srcW, srcH, target.x, target.y, targetW, targetH);
     sourcePoint = result.sourcePoint;
     targetPoint = result.targetPoint;
+  } else {
+    // Both points must be selected
+    if (!state.anchorSourcePoint || !state.anchorTargetPoint) {
+      alert('Please select anchor points on both objects, or click "Save Adaptive"');
+      return;
+    }
+    sourcePoint = state.anchorSourcePoint;
+    targetPoint = state.anchorTargetPoint;
   }
 
   src.anchors.push({
@@ -431,7 +486,7 @@ window.saveAnchor = function() {
     id: targetId,
     sourcePoint,
     targetPoint,
-    locked: hasManualPoints  // Mark as manually locked if user selected any points
+    locked: hasManualPoints  // Mark as manually locked if user selected both points
   });
 
   // Reset anchor mode state
@@ -569,6 +624,7 @@ export function renderAnchors() {
   g.innerHTML = c;
   attachAnchorEvents();
   updateAnchorSaveToolbar();
+  updateAnchorEditToolbar();
 }
 
 function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, targetIdx, anchorIdx, isSelected) {
@@ -623,15 +679,15 @@ function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, t
 
   c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${linkColor}" stroke-width="${lineWidth}" stroke-dasharray="6 4"/>`;
 
-  // Larger, more visible endpoint markers with labels
+  // Larger, more visible endpoint markers with labels - make clickable for editing
   const endpointR = isSelected ? 7 : 5;
   const endpointStroke = isSelected ? 2.5 : 1.5;
-  c += `<circle cx="${sx1}" cy="${sy1}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
-  c += `<circle cx="${sx2}" cy="${sy2}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
+  c += `<circle class="anchor-endpoint" data-furniture-idx="${furnitureIdx}" data-anchor-idx="${anchorIdx}" data-endpoint="source" cx="${sx1}" cy="${sy1}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}" style="cursor:pointer"/>`;
+  c += `<circle class="anchor-endpoint" data-furniture-idx="${furnitureIdx}" data-anchor-idx="${anchorIdx}" data-endpoint="target" cx="${sx2}" cy="${sy2}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}" style="cursor:pointer"/>`;
 
   // Add "S" and "T" labels for Source and Target
-  c += `<text x="${sx1}" y="${sy1 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">S</text>`;
-  c += `<text x="${sx2}" y="${sy2 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">T</text>`;
+  c += `<text x="${sx1}" y="${sy1 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke" pointer-events="none">S</text>`;
+  c += `<text x="${sx2}" y="${sy2 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke" pointer-events="none">T</text>`;
 
   const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
   const label = formatDist(gap);
@@ -695,15 +751,15 @@ function renderFixtureAnchor(p, d, pw, ph, fixtureTarget, furnitureIdx, anchorId
 
   c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${linkColor}" stroke-width="${lineWidth}" stroke-dasharray="6 4"/>`;
 
-  // Larger, more visible endpoint markers with labels
+  // Larger, more visible endpoint markers with labels - make clickable for editing
   const endpointR = isSelected ? 7 : 5;
   const endpointStroke = isSelected ? 2.5 : 1.5;
-  c += `<circle cx="${sx1}" cy="${sy1}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
-  c += `<circle cx="${sx2}" cy="${sy2}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
+  c += `<circle class="anchor-endpoint" data-furniture-idx="${furnitureIdx}" data-anchor-idx="${anchorIdx}" data-endpoint="source" cx="${sx1}" cy="${sy1}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}" style="cursor:pointer"/>`;
+  c += `<circle class="anchor-endpoint" data-furniture-idx="${furnitureIdx}" data-anchor-idx="${anchorIdx}" data-endpoint="target" cx="${sx2}" cy="${sy2}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}" style="cursor:pointer"/>`;
 
   // Add "S" and "T" labels for Source and Target
-  c += `<text x="${sx1}" y="${sy1 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">S</text>`;
-  c += `<text x="${sx2}" y="${sy2 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">T</text>`;
+  c += `<text x="${sx1}" y="${sy1 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke" pointer-events="none">S</text>`;
+  c += `<text x="${sx2}" y="${sy2 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke" pointer-events="none">T</text>`;
 
   const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
   const label = formatDist(gap);
@@ -776,6 +832,53 @@ function renderWallAnchor(p, d, pw, ph, anchor, furnitureIdx, anchorIdx, isSelec
  * Attach event handlers to anchor links
  */
 function attachAnchorEvents() {
+  // Handle anchor endpoint clicks for editing
+  document.querySelectorAll('.anchor-endpoint').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const furnitureIdx = parseInt(el.dataset.furnitureIdx);
+      const anchorIdx = parseInt(el.dataset.anchorIdx);
+      const endpoint = el.dataset.endpoint; // 'source' or 'target'
+
+      // Enter edit mode
+      state.editingAnchor = { furnitureIdx, anchorIdx, editingPoint: endpoint };
+
+      const piece = state.placedFurniture[furnitureIdx];
+      const anchor = piece?.anchors?.[anchorIdx];
+
+      if (!anchor) return;
+
+      // Set up edit state based on which endpoint was clicked
+      if (endpoint === 'source') {
+        state.anchorSource = furnitureIdx;
+        state.anchorSourcePoint = anchor.sourcePoint || null;
+
+        // Find target
+        if (anchor.type === 'furniture') {
+          const targetPiece = state.placedFurniture.find(p => p.id === anchor.id);
+          if (targetPiece) {
+            state.anchorTarget = state.placedFurniture.indexOf(targetPiece);
+            state.anchorTargetPoint = anchor.targetPoint || null;
+          }
+        }
+      } else {
+        // Editing target point
+        if (anchor.type === 'furniture') {
+          const targetPiece = state.placedFurniture.find(p => p.id === anchor.id);
+          if (targetPiece) {
+            state.anchorSource = furnitureIdx;
+            state.anchorSourcePoint = anchor.sourcePoint || null;
+            state.anchorTarget = state.placedFurniture.indexOf(targetPiece);
+            state.anchorTargetPoint = anchor.targetPoint || null;
+          }
+        }
+      }
+
+      renderAnchors();
+      updateAnchorEditToolbar();
+    });
+  });
+
   // Handle anchor point clicks during anchor creation
   document.querySelectorAll('.anchor-point-clickable').forEach(el => {
     el.addEventListener('click', e => {
@@ -936,8 +1039,10 @@ export function toggleAnchorMode() {
   state.anchorSourcePoint = null;
   state.anchorTarget = null;
   state.anchorTargetPoint = null;
+  state.editingAnchor = null;
   document.getElementById('btnAnchor')?.classList.toggle('active', state.anchorMode);
   updateAnchorSaveToolbar();
+  updateAnchorEditToolbar();
   renderAnchors();
 }
 
