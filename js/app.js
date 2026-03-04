@@ -4,7 +4,7 @@
  * This is the entry point that wires everything together.
  */
 
-import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache, getFixtures } from './data.js';
+import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache } from './data.js';
 import { buildSVG, buildStagingSVG } from './render.js';
 import { renderFurniture, renderStagingFurniture, handleDragMove, handleDragEnd } from './furniture.js';
 import { clearSelection, updateAlignToolbar } from './selection.js';

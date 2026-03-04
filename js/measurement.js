@@ -6,7 +6,7 @@
  * Anchors: link two pieces to show persistent distance between them
  */
 
-import { S, PAD, PPI, state, getFurnitureDef, getWalls } from './data.js';
+import { S, PAD, PPI, state, getFurnitureDef } from './data.js';
 import { wx, wy } from './render.js';
 import { getRoomBounds, findRoomAt } from './collision.js';
 import { formatDist } from './units.js';

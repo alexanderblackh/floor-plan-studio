@@ -10,7 +10,7 @@
  * (within a configurable depth threshold) onto the wall plane.
  */
 
-import { S, PPI, state, getFurnitureDef, getElevationWalls, getWalls } from './data.js';
+import { state, getFurnitureDef, getElevationWalls, getWalls } from './data.js';
 import { formatDist } from './units.js';
 
 const ELEV_PPI = 1.5; // Slightly smaller scale for elevation
@@ -287,6 +287,5 @@ export function buildElevationSelector() {
   sel.addEventListener('change', () => selectElevationWall(sel.value));
 }
 
-// Expose for inline handlers
-window.toggleElevation = toggleElevation;
+// Expose for inline handlers (toggleElevation is exposed in app.js)
 window.selectElevationWall = selectElevationWall;

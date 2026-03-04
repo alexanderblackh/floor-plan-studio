@@ -243,7 +243,6 @@ export function buildSVG() {
   c += `<g id="furnitureGroup"></g>`;
   c += `<g id="measurementGroup"></g>`;
   c += `<g id="anchorGroup"></g>`;
-  c += `<g id="selectionGroup"></g>`;
 
   svg.innerHTML = c;
 }
