@@ -325,6 +325,7 @@ export function renderElevation() {
 
   // Render fixtures near this wall
   const fixtures = getFixturesNearWall(wallDef);
+  const allFixtures = getFixtures();
   for (const item of fixtures) {
     const x = ELEV_PAD + ES(item.projX);
     const w = ES(item.projW);
@@ -334,9 +335,14 @@ export function renderElevation() {
     // Opacity based on depth (closer = more opaque)
     const opacity = Math.max(0.3, 1 - item.depth / DEPTH_THRESHOLD * 0.7);
 
-    // Render fixture (not interactive)
+    // Find the fixture index in the fixtures array
+    const fixtureIdx = allFixtures.indexOf(item.fixture);
+
+    // Make fixture interactive with data-fixture-idx
+    c += `<g class="elev-fixture-piece" data-fixture-idx="${fixtureIdx}" style="cursor:pointer">`;
     c += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${item.fixture.color}" stroke="${item.fixture.stroke}" stroke-width="1" rx="2" opacity="${opacity}"/>`;
     c += `<text x="${x + w/2}" y="${y + h/2}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(item.fixture.label)}</text>`;
+    c += `</g>`;
 
     // Height label
     c += `<text x="${x + w + 8}" y="${y + h/2}" font-family="JetBrains Mono" font-size="6" fill="#66666699" text-anchor="start">H:${formatDist(item.height)}</text>`;
@@ -344,8 +350,9 @@ export function renderElevation() {
 
   svg.innerHTML = c;
 
-  // Attach event handlers to furniture
+  // Attach event handlers to furniture and fixtures
   attachElevationFurnitureEvents();
+  attachElevationFixtureEvents();
 }
 
 /**
@@ -512,6 +519,67 @@ function attachElevationFurnitureEvents() {
       renderElevation();
       if (window._renderFurniture) window._renderFurniture();
       saveToCache();
+    });
+  });
+}
+
+/**
+ * Attach event handlers to fixture pieces in elevation view
+ */
+function attachElevationFixtureEvents() {
+  const pieces = document.querySelectorAll('.elev-fixture-piece');
+
+  pieces.forEach(el => {
+    let isDragging = false;
+    let dragStartY = 0;
+    let initialHeight = 0;
+
+    el.addEventListener('mousedown', e => {
+      // Only left click
+      if (e.button !== 0) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      const idx = parseInt(el.dataset.fixtureIdx);
+      const fixture = state.floorPlan.fixtures[idx];
+      if (!fixture) return;
+
+      isDragging = true;
+      dragStartY = e.clientY;
+      initialHeight = fixture.surfaceHeight || 36;
+
+      const handleMouseMove = (moveEvent) => {
+        if (!isDragging) return;
+
+        const deltaY = moveEvent.clientY - dragStartY;
+        // Convert screen pixels to inches (inverted because Y goes down but height goes up)
+        const heightChange = -Math.round(deltaY / ELEV_PPI);
+        const newHeight = Math.max(0, initialHeight + heightChange);
+
+        fixture.surfaceHeight = newHeight;
+        renderElevation();
+        // Also update the main plan view if render function exists
+        if (window._renderPlan) window._renderPlan();
+      };
+
+      const handleMouseUp = () => {
+        if (isDragging) {
+          isDragging = false;
+          pushHistory();
+          saveToCache();
+        }
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
+
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      // Fixtures don't have selection state like furniture, but we could add it later
     });
   });
 }
