@@ -10,9 +10,10 @@
  * (within a configurable depth threshold) onto the wall plane.
  */
 
-import { state, getFurnitureDef, getElevationWalls, getWalls } from './data.js';
+import { state, getFurnitureDef, getElevationWalls, getWalls, saveToCache } from './data.js';
 import { formatDist } from './units.js';
 import { escapeXml } from './render.js';
+import { pushHistory } from './history.js';
 
 const ELEV_PPI = 1.5; // Slightly smaller scale for elevation
 const ES = (i) => i * ELEV_PPI;
@@ -225,8 +226,14 @@ export function renderElevation() {
     // Opacity based on depth (closer = more opaque)
     const opacity = Math.max(0.3, 1 - item.depth / DEPTH_THRESHOLD * 0.7);
 
+    // Find the furniture index in placedFurniture
+    const furnitureIdx = state.placedFurniture.indexOf(item.piece);
+
+    // Make furniture interactive with data-idx
+    c += `<g class="elev-furniture-piece" data-idx="${furnitureIdx}" style="cursor:pointer">`;
     c += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${item.def.color}" stroke="${item.def.stroke}" stroke-width="1" rx="2" opacity="${opacity}"/>`;
     c += `<text x="${x + w/2}" y="${y + h/2}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(item.def.label)}</text>`;
+    c += `</g>`;
 
     // Height dimension
     if (item.elevation > 0) {
@@ -240,6 +247,9 @@ export function renderElevation() {
   }
 
   svg.innerHTML = c;
+
+  // Attach event handlers to furniture
+  attachElevationFurnitureEvents();
 }
 
 /**
@@ -292,6 +302,51 @@ export function buildElevationSelector() {
     sel.addEventListener('change', () => selectElevationWall(sel.value));
     elevSelectorBound = true;
   }
+}
+
+/**
+ * Attach event handlers to furniture pieces in elevation view
+ */
+function attachElevationFurnitureEvents() {
+  const pieces = document.querySelectorAll('.elev-furniture-piece');
+
+  pieces.forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx = parseInt(el.dataset.idx);
+
+      // Toggle selection
+      if (e.shiftKey) {
+        if (state.selectedFurniture.has(idx)) {
+          state.selectedFurniture.delete(idx);
+        } else {
+          state.selectedFurniture.add(idx);
+        }
+      } else {
+        state.selectedFurniture.clear();
+        state.selectedFurniture.add(idx);
+      }
+
+      renderElevation();
+      // Also update the main plan view
+      if (window._renderFurniture) window._renderFurniture();
+      if (window._updateAlignToolbar) window._updateAlignToolbar();
+    });
+
+    el.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      e.preventDefault();
+      const idx = parseInt(el.dataset.idx);
+      pushHistory();
+      state.placedFurniture[idx].rotated = !state.placedFurniture[idx].rotated;
+      renderElevation();
+      if (window._renderFurniture) window._renderFurniture();
+      saveToCache();
+    });
+
+    // TODO: Implement drag in elevation view
+    // This is more complex as it requires converting elevation coordinates back to floor plan coordinates
+  });
 }
 
 // Expose for inline handlers (toggleElevation is exposed in app.js)

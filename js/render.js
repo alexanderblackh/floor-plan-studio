@@ -22,26 +22,31 @@ export function escapeXml(str) {
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+/** Get CSS variable color value */
+function getCSSVar(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
 // ===== PRIMITIVE DRAWING FUNCTIONS =====
 function wallLine(x1, y1, x2, y2) {
-  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#555" stroke-width="5" stroke-linecap="round"/>`;
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="${getCSSVar('--wall-color') || '#555'}" stroke-width="5" stroke-linecap="round"/>`;
 }
 
 function thinWall(x1, y1, x2, y2) {
-  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#444" stroke-width="3" stroke-linecap="round"/>`;
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="${getCSSVar('--wall-thin') || '#444'}" stroke-width="3" stroke-linecap="round"/>`;
 }
 
 function windowMark(x1, y1, x2, y2) {
-  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#4a9eff22" stroke-width="10"/>` +
-    `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#4a9eff" stroke-width="3"/>`;
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="${getCSSVar('--window-bg') || '#4a9eff22'}" stroke-width="10"/>` +
+    `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="${getCSSVar('--window-color') || '#4a9eff'}" stroke-width="3"/>`;
 }
 
 function doorOpen(x1, y1, x2, y2) {
-  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#c5975b" stroke-width="2.5"/>`;
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="${getCSSVar('--door-color') || '#c5975b'}" stroke-width="2.5"/>`;
 }
 
 function slidingDoor(x1, y1, x2, y2) {
-  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#c5975b" stroke-width="2" stroke-dasharray="6 3"/>`;
+  return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="${getCSSVar('--door-color') || '#c5975b'}" stroke-width="2" stroke-dasharray="6 3"/>`;
 }
 
 function doorArc(cx, cy, r, startAngle, endAngle) {
@@ -49,27 +54,36 @@ function doorArc(cx, cy, r, startAngle, endAngle) {
   const x1 = cx + r * Math.cos(sa), y1 = cy + r * Math.sin(sa);
   const x2 = cx + r * Math.cos(ea), y2 = cy + r * Math.sin(ea);
   const sweep = endAngle > startAngle ? 1 : 0;
-  return `<path d="M ${wx(x1)} ${wy(y1)} A ${S(r)} ${S(r)} 0 0 ${sweep} ${wx(x2)} ${wy(y2)}" fill="none" stroke="#c5975b33" stroke-width="1" stroke-dasharray="3 2"/>`;
+  return `<path d="M ${wx(x1)} ${wy(y1)} A ${S(r)} ${S(r)} 0 0 ${sweep} ${wx(x2)} ${wy(y2)}" fill="none" stroke="${getCSSVar('--door-arc') || '#c5975b33'}" stroke-width="1" stroke-dasharray="3 2"/>`;
 }
 
-function labelText(x, y, text, size = 8, color = '#444', rot = 0) {
+function labelText(x, y, text, size = 8, color = null, rot = 0) {
+  const finalColor = color || getCSSVar('--text-dimmer') || '#444';
   const tr = rot ? `transform="rotate(${rot} ${wx(x)} ${wy(y)})"` : '';
-  return `<text x="${wx(x)}" y="${wy(y)}" font-family="JetBrains Mono" font-size="${size}" fill="${color}" text-anchor="middle" ${tr}>${escapeXml(text)}</text>`;
+  return `<text x="${wx(x)}" y="${wy(y)}" font-family="JetBrains Mono" font-size="${size}" fill="${finalColor}" text-anchor="middle" ${tr}>${escapeXml(text)}</text>`;
 }
 
 // ===== ROOM RENDERING =====
 function renderRooms() {
   let c = '';
+  const defaultRoomFill = getCSSVar('--room-fill-default') || '#18182288';
+
   for (const room of getRooms()) {
     const pts = room.vertices.map(([x,y]) => `${wx(x)},${wy(y)}`).join(' ');
-    c += `<polygon points="${pts}" fill="${room.color}" stroke="none"/>`;
+    // Use CSS variable as default, allow room to override
+    const roomColor = room.color || defaultRoomFill;
+    // In light mode, replace dark colors with CSS variable
+    const isLightMode = document.body.classList.contains('light-mode');
+    const finalColor = isLightMode ? defaultRoomFill : roomColor;
+
+    c += `<polygon points="${pts}" fill="${finalColor}" stroke="none"/>`;
 
     // Room label
     const cx = room.vertices.reduce((s, v) => s + v[0], 0) / room.vertices.length;
     const cy = room.vertices.reduce((s, v) => s + v[1], 0) / room.vertices.length;
     const lx = cx + (room.labelOffset?.[0] || 0);
     const ly = cy + (room.labelOffset?.[1] || 0);
-    c += `<text x="${wx(lx)}" y="${wy(ly)}" font-family="Cormorant Garamond" font-size="${room.labelSize || 14}" fill="#33335544" text-anchor="middle">${escapeXml(room.name)}</text>`;
+    c += `<text x="${wx(lx)}" y="${wy(ly)}" font-family="Cormorant Garamond" font-size="${room.labelSize || 14}" fill="${getCSSVar('--label-color') || '#33335544'}" text-anchor="middle">${escapeXml(room.name)}</text>`;
   }
   return c;
 }
@@ -139,11 +153,19 @@ function renderWalls() {
 // ===== FIXTURE RENDERING =====
 function renderFixtures() {
   let c = '';
+  const defaultFixtureFill = getCSSVar('--fixture-fill') || '#4a4a3a';
+  const defaultFixtureStroke = getCSSVar('--fixture-stroke') || '#5a5a4a';
+  const fixtureTextColor = getCSSVar('--text-tertiary') || '#888';
+  const isLightMode = document.body.classList.contains('light-mode');
+
   for (const fix of getFixtures()) {
-    // Main rectangle
+    // Main rectangle - use CSS variables in light mode
     const dash = fix.dashed ? 'stroke-dasharray="4 2"' : '';
-    c += `<rect x="${wx(fix.x)}" y="${wy(fix.y)}" width="${S(fix.w)}" height="${S(fix.h)}" fill="${fix.color}" stroke="${fix.stroke || '#555'}" stroke-width="1" ${dash} rx="1"/>`;
-    c += `<text x="${wx(fix.x + fix.w/2)}" y="${wy(fix.y + fix.h/2)}" font-family="JetBrains Mono" font-size="7" fill="${fix.dashed ? '#3a3a4a' : '#888'}" text-anchor="middle" dominant-baseline="central">${escapeXml(fix.label)}</text>`;
+    const fillColor = isLightMode ? defaultFixtureFill : fix.color;
+    const strokeColor = isLightMode ? defaultFixtureStroke : (fix.stroke || '#555');
+
+    c += `<rect x="${wx(fix.x)}" y="${wy(fix.y)}" width="${S(fix.w)}" height="${S(fix.h)}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="1" ${dash} rx="1"/>`;
+    c += `<text x="${wx(fix.x + fix.w/2)}" y="${wy(fix.y + fix.h/2)}" font-family="JetBrains Mono" font-size="7" fill="${fixtureTextColor}" text-anchor="middle" dominant-baseline="central">${escapeXml(fix.label)}</text>`;
 
     // Closet doors
     if (fix.doors) {
@@ -188,10 +210,11 @@ function renderDimensions() {
 // ===== GRID RENDERING =====
 function renderGrid(svgW, svgH) {
   let c = '';
+  const gridColor = getCSSVar('--grid-line') || '#ffffff06';
   for (let x = PAD; x < svgW; x += S(12))
-    c += `<line x1="${x}" y1="${PAD}" x2="${x}" y2="${svgH-PAD}" stroke="#ffffff06" stroke-width="0.5"/>`;
+    c += `<line x1="${x}" y1="${PAD}" x2="${x}" y2="${svgH-PAD}" stroke="${gridColor}" stroke-width="0.5"/>`;
   for (let y = PAD; y < svgH; y += S(12))
-    c += `<line x1="${PAD}" y1="${y}" x2="${svgW-PAD}" y2="${y}" stroke="#ffffff06" stroke-width="0.5"/>`;
+    c += `<line x1="${PAD}" y1="${y}" x2="${svgW-PAD}" y2="${y}" stroke="${gridColor}" stroke-width="0.5"/>`;
   return c;
 }
 
@@ -204,9 +227,10 @@ function renderScaleBar() {
   const sbY = maxY + 28;
 
   let c = '';
-  c += `<line x1="${wx(0)}" y1="${wy(sbY)}" x2="${wx(48)}" y2="${wy(sbY)}" stroke="#444" stroke-width="1"/>`;
-  c += `<line x1="${wx(0)}" y1="${wy(sbY)-3}" x2="${wx(0)}" y2="${wy(sbY)+3}" stroke="#444"/>`;
-  c += `<line x1="${wx(48)}" y1="${wy(sbY)-3}" x2="${wx(48)}" y2="${wy(sbY)+3}" stroke="#444"/>`;
+  const scaleBarColor = getCSSVar('--text-dimmer') || '#444';
+  c += `<line x1="${wx(0)}" y1="${wy(sbY)}" x2="${wx(48)}" y2="${wy(sbY)}" stroke="${scaleBarColor}" stroke-width="1"/>`;
+  c += `<line x1="${wx(0)}" y1="${wy(sbY)-3}" x2="${wx(0)}" y2="${wy(sbY)+3}" stroke="${scaleBarColor}"/>`;
+  c += `<line x1="${wx(48)}" y1="${wy(sbY)-3}" x2="${wx(48)}" y2="${wy(sbY)+3}" stroke="${scaleBarColor}"/>`;
   c += labelText(24, sbY - 4, formatDist(48), 7);
   return c;
 }

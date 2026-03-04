@@ -14,6 +14,7 @@ import { S, PPI, PAD, state, getFurnitureDef, getFurnitureDefs, saveToCache } fr
 import { checkCollision, autoStack } from './collision.js';
 import { formatDist } from './units.js';
 import { escapeXml } from './render.js';
+import { pushHistory } from './history.js';
 
 // ===== RENDER PLACED FURNITURE =====
 export function renderFurniture() {
@@ -36,6 +37,9 @@ export function renderFurniture() {
     const isSelected = state.selectedFurniture.has(idx);
     const selStroke = isSelected ? `<rect x="${PAD+S(p.x)-2}" y="${PAD+S(p.y)-2}" width="${w+4}" height="${h+4}" fill="none" stroke="#c5975b" stroke-width="2" stroke-dasharray="4 2" rx="3"/>` : '';
 
+    // Use custom color if set, otherwise use default
+    const fillColor = p.customColor || d.color;
+
     const displayW = p.rotated ? d.h : d.w;
     const displayH = p.rotated ? d.w : d.h;
     const dimText = `${formatDist(displayW)} × ${formatDist(displayH)}`;
@@ -53,7 +57,7 @@ export function renderFurniture() {
 
     html += `${shadow}<g class="furniture-piece" data-idx="${idx}" style="cursor:grab">
       ${selStroke}
-      <rect x="${PAD+S(p.x)}" y="${PAD+S(p.y)}" width="${w}" height="${h}" fill="${d.color}" stroke="${strokeColor}" stroke-width="${hasCollision?2:1}" ${extra} rx="2" opacity="0.85"/>
+      <rect x="${PAD+S(p.x)}" y="${PAD+S(p.y)}" width="${w}" height="${h}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${hasCollision?2:1}" ${extra} rx="2" opacity="0.85"/>
       ${hasCollision ? `<text x="${PAD+S(p.x)+w-6}" y="${PAD+S(p.y)+10}" font-family="JetBrains Mono" font-size="8" fill="#ff4444">⚠</text>` : ''}
       <text x="${PAD+S(p.x)+w/2}" y="${PAD+S(p.y)+h/2-4}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(d.label)}</text>
       <text x="${PAD+S(p.x)+w/2}" y="${PAD+S(p.y)+h/2+6}" font-family="JetBrains Mono" font-size="6" fill="#ffffff88" text-anchor="middle" dominant-baseline="central" pointer-events="none">${dimText}</text>
@@ -118,8 +122,11 @@ export function renderStagingFurniture() {
       const sx = (CANVAS_WIDTH - w) / 2;
       const sy = offsetY;
 
+      // Use custom color if set
+      const fillColor = piece.customColor || def.color;
+
       c += `<g class="furniture-piece-staging" data-idx="${actualIdx}">
-        <rect x="${sx}" y="${sy}" width="${w}" height="${h}" fill="${def.color}" stroke="${def.stroke}" stroke-width="1.5" rx="3" opacity="0.85"/>
+        <rect x="${sx}" y="${sy}" width="${w}" height="${h}" fill="${fillColor}" stroke="${def.stroke}" stroke-width="1.5" rx="3" opacity="0.85"/>
         <text x="${sx+w/2}" y="${sy+h/2-4}" font-family="JetBrains Mono" font-size="9" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(def.label)}</text>
         <text x="${sx+w/2}" y="${sy+h/2+6}" font-family="JetBrains Mono" font-size="7" fill="#ffffff88" text-anchor="middle" pointer-events="none">${formatDist(def.w)} × ${formatDist(def.h)}</text>
       </g>`;
@@ -149,8 +156,10 @@ export function returnToStaging(idx) {
 
 // ===== EVENT HANDLERS =====
 function attachFurnitureEvents() {
+  console.log('Attaching furniture events to', document.querySelectorAll('.furniture-piece').length, 'pieces');
   document.querySelectorAll('.furniture-piece').forEach(el => {
     el.addEventListener('mousedown', e => {
+      console.log('Mousedown on furniture', el.dataset.idx);
       if (e.button === 2) return;
       e.stopPropagation();
 
@@ -168,11 +177,14 @@ function attachFurnitureEvents() {
         if (!state.measureStart) {
           state.measureStart = { x: Math.round(snapPoint.x), y: Math.round(snapPoint.y), edge: snapPoint.edge };
           state.measureEnd = null;
+          state.measureShiftKey = e.shiftKey;
         } else if (!state.measureEnd) {
           state.measureEnd = { x: Math.round(snapPoint.x), y: Math.round(snapPoint.y), edge: snapPoint.edge };
+          state.measureShiftKey = e.shiftKey;
         } else {
           state.measureStart = { x: Math.round(snapPoint.x), y: Math.round(snapPoint.y), edge: snapPoint.edge };
           state.measureEnd = null;
+          state.measureShiftKey = e.shiftKey;
         }
 
         // Trigger measurement render via callback
@@ -212,8 +224,17 @@ function attachFurnitureEvents() {
         return;
       }
 
-      // Regular drag
-      state.selectedFurniture.clear();
+      // Regular drag - if clicking an already selected item, drag all selected items
+      // Otherwise, clear selection and select just this item
+      const wasAlreadySelected = state.selectedFurniture.has(idx);
+      if (!wasAlreadySelected) {
+        state.selectedFurniture.clear();
+        state.selectedFurniture.add(idx);
+      }
+
+      // Push to history before starting drag
+      pushHistory();
+
       state.dragging = idx;
       const r = document.getElementById('canvasContainer').getBoundingClientRect();
       const mx = (e.clientX - r.left - state.panX) / state.zoom;
@@ -221,21 +242,43 @@ function attachFurnitureEvents() {
       const p = state.placedFurniture[idx];
       state.dragOffset.x = (mx - PAD) / PPI - p.x;
       state.dragOffset.y = (my - PAD) / PPI - p.y;
+
+      // Store initial positions of all selected items for group dragging
+      state.dragInitialPositions = new Map();
+      for (const selectedIdx of state.selectedFurniture) {
+        const piece = state.placedFurniture[selectedIdx];
+        if (piece && piece.x >= 0 && piece.y >= 0) {
+          state.dragInitialPositions.set(selectedIdx, { x: piece.x, y: piece.y });
+        }
+      }
+
+      // Update toolbar visibility
+      if (window._updateAlignToolbar) window._updateAlignToolbar();
+      renderFurniture();
     });
 
     el.addEventListener('dblclick', e => {
       e.stopPropagation();
-      if (state.measureMode) return;
+      e.preventDefault();
       const i = parseInt(el.dataset.idx);
+      console.log('Double-click detected on furniture:', i, 'measureMode:', state.measureMode);
+      if (state.measureMode) {
+        console.log('Rotation blocked by measure mode');
+        return;
+      }
+      console.log('Rotating furniture:', i, 'from', state.placedFurniture[i].rotated, 'to', !state.placedFurniture[i].rotated);
+      pushHistory();
       state.placedFurniture[i].rotated = !state.placedFurniture[i].rotated;
       renderFurniture();
       renderStagingFurniture();
       saveToCache();
+      console.log('Rotation complete, new state:', state.placedFurniture[i].rotated);
     });
 
     el.addEventListener('contextmenu', e => {
       e.preventDefault();
       e.stopPropagation();
+      pushHistory();
       returnToStaging(parseInt(el.dataset.idx));
     });
   });
@@ -246,6 +289,7 @@ function attachStagingFurnitureEvents() {
     el.addEventListener('click', e => {
       if (e.button === 2) return;
       e.stopPropagation();
+      pushHistory();
       const idx = parseInt(el.dataset.idx);
       const p = state.placedFurniture[idx];
       p.x = 40;
@@ -259,11 +303,16 @@ function attachStagingFurnitureEvents() {
 
     el.addEventListener('dblclick', e => {
       e.stopPropagation();
+      e.preventDefault();
       const i = parseInt(el.dataset.idx);
+      console.log('Double-click on staging furniture:', i);
+      console.log('Rotating staging furniture:', i, 'from', state.placedFurniture[i].rotated, 'to', !state.placedFurniture[i].rotated);
+      pushHistory();
       state.placedFurniture[i].rotated = !state.placedFurniture[i].rotated;
       renderFurniture();
       renderStagingFurniture();
       saveToCache();
+      console.log('Staging rotation complete, new state:', state.placedFurniture[i].rotated);
     });
   });
 }
@@ -301,16 +350,41 @@ export function handleDragMove(e) {
   const r = ctr.getBoundingClientRect();
   const ix = ((e.clientX - r.left - state.panX) / state.zoom - PAD) / PPI - state.dragOffset.x;
   const iy = ((e.clientY - r.top - state.panY) / state.zoom - PAD) / PPI - state.dragOffset.y;
-  state.placedFurniture[state.dragging].x = Math.round(ix);
-  state.placedFurniture[state.dragging].y = Math.round(iy);
+
+  // Calculate the delta from the dragged item's initial position
+  const draggingInitial = state.dragInitialPositions?.get(state.dragging);
+  if (draggingInitial && state.selectedFurniture.size > 1) {
+    const dx = Math.round(ix) - draggingInitial.x;
+    const dy = Math.round(iy) - draggingInitial.y;
+
+    // Move all selected items by the same delta
+    for (const selectedIdx of state.selectedFurniture) {
+      const initial = state.dragInitialPositions.get(selectedIdx);
+      if (initial) {
+        state.placedFurniture[selectedIdx].x = initial.x + dx;
+        state.placedFurniture[selectedIdx].y = initial.y + dy;
+      }
+    }
+  } else {
+    // Single item drag
+    state.placedFurniture[state.dragging].x = Math.round(ix);
+    state.placedFurniture[state.dragging].y = Math.round(iy);
+  }
+
   renderFurniture();
   renderStagingFurniture();
+
+  // Update dimension links and Show All measurements in real-time during drag
+  if (window._renderAnchors) window._renderAnchors();
+  if (window._renderMeasurement) window._renderMeasurement();
 
   const d = getFurnitureDef(state.placedFurniture[state.dragging].id);
   const p = state.placedFurniture[state.dragging];
   const info = document.querySelector('#selectedInfo span');
   if (info && d) {
-    info.textContent = `${d.name} @ ${formatDist(p.x)}, ${formatDist(p.y)}${p.elevation ? ` ↑${formatDist(p.elevation)}` : ''}`;
+    const itemCount = state.selectedFurniture.size;
+    const countText = itemCount > 1 ? ` (${itemCount} items)` : '';
+    info.textContent = `${d.name}${countText} @ ${formatDist(p.x)}, ${formatDist(p.y)}${p.elevation ? ` ↑${formatDist(p.elevation)}` : ''}`;
   }
   return true;
 }
@@ -321,16 +395,23 @@ export function handleDragMove(e) {
 export function handleDragEnd() {
   if (state.dragging === null) return false;
 
-  // Auto-stack check
-  const piece = state.placedFurniture[state.dragging];
-  if (piece.x >= 0 && piece.y >= 0) {
-    autoStack(piece, state.dragging);
+  // Auto-stack check for all selected items
+  for (const selectedIdx of state.selectedFurniture) {
+    const piece = state.placedFurniture[selectedIdx];
+    if (piece && piece.x >= 0 && piece.y >= 0) {
+      autoStack(piece, selectedIdx);
+    }
   }
 
   state.dragging = null;
+  state.dragInitialPositions = null;
   const info = document.querySelector('#selectedInfo span');
   if (info) info.textContent = 'none';
   saveToCache();
   renderFurniture(); // Re-render to show elevation after auto-stack
+
+  // Update dimension links after drag ends
+  if (window._renderAnchors) window._renderAnchors();
+
   return true;
 }

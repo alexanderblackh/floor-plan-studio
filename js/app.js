@@ -8,10 +8,13 @@ import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache, getFurniture
 import { buildSVG, buildStagingSVG } from './render.js';
 import { renderFurniture, renderStagingFurniture, handleDragMove, handleDragEnd } from './furniture.js';
 import { clearSelection, updateAlignToolbar } from './selection.js';
-import { renderMeasurement, renderAnchors, toggleMeasure, toggleShowAll, toggleAnchorMode } from './measurement.js';
+import { renderMeasurement, renderAnchors, toggleMeasure, toggleShowAll, toggleAnchorMode, lockCurrentMeasurement } from './measurement.js';
 import { renderElevation, toggleElevation, buildElevationSelector } from './elevation.js';
-import { cycleUnit, getUnit, formatDist } from './units.js';
+import { cycleUnit, getUnit, formatDist, setUnit } from './units.js';
 import { toggleFixtureEditMode, handleFixtureClick, handleFixtureDragMove, handleFixtureDragEnd, renderFixtureHandles } from './fixtures.js';
+import { undo, redo, initHistory, pushHistory } from './history.js';
+import { renderDividers, toggleDividerMode, handleDividerClick } from './dividers.js';
+import { updateColorPicker } from './colors.js';
 import './io.js'; // registers global export/import functions
 
 // ===== ZOOM / PAN =====
@@ -72,6 +75,7 @@ function toggleDims() {
 
 function clearAllFurniture() {
   if (!confirm('Remove all furniture from the floor plan? This will move everything back to staging.')) return;
+  pushHistory();
   initDefaults();
   renderFurniture();
   renderStagingFurniture();
@@ -79,14 +83,50 @@ function clearAllFurniture() {
 }
 
 function resetFurniture() {
+  pushHistory();
   initDefaults();
   renderFurniture();
   renderStagingFurniture();
   saveToCache();
 }
 
-// ===== UNIT TOGGLE =====
-function handleUnitToggle() {
+// ===== UNIT MANAGEMENT =====
+function toggleUnitMenu() {
+  const menu = document.getElementById('unitMenu');
+  if (menu) {
+    const isVisible = menu.style.display === 'block';
+    menu.style.display = isVisible ? 'none' : 'block';
+
+    // Close on click outside
+    if (!isVisible) {
+      setTimeout(() => {
+        document.addEventListener('click', function closeMenu(e) {
+          if (!e.target.closest('.export-dropdown')) {
+            menu.style.display = 'none';
+            document.removeEventListener('click', closeMenu);
+          }
+        });
+      }, 0);
+    }
+  }
+}
+
+function selectUnit(unit) {
+  setUnit(unit);
+  updateUnitDisplay();
+  // Re-render everything that shows distances
+  renderMeasurement();
+  renderAnchors();
+  renderElevation();
+  // Rebuild SVG to update dimension labels
+  buildSVG();
+  renderFurniture();
+  // Close menu
+  document.getElementById('unitMenu').style.display = 'none';
+}
+
+// Cycle units (for keyboard shortcut)
+function cycleUnits() {
   cycleUnit();
   updateUnitDisplay();
   // Re-render everything that shows distances
@@ -100,7 +140,7 @@ function handleUnitToggle() {
 
 function updateUnitDisplay() {
   const btn = document.getElementById('btnUnit');
-  if (btn) btn.textContent = getUnit().toUpperCase();
+  if (btn) btn.textContent = getUnit().toUpperCase() + ' ▾';
   const scaleSpan = document.getElementById('scaleDisplay');
   // PPI is always pixels-per-inch regardless of display unit
   if (scaleSpan) scaleSpan.textContent = `1" = ${PPI}px`;
@@ -153,6 +193,11 @@ function attachCanvasEvents() {
       if (handleFixtureClick(clickX, clickY, e)) return;
     }
 
+    // Divider mode: place divider points
+    if (state.dividerMode && e.button === 0) {
+      if (handleDividerClick(clickX, clickY)) return;
+    }
+
     // Anchor mode: clicking empty space creates a wall anchor
     if (state.anchorMode && state.anchorSource !== null && e.button === 0) {
       e.stopPropagation();
@@ -176,11 +221,18 @@ function attachCanvasEvents() {
       if (!state.measureStart) {
         state.measureStart = { x: clickX, y: clickY, edge: 'floor' };
         state.measureEnd = null;
+        state.measurePreview = null;
+        state.measureShiftKey = e.shiftKey;
       } else if (!state.measureEnd) {
         state.measureEnd = { x: clickX, y: clickY, edge: 'floor' };
+        state.measurePreview = null;
+        // Capture shift key state for 45-degree snap
+        state.measureShiftKey = e.shiftKey;
       } else {
         state.measureStart = { x: clickX, y: clickY, edge: 'floor' };
         state.measureEnd = null;
+        state.measurePreview = null;
+        state.measureShiftKey = e.shiftKey;
       }
       renderMeasurement();
       return;
@@ -206,6 +258,18 @@ function attachCanvasEvents() {
     // Furniture dragging takes priority
     if (handleDragMove(e)) return;
 
+    // Cursor position calculation
+    const r2 = ctr.getBoundingClientRect();
+    const cx = Math.round(((e.clientX - r2.left - state.panX) / state.zoom - PAD) / PPI);
+    const cy = Math.round(((e.clientY - r2.top - state.panY) / state.zoom - PAD) / PPI);
+
+    // Measurement preview: if first point is set, show line following cursor
+    if (state.measureMode && state.measureStart && !state.measureEnd) {
+      state.measurePreview = { x: cx, y: cy, edge: 'floor' };
+      state.measureShiftKey = e.shiftKey; // Update shift state for live preview
+      renderMeasurement();
+    }
+
     // Panning
     if (state.isPanning && !state.measureMode) {
       state.panX = e.clientX - state.panStart.x;
@@ -214,9 +278,6 @@ function attachCanvasEvents() {
     }
 
     // Cursor position display
-    const r2 = ctr.getBoundingClientRect();
-    const cx = Math.round(((e.clientX - r2.left - state.panX) / state.zoom - PAD) / PPI);
-    const cy = Math.round(((e.clientY - r2.top - state.panY) / state.zoom - PAD) / PPI);
     const pos = document.getElementById('cursorPos');
     if (pos) pos.textContent = formatDist(cx) + ', ' + formatDist(cy);
   });
@@ -231,14 +292,34 @@ function attachCanvasEvents() {
 
   // Keyboard shortcuts
   document.addEventListener('keydown', e => {
+    // Undo/Redo
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+      undo();
+      e.preventDefault();
+      return;
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+      redo();
+      e.preventDefault();
+      return;
+    }
+
     if (e.key === '=' || e.key === '+') { zoomIn(); e.preventDefault(); }
     if (e.key === '-') { zoomOut(); e.preventDefault(); }
     if (e.key === '0') { fitToView(); e.preventDefault(); }
     if (e.key === 'm' && !e.shiftKey) { toggleMeasure(); e.preventDefault(); }
     if (e.key === 'M' && e.shiftKey) { toggleShowAll(); e.preventDefault(); }
+    if (e.key === 'l' || e.key === 'L') {
+      // Lock current measurement
+      if (state.measureMode && state.measureStart && state.measureEnd) {
+        lockCurrentMeasurement();
+        e.preventDefault();
+      }
+    }
     if (e.key === 'e' || e.key === 'E') { toggleElevation(); e.preventDefault(); }
-    if (e.key === 'u' || e.key === 'U') { handleUnitToggle(); e.preventDefault(); }
+    if (e.key === 'u' || e.key === 'U') { cycleUnits(); e.preventDefault(); }
     if (e.key === 'f' && !e.ctrlKey && !e.metaKey) { toggleFixtureEditMode(); e.preventDefault(); }
+    if (e.key === 'd' || e.key === 'D') { toggleDividerMode(); e.preventDefault(); }
     if (e.key === 'Escape') {
       if (state.measureMode) {
         state.measureStart = null;
@@ -256,9 +337,78 @@ function attachCanvasEvents() {
       if (state.fixtureEditMode) {
         toggleFixtureEditMode();
       }
+      if (state.dividerMode) {
+        state.dividerMode = false;
+        state.dividerStart = null;
+        document.getElementById('btnDivider')?.classList.remove('active');
+        renderDividers();
+      }
       e.preventDefault();
     }
+
+    // Arrow key movement for selected furniture
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) {
+      if (state.selectedFurniture.size > 0 && !state.measureMode && !state.anchorMode) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1; // 10 inches with Shift, 1 inch otherwise
+
+        pushHistory();
+
+        for (const idx of state.selectedFurniture) {
+          const piece = state.placedFurniture[idx];
+          if (piece && piece.x >= 0 && piece.y >= 0) {
+            switch (e.key) {
+              case 'ArrowLeft': piece.x -= step; break;
+              case 'ArrowRight': piece.x += step; break;
+              case 'ArrowUp': piece.y -= step; break;
+              case 'ArrowDown': piece.y += step; break;
+            }
+          }
+        }
+
+        renderFurniture();
+        renderStagingFurniture();
+        if (window._renderAnchors) window._renderAnchors();
+        if (window._renderMeasurement) window._renderMeasurement();
+        saveToCache();
+      }
+    }
   });
+}
+
+// ===== THEME MANAGEMENT =====
+function toggleTheme() {
+  document.body.classList.toggle('light-mode');
+  const isLight = document.body.classList.contains('light-mode');
+  const btn = document.getElementById('btnTheme');
+  if (btn) btn.textContent = isLight ? '☾' : '☀';
+  try {
+    localStorage.setItem('floor-plan-theme', isLight ? 'light' : 'dark');
+  } catch(e) {}
+  // Rebuild SVGs with new theme colors
+  buildSVG();
+  buildStagingSVG();
+  renderFurniture();
+  renderStagingFurniture();
+  renderMeasurement();
+  renderAnchors();
+  if (state.showElevation) renderElevation();
+  if (state.fixtureEditMode) renderFixtureHandles();
+  // Re-initialize Lucide icons
+  if (window.lucide) {
+    setTimeout(() => lucide.createIcons(), 0);
+  }
+}
+
+function loadTheme() {
+  try {
+    const theme = localStorage.getItem('floor-plan-theme');
+    if (theme === 'light') {
+      document.body.classList.add('light-mode');
+      const btn = document.getElementById('btnTheme');
+      if (btn) btn.textContent = '☾';
+    }
+  } catch(e) {}
 }
 
 // ===== EXPOSE GLOBAL FUNCTIONS FOR ONCLICK HANDLERS =====
@@ -268,20 +418,29 @@ window.toggleMeasure = toggleMeasure;
 window.toggleShowAll = toggleShowAll;
 window.toggleAnchorMode = toggleAnchorMode;
 window.toggleFixtureEditMode = toggleFixtureEditMode;
-window.handleUnitToggle = handleUnitToggle;
+window.toggleDividerMode = toggleDividerMode;
+window.toggleUnitMenu = toggleUnitMenu;
+window.selectUnit = selectUnit;
 window.clearAllFurniture = clearAllFurniture;
 window.resetFurniture = resetFurniture;
 window.toggleElevation = toggleElevation;
 window.fitToView = fitToView;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
+window.toggleTheme = toggleTheme;
 
 // ===== INITIALIZATION =====
 function init() {
+  // Load theme first
+  loadTheme();
+
   // Load state
   if (!loadFromCache()) {
     initDefaults();
   }
+
+  // Initialize undo/redo history
+  initHistory();
 
   // Build SVGs
   buildSVG();
@@ -290,6 +449,9 @@ function init() {
   // Render furniture
   renderFurniture();
   renderStagingFurniture();
+
+  // Render dividers
+  renderDividers();
 
   // Build elevation selector
   buildElevationSelector();
@@ -303,6 +465,14 @@ function init() {
 
   // Update unit display
   updateUnitDisplay();
+
+  // Initialize Lucide icons
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+
+  // Expose color picker update function
+  window._updateColorPicker = updateColorPicker;
 
   // Initial view
   requestAnimationFrame(fitToView);

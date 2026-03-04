@@ -8,6 +8,7 @@
 import { state, getFurnitureDef, saveToCache } from './data.js';
 import { getRoomBounds, findRoomAt } from './collision.js';
 import { renderFurniture, renderStagingFurniture } from './furniture.js';
+import { pushHistory } from './history.js';
 
 /**
  * Update the alignment toolbar visibility
@@ -15,7 +16,11 @@ import { renderFurniture, renderStagingFurniture } from './furniture.js';
 export function updateAlignToolbar() {
   const toolbar = document.getElementById('alignToolbar');
   if (!toolbar) return;
-  toolbar.classList.toggle('visible', state.selectedFurniture.size >= 2);
+  // Show toolbar for single or multi-select (>= 1)
+  toolbar.classList.toggle('visible', state.selectedFurniture.size >= 1);
+
+  // Update color picker visibility
+  if (window._updateColorPicker) window._updateColorPicker();
 }
 
 // Expose globally for furniture.js callback
@@ -28,6 +33,9 @@ export function clearSelection() {
   state.selectedFurniture.clear();
   updateAlignToolbar();
   renderFurniture();
+
+  // Hide color picker
+  if (window._updateColorPicker) window._updateColorPicker();
 }
 
 /**
@@ -54,6 +62,8 @@ function getSelectionBounds() {
 export function alignSelection(mode) {
   const items = getSelectionBounds();
   if (items.length < 2) return;
+
+  pushHistory();
 
   switch (mode) {
     case 'left': {
@@ -104,6 +114,8 @@ export function alignSelection(mode) {
 export function alignToWall(mode) {
   const items = getSelectionBounds();
   if (items.length === 0) return;
+
+  pushHistory();
 
   // Find room for the first selected item (assume all in same room for simplicity)
   const firstItem = items[0];

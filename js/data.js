@@ -48,6 +48,12 @@ export const DEFAULT_FLOOR_PLAN = {
       labelSize: 11
     },
     {
+      id: "hallway", name: "Hallway",
+      vertices: [[168.5,66],[202.5,66],[202.5,93],[168.5,93]],
+      color: "#14141c88", placeable: true,
+      labelSize: 9
+    },
+    {
       id: "bedroom", name: "Bedroom",
       vertices: [[125,93],[246,93],[246,255],[125,255]],
       color: "#16161e88", placeable: true,
@@ -94,7 +100,8 @@ export const DEFAULT_FLOOR_PLAN = {
     { from: [158,0], to: [217,0], type: "exterior",
       window: { from: [168,0], to: [192,0] } },
     { from: [217,0], to: [217,83], type: "exterior" },
-    { from: [158,83], to: [217,83], type: "exterior" },
+    { from: [158,83], to: [168.5,83], type: "exterior" },
+    { from: [202.5,83], to: [217,83], type: "exterior" },
     // --- Bedroom Walls ---
     { from: [246,93], to: [246,255], type: "exterior" },
     { from: [125,93], to: [246,93], type: "exterior" },
@@ -189,7 +196,37 @@ export const DEFAULT_FLOOR_PLAN = {
     { id: "interior-upper", name: "Kitchen Wall (Interior)", facing: "east",
       from: [83,0], to: [83,93], wallHeight: 96 },
     { id: "interior-lower", name: "Bedroom Wall (Interior)", facing: "east",
-      from: [125,93], to: [125,255], wallHeight: 96 }
+      from: [125,93], to: [125,255], wallHeight: 96 },
+    { id: "kitchen-back", name: "Kitchen Back Wall", facing: "south",
+      from: [83,0], to: [158,0], wallHeight: 96 },
+    { id: "kitchen-right", name: "Kitchen Right Wall", facing: "west",
+      from: [158,0], to: [158,93], wallHeight: 96 },
+    { id: "bathroom-back", name: "Bathroom Back Wall", facing: "south",
+      from: [158,0], to: [217,0], wallHeight: 96 },
+    { id: "bathroom-right", name: "Bathroom Right Wall", facing: "west",
+      from: [217,0], to: [217,83], wallHeight: 96 },
+    { id: "bathroom-front-left", name: "Bathroom Front Wall (Left)", facing: "north",
+      from: [158,83], to: [168.5,83], wallHeight: 96 },
+    { id: "bathroom-front-right", name: "Bathroom Front Wall (Right)", facing: "north",
+      from: [202.5,83], to: [217,83], wallHeight: 96 },
+    { id: "bedroom-back", name: "Bedroom Back Wall", facing: "south",
+      from: [125,93], to: [246,93], wallHeight: 96 },
+    { id: "hallway-left", name: "Hallway Left Wall", facing: "west",
+      from: [168.5,66], to: [168.5,93], wallHeight: 96 },
+    { id: "hallway-right", name: "Hallway Right Wall", facing: "east",
+      from: [202.5,66], to: [202.5,93], wallHeight: 96 },
+    { id: "hallway-front", name: "Hallway Front Wall", facing: "north",
+      from: [168.5,66], to: [202.5,66], wallHeight: 96 },
+    { id: "interior-upper-1", name: "Kitchen Wall Upper", facing: "east",
+      from: [83,0], to: [83,32], wallHeight: 96 },
+    { id: "interior-upper-2", name: "Kitchen Wall Lower", facing: "east",
+      from: [83,62], to: [83,93], wallHeight: 96 },
+    { id: "interior-bedroom-upper", name: "Bedroom Wall Upper", facing: "east",
+      from: [125,93], to: [125,108], wallHeight: 96 },
+    { id: "interior-bedroom-lower", name: "Bedroom Wall Lower", facing: "east",
+      from: [125,140], to: [125,255], wallHeight: 96 },
+    { id: "bathroom-left", name: "Bathroom Left Wall", facing: "east",
+      from: [158,0], to: [158,83], wallHeight: 96 }
   ],
 
   furniture: [
@@ -264,6 +301,12 @@ export const state = {
   measureMode: false,
   measureStart: null,
   measureEnd: null,
+  measurePreview: null,
+  measureShiftKey: false,
+  lockedMeasurements: [],  // Persistent measurements: [{ start, end, shiftKey }]
+  softDividers: [],  // Visual dividers for room zones: [{ from: {x, y}, to: {x, y} }]
+  dividerMode: false,
+  dividerStart: null,
   showAllMeasurements: false,
   anchorMode: false,
   anchorSource: null,
