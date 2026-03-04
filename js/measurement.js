@@ -508,8 +508,8 @@ export function renderAnchors() {
 
   let c = '';
 
-  // Render anchor mode: show source and target with anchor points
-  if (state.anchorMode && state.anchorSource !== null) {
+  // Render anchor mode OR edit mode: show source and target with anchor points
+  if ((state.anchorMode || state.editingAnchor) && state.anchorSource !== null) {
     const sourcePiece = state.placedFurniture[state.anchorSource];
     if (sourcePiece && sourcePiece.x >= 0 && sourcePiece.y >= 0) {
       const sourceDef = getFurnitureDef(sourcePiece.id);
@@ -520,11 +520,13 @@ export function renderAnchors() {
         const sy = PAD + S(sourcePiece.y);
         const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
 
-        // Pulsing glow around source
-        c += `<rect x="${sx - 4}" y="${sy - 4}" width="${S(sw) + 8}" height="${S(sh) + 8}" fill="none" stroke="${accentColor}" stroke-width="3" stroke-dasharray="8 4" rx="4" opacity="0.8">
-          <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
-        </rect>`;
-        c += `<text x="${sx + S(sw)/2}" y="${sy - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">SOURCE</text>`;
+        // Pulsing glow around source (only in anchor mode, not edit)
+        if (state.anchorMode && !state.editingAnchor) {
+          c += `<rect x="${sx - 4}" y="${sy - 4}" width="${S(sw) + 8}" height="${S(sh) + 8}" fill="none" stroke="${accentColor}" stroke-width="3" stroke-dasharray="8 4" rx="4" opacity="0.8">
+            <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
+          </rect>`;
+          c += `<text x="${sx + S(sw)/2}" y="${sy - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">SOURCE</text>`;
+        }
 
         // Show anchor points if target is also selected
         if (state.anchorTarget !== null) {
@@ -558,9 +560,11 @@ export function renderAnchors() {
           const ty = PAD + S(targetPiece.y);
           const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
 
-          // Glow around target
-          c += `<rect x="${tx - 4}" y="${ty - 4}" width="${S(tw) + 8}" height="${S(th) + 8}" fill="none" stroke="${accentColor}" stroke-width="2" stroke-dasharray="4 2" rx="4" opacity="0.6"/>`;
-          c += `<text x="${tx + S(tw)/2}" y="${ty - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">TARGET</text>`;
+          // Glow around target (only in anchor mode, not edit)
+          if (state.anchorMode && !state.editingAnchor) {
+            c += `<rect x="${tx - 4}" y="${ty - 4}" width="${S(tw) + 8}" height="${S(th) + 8}" fill="none" stroke="${accentColor}" stroke-width="2" stroke-dasharray="4 2" rx="4" opacity="0.6"/>`;
+            c += `<text x="${tx + S(tw)/2}" y="${ty - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">TARGET</text>`;
+          }
 
           // Show anchor points on target object
           c += renderAnchorPoints(targetPiece.x, targetPiece.y, tw, th, false, 'target');
