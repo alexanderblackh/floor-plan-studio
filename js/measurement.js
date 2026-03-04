@@ -248,24 +248,16 @@ function edgeGap(ax, ay, aw, ah, bx, by, bw, bh) {
 
 // Closest edge points between two rects (for drawing the line)
 function closestEdgePoints(ax, ay, aw, ah, bx, by, bw, bh) {
+  // Find closest points on each rectangle's perimeter
   const acx = ax + aw/2, acy = ay + ah/2;
   const bcx = bx + bw/2, bcy = by + bh/2;
-  const dx = bcx - acx, dy = bcy - acy;
 
-  let x1, y1, x2, y2;
-  if (Math.abs(dx) > Math.abs(dy)) {
-    // Horizontal dominant
-    x1 = dx > 0 ? ax + aw : ax;
-    y1 = acy;
-    x2 = dx > 0 ? bx : bx + bw;
-    y2 = bcy;
-  } else {
-    // Vertical dominant
-    x1 = acx;
-    y1 = dy > 0 ? ay + ah : ay;
-    x2 = bcx;
-    y2 = dy > 0 ? by : by + bh;
-  }
+  // Clamp centers to each other's rectangles to find closest edge points
+  const x1 = Math.max(ax, Math.min(ax + aw, bcx));
+  const y1 = Math.max(ay, Math.min(ay + ah, bcy));
+  const x2 = Math.max(bx, Math.min(bx + bw, acx));
+  const y2 = Math.max(by, Math.min(by + bh, acy));
+
   return { x1, y1, x2, y2 };
 }
 

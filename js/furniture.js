@@ -356,11 +356,33 @@ export function handleDragMove(e) {
 
   const ctr = document.getElementById('canvasContainer');
   const r = ctr.getBoundingClientRect();
-  const ix = ((e.clientX - r.left - state.panX) / state.zoom - PAD) / PPI - state.dragOffset.x;
-  const iy = ((e.clientY - r.top - state.panY) / state.zoom - PAD) / PPI - state.dragOffset.y;
+  let ix = ((e.clientX - r.left - state.panX) / state.zoom - PAD) / PPI - state.dragOffset.x;
+  let iy = ((e.clientY - r.top - state.panY) / state.zoom - PAD) / PPI - state.dragOffset.y;
 
   // Calculate the delta from the dragged item's initial position
   const draggingInitial = state.dragInitialPositions?.get(state.dragging);
+
+  // Axis constraint with Shift key
+  if (e.shiftKey && draggingInitial) {
+    const dx = Math.abs(Math.round(ix) - draggingInitial.x);
+    const dy = Math.abs(Math.round(iy) - draggingInitial.y);
+
+    // Lock to dominant axis based on initial movement direction
+    if (!state.dragAxisLocked) {
+      if (dx > 3 || dy > 3) {
+        state.dragAxisLocked = dx > dy ? 'x' : 'y';
+      }
+    }
+
+    if (state.dragAxisLocked === 'x') {
+      iy = draggingInitial.y - state.dragOffset.y;
+    } else if (state.dragAxisLocked === 'y') {
+      ix = draggingInitial.x - state.dragOffset.x;
+    }
+  } else {
+    state.dragAxisLocked = null;
+  }
+
   if (draggingInitial && state.selectedFurniture.size > 1) {
     const dx = Math.round(ix) - draggingInitial.x;
     const dy = Math.round(iy) - draggingInitial.y;

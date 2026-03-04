@@ -313,6 +313,7 @@ export const state = {
   selectedMeasurement: null, // { type: 'locked', idx: number } | { type: 'anchor', furnitureIdx: number, anchorIdx: number }
   selectedDivider: null, // index of selected divider
   draggingMeasurementPoint: null, // { type: 'locked'|'divider'|'anchor', idx: number, point: 'start'|'end' }
+  dragAxisLocked: null, // 'x' | 'y' | null - for shift-constrained dragging
   elevationWall: null, // currently viewed elevation wall id
   showElevation: false,
   displayUnit: 'in',  // 'in' | 'ft' | 'cm' | 'm'
@@ -387,6 +388,10 @@ export function saveToCache() {
     localStorage.setItem('fps-layout', JSON.stringify(state.placedFurniture));
     // Also persist fixture positions (they can be edited in fixture mode)
     localStorage.setItem('fps-fixtures', JSON.stringify(state.floorPlan.fixtures));
+    // Persist locked measurements
+    localStorage.setItem('fps-locked-measurements', JSON.stringify(state.lockedMeasurements));
+    // Persist soft dividers
+    localStorage.setItem('fps-dividers', JSON.stringify(state.softDividers));
   } catch(e) { /* quota exceeded or private browsing */ }
 }
 
@@ -414,6 +419,16 @@ export function loadFromCache() {
           const fix = state.floorPlan.fixtures.find(f => f.id === saved.id);
           if (fix) { fix.x = saved.x; fix.y = saved.y; }
         }
+      }
+      // Restore locked measurements
+      const measureData = localStorage.getItem('fps-locked-measurements');
+      if (measureData) {
+        state.lockedMeasurements = JSON.parse(measureData);
+      }
+      // Restore soft dividers
+      const dividerData = localStorage.getItem('fps-dividers');
+      if (dividerData) {
+        state.softDividers = JSON.parse(dividerData);
       }
       return true;
     }
