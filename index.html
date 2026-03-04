@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Floor Plan Studio</title>
+<!--
+  FLOOR PLAN STUDIO — Interactive Room Layout Tool (FOSS)
+
+  A data-driven floor plan tool. Define rooms as polygons, import/export
+  via JSON or CSV, and arrange furniture with drag-and-drop.
+
+  Features:
+  - Polygon-based rooms (supports L-shapes, jogs, any axis-aligned shape)
+  - Data-driven rendering from JSON floor plan schema
+  - Drag-and-drop furniture with rotation and collision detection
+  - 2.5D elevation model with stacking and head-on wall views
+  - Multi-select alignment (furniture-to-furniture, furniture-to-wall)
+  - Measurement anchors with "Show All" measurements mode
+  - Import/Export: JSON (full plan or placement), CSV, SVG, PNG
+  - localStorage persistence
+  - Zero dependencies (ES modules, single-page app)
+-->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+  body {
+    background: #0f0f14;
+    color: #d4c9b8;
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  .app-header {
+    background: linear-gradient(135deg, #1a1a24 0%, #12121a 100%);
+    border-bottom: 1px solid #2a2a3a;
+    padding: 12px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 100; height: 52px;
+  }
+  .app-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 20px; font-weight: 600; color: #c5975b;
+    letter-spacing: 1px;
+  }
+  .app-subtitle {
+    font-size: 9px; color: #555; margin-left: 12px;
+    letter-spacing: 1px; text-transform: uppercase;
+  }
+  .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .btn {
+    background: #1e1e2e; border: 1px solid #333; color: #888;
+    padding: 6px 12px; font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; cursor: pointer; border-radius: 3px;
+    transition: all 0.15s; letter-spacing: 0.5px;
+  }
+  .btn:hover { background: #2a2a3a; color: #c5975b; border-color: #c5975b55; }
+  .btn.active { background: #c5975b22; color: #c5975b; border-color: #c5975b; }
+  .export-dropdown { position: relative; display: inline-block; }
+  .export-menu {
+    position: absolute; top: 100%; right: 0; margin-top: 4px;
+    background: #1a1a24; border: 1px solid #333; border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 200px; z-index: 1000;
+  }
+  .export-menu button {
+    display: block; width: 100%; text-align: left;
+    background: transparent; border: none; color: #aaa;
+    padding: 10px 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; cursor: pointer; transition: all 0.15s;
+    border-bottom: 1px solid #222;
+  }
+  .export-menu button:last-child { border-bottom: none; }
+  .export-menu button:hover { background: #2a2a3a; color: #c5975b; }
+  .export-menu .menu-divider {
+    border-bottom: 1px solid #333; margin: 2px 0; padding: 0; height: 0;
+    pointer-events: none;
+  }
+  .main-layout { display: flex; height: calc(100vh - 52px); margin-top: 52px; }
+  .staging-panel {
+    width: 280px; background: #141420; border-right: 1px solid #2a2a3a;
+    display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .staging-header {
+    padding: 12px 14px; border-bottom: 1px solid #2a2a3a;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 2px;
+    color: #666; font-weight: 500;
+  }
+  .staging-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+  .staging-scroll::-webkit-scrollbar { width: 4px; }
+  .staging-scroll::-webkit-scrollbar-track { background: #0f0f14; }
+  .staging-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  .staging-canvas { min-height: 100%; }
+  .canvas-area { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+  .canvas-container {
+    flex: 1; overflow: hidden; position: relative;
+    background: #0f0f14; cursor: grab;
+  }
+  .canvas-container.panning { cursor: grabbing; }
+  .floor-plan { transform-origin: 0 0; }
+
+  /* Elevation panel */
+  .elevation-panel {
+    display: none; border-top: 1px solid #2a2a3a;
+    background: #12121a; max-height: 250px; overflow: hidden;
+    flex-shrink: 0;
+  }
+  .elevation-header {
+    padding: 8px 14px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid #2a2a3a;
+  }
+  .elevation-header-title {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: #666;
+  }
+  .elevation-header select {
+    background: #1e1e2e; border: 1px solid #333; color: #aaa;
+    padding: 3px 8px; font-family: 'JetBrains Mono', monospace;
+    font-size: 9px; border-radius: 3px; cursor: pointer;
+  }
+  .elevation-content { overflow-x: auto; overflow-y: hidden; padding: 10px; }
+
+  /* Zoom controls */
+  .zoom-controls {
+    position: fixed; bottom: 40px; right: 20px; z-index: 50;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .zoom-btn {
+    width: 32px; height: 32px; background: #1a1a24; border: 1px solid #333;
+    color: #888; font-size: 16px; cursor: pointer; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .zoom-btn:hover { background: #2a2a3a; color: #c5975b; }
+
+  /* Info bar */
+  .info-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #12121a; border-top: 1px solid #2a2a3a;
+    padding: 4px 24px; display: flex; gap: 20px;
+    font-size: 9px; color: #555; z-index: 50;
+  }
+  .info-item { display: flex; gap: 4px; }
+
+  /* Alignment toolbar */
+  .align-toolbar {
+    position: fixed; top: 58px; left: 50%; transform: translateX(-50%);
+    background: #1a1a24; border: 1px solid #c5975b55; border-radius: 6px;
+    padding: 4px 8px; display: none; gap: 2px; z-index: 90;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .align-toolbar.visible { display: flex; }
+  .align-toolbar .sep { width: 1px; background: #333; margin: 0 4px; }
+  .align-btn {
+    width: 28px; height: 28px; background: transparent; border: 1px solid transparent;
+    color: #888; font-size: 14px; cursor: pointer; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; transition: all 0.15s;
+  }
+  .align-btn:hover { background: #2a2a3a; color: #c5975b; border-color: #c5975b55; }
+
+  kbd {
+    background: #1e1e2e; border: 1px solid #333;
+    padding: 1px 4px; border-radius: 2px; font-size: 8px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app-header">
+  <div style="display:flex;align-items:baseline;">
+    <div class="app-title">Floor Plan Studio</div>
+    <div class="app-subtitle" id="planName">Wizard Study Apartment</div>
+  </div>
+  <div class="controls">
+    <button class="btn active" id="btnGrid" onclick="toggleGrid()">Grid</button>
+    <button class="btn active" id="btnDims" onclick="toggleDims()">Dims</button>
+    <button class="btn" id="btnMeasure" onclick="toggleMeasure()">Measure</button>
+    <button class="btn" id="btnShowAll" onclick="toggleShowAll()">Show All</button>
+    <button class="btn" id="btnAnchor" onclick="toggleAnchorMode()">Anchor</button>
+    <button class="btn" id="btnElevation" onclick="toggleElevation()">Elevation</button>
+    <button class="btn" onclick="clearAllFurniture()">Clear All</button>
+    <button class="btn" onclick="resetFurniture()">Reset</button>
+    <button class="btn" onclick="fitToView()">Fit</button>
+    <div class="export-dropdown">
+      <button class="btn" onclick="toggleExportMenu()">Export &#x25BE;</button>
+      <div class="export-menu" id="exportMenu" style="display:none;">
+        <button onclick="exportSVG()">Export SVG</button>
+        <button onclick="exportPNG()">Export PNG</button>
+        <button onclick="exportFigma()">Export for Figma</button>
+        <div class="menu-divider"></div>
+        <button onclick="exportJSON()">Export Placement JSON</button>
+        <button onclick="exportFullJSON()">Export Full Floor Plan</button>
+        <button onclick="exportCSV()">Export Furniture CSV</button>
+        <div class="menu-divider"></div>
+        <button onclick="importJSON()">Import JSON</button>
+        <button onclick="importCSV()">Import Furniture CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="align-toolbar" id="alignToolbar">
+  <button class="align-btn" onclick="alignSelection('left')" title="Align Left">&#x2B0D;</button>
+  <button class="align-btn" onclick="alignSelection('centerH')" title="Center H">&#x2B3F;</button>
+  <button class="align-btn" onclick="alignSelection('right')" title="Align Right">&#x2B0E;</button>
+  <div class="sep"></div>
+  <button class="align-btn" onclick="alignSelection('top')" title="Align Top">&#x22A4;</button>
+  <button class="align-btn" onclick="alignSelection('centerV')" title="Center V">&#x22A2;</button>
+  <button class="align-btn" onclick="alignSelection('bottom')" title="Align Bottom">&#x22A5;</button>
+  <div class="sep"></div>
+  <button class="align-btn" onclick="alignToWall('left')" title="Snap Left">&#x21E4;</button>
+  <button class="align-btn" onclick="alignToWall('right')" title="Snap Right">&#x21E5;</button>
+  <button class="align-btn" onclick="alignToWall('top')" title="Snap Top">&#x2912;</button>
+  <button class="align-btn" onclick="alignToWall('bottom')" title="Snap Bottom">&#x2913;</button>
+  <button class="align-btn" onclick="alignToWall('center')" title="Center Room">&#x229E;</button>
+</div>
+
+<div class="main-layout">
+  <div class="staging-panel">
+    <div class="staging-header">
+      Furniture Staging
+      <div style="font-size:8px;color:#444;margin-top:4px;text-transform:none;letter-spacing:0;">Drag furniture onto floor plan &bull; Right-click to return here</div>
+    </div>
+    <div class="staging-scroll" id="stagingScroll">
+      <div class="staging-canvas">
+        <svg id="svgStaging" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+    <div style="padding:10px;border-top:1px solid #2a2a3a;font-size:9px;color:#555;">
+      <div style="margin-bottom:4px;"><kbd>M</kbd> Measure mode (edge snap)</div>
+      <div style="margin-bottom:4px;"><kbd>Shift+M</kbd> Show all measurements</div>
+      <div style="margin-bottom:4px;"><kbd>E</kbd> Toggle elevation view</div>
+      <div style="margin-bottom:4px;"><kbd>Dbl-click</kbd> Rotate 90&deg;</div>
+      <div style="margin-bottom:4px;"><kbd>Shift+Click</kbd> Multi-select</div>
+      <div style="margin-bottom:4px;"><kbd>Alt+Click</kbd> Link anchor</div>
+      <div style="margin-bottom:4px;"><kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd> Zoom</div>
+    </div>
+  </div>
+
+  <div class="canvas-area">
+    <div class="canvas-container" id="canvasContainer">
+      <svg class="floor-plan" id="svgPlan" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="elevation-panel" id="elevationPanel">
+      <div class="elevation-header">
+        <span class="elevation-header-title">Elevation View</span>
+        <select id="elevWallSelect"></select>
+      </div>
+      <div class="elevation-content"></div>
+    </div>
+  </div>
+</div>
+
+<div class="zoom-controls">
+  <button class="zoom-btn" onclick="zoomIn()">+</button>
+  <button class="zoom-btn" onclick="zoomOut()">&minus;</button>
+  <button class="zoom-btn" onclick="fitToView()" style="font-size:12px">&#x22A1;</button>
+</div>
+
+<div class="info-bar">
+  <div class="info-item">Zoom: <span id="zoomLevel">100%</span></div>
+  <div class="info-item">Scale: <span>1" = 2px</span></div>
+  <div class="info-item">Cursor: <span id="cursorPos">&mdash;</span></div>
+  <div class="info-item" id="selectedInfo">Selected: <span>none</span></div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+
+</body>
+</html>
