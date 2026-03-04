@@ -13,6 +13,7 @@
 import { S, PPI, PAD, state, getFurnitureDef, getFurnitureDefs, saveToCache } from './data.js';
 import { checkCollision, autoStack } from './collision.js';
 import { formatDist } from './units.js';
+import { escapeXml } from './render.js';
 
 // ===== RENDER PLACED FURNITURE =====
 export function renderFurniture() {
@@ -21,16 +22,18 @@ export function renderFurniture() {
   const g = svg.querySelector('#furnitureGroup');
   if (!g) return;
 
-  g.innerHTML = state.placedFurniture.filter(p => p.x >= 0 && p.y >= 0).map((p) => {
-    const actualIdx = state.placedFurniture.indexOf(p);
+  let html = '';
+  for (let idx = 0; idx < state.placedFurniture.length; idx++) {
+    const p = state.placedFurniture[idx];
+    if (p.x < 0 || p.y < 0) continue; // skip staging items
     const d = getFurnitureDef(p.id);
-    if (!d) return '';
+    if (!d) continue;
     const w = p.rotated ? S(d.h) : S(d.w);
     const h = p.rotated ? S(d.w) : S(d.h);
-    const hasCollision = checkCollision(p, actualIdx);
+    const hasCollision = checkCollision(p, idx);
     const strokeColor = hasCollision ? '#ff4444' : d.stroke;
     const extra = hasCollision ? 'stroke-dasharray="4 2"' : '';
-    const isSelected = state.selectedFurniture.has(actualIdx);
+    const isSelected = state.selectedFurniture.has(idx);
     const selStroke = isSelected ? `<rect x="${PAD+S(p.x)-2}" y="${PAD+S(p.y)-2}" width="${w+4}" height="${h+4}" fill="none" stroke="#c5975b" stroke-width="2" stroke-dasharray="4 2" rx="3"/>` : '';
 
     const displayW = p.rotated ? d.h : d.w;
@@ -48,15 +51,16 @@ export function renderFurniture() {
       ? `<rect x="${PAD+S(p.x)+3}" y="${PAD+S(p.y)+3}" width="${w}" height="${h}" fill="#00000044" rx="2"/>`
       : '';
 
-    return `${shadow}<g class="furniture-piece" data-idx="${actualIdx}" style="cursor:grab">
+    html += `${shadow}<g class="furniture-piece" data-idx="${idx}" style="cursor:grab">
       ${selStroke}
       <rect x="${PAD+S(p.x)}" y="${PAD+S(p.y)}" width="${w}" height="${h}" fill="${d.color}" stroke="${strokeColor}" stroke-width="${hasCollision?2:1}" ${extra} rx="2" opacity="0.85"/>
       ${hasCollision ? `<text x="${PAD+S(p.x)+w-6}" y="${PAD+S(p.y)+10}" font-family="JetBrains Mono" font-size="8" fill="#ff4444">⚠</text>` : ''}
-      <text x="${PAD+S(p.x)+w/2}" y="${PAD+S(p.y)+h/2-4}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${d.label}</text>
+      <text x="${PAD+S(p.x)+w/2}" y="${PAD+S(p.y)+h/2-4}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(d.label)}</text>
       <text x="${PAD+S(p.x)+w/2}" y="${PAD+S(p.y)+h/2+6}" font-family="JetBrains Mono" font-size="6" fill="#ffffff88" text-anchor="middle" dominant-baseline="central" pointer-events="none">${dimText}</text>
       ${elevBadge}
     </g>`;
-  }).join('');
+  }
+  g.innerHTML = html;
 
   attachFurnitureEvents();
 }
@@ -71,16 +75,17 @@ export function renderStagingFurniture() {
   let c = '';
   const defs = getFurnitureDefs();
 
-  // Group by room
+  // Group by room (track indices to avoid O(n^2) indexOf)
   const groups = {};
-  state.placedFurniture.forEach((p) => {
-    if (p.x >= 0 && p.y >= 0) return; // skip placed items
+  for (let idx = 0; idx < state.placedFurniture.length; idx++) {
+    const p = state.placedFurniture[idx];
+    if (p.x >= 0 && p.y >= 0) continue; // skip placed items
     const d = defs.find(f => f.id === p.id);
-    if (!d) return;
+    if (!d) continue;
     const room = d.room || 'other';
     if (!groups[room]) groups[room] = [];
-    groups[room].push({ piece: p, def: d });
-  });
+    groups[room].push({ piece: p, def: d, idx });
+  }
 
   let offsetY = 20;
   const SCALE = 1.3;
@@ -100,8 +105,7 @@ export function renderStagingFurniture() {
     c += `<line x1="10" y1="${offsetY + 3}" x2="250" y2="${offsetY + 3}" stroke="#333" stroke-width="1"/>`;
     offsetY += 15;
 
-    items.forEach(({ piece, def }) => {
-      const actualIdx = state.placedFurniture.indexOf(piece);
+    items.forEach(({ piece, def, idx: actualIdx }) => {
       let w = (piece.rotated ? S(def.h) : S(def.w)) * SCALE;
       let h = (piece.rotated ? S(def.w) : S(def.h)) * SCALE;
 
@@ -116,12 +120,9 @@ export function renderStagingFurniture() {
 
       c += `<g class="furniture-piece-staging" data-idx="${actualIdx}">
         <rect x="${sx}" y="${sy}" width="${w}" height="${h}" fill="${def.color}" stroke="${def.stroke}" stroke-width="1.5" rx="3" opacity="0.85"/>
-        <text x="${sx+w/2}" y="${sy+h/2-4}" font-family="JetBrains Mono" font-size="9" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${def.label}</text>
+        <text x="${sx+w/2}" y="${sy+h/2-4}" font-family="JetBrains Mono" font-size="9" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(def.label)}</text>
         <text x="${sx+w/2}" y="${sy+h/2+6}" font-family="JetBrains Mono" font-size="7" fill="#ffffff88" text-anchor="middle" pointer-events="none">${formatDist(def.w)} × ${formatDist(def.h)}</text>
       </g>`;
-
-      piece.x = -(sx / (PPI * SCALE));
-      piece.y = sy / (PPI * SCALE);
 
       offsetY += h + 8;
     });

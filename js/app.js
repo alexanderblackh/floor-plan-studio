@@ -102,7 +102,8 @@ function updateUnitDisplay() {
   const btn = document.getElementById('btnUnit');
   if (btn) btn.textContent = getUnit().toUpperCase();
   const scaleSpan = document.getElementById('scaleDisplay');
-  if (scaleSpan) scaleSpan.textContent = `1${formatDist(1).replace(/[\d.]+/, '')} = ${PPI}px`;
+  // PPI is always pixels-per-inch regardless of display unit
+  if (scaleSpan) scaleSpan.textContent = `1" = ${PPI}px`;
 }
 
 // ===== WALL ANCHOR HELPER =====

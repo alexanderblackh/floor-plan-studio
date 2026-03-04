@@ -88,8 +88,7 @@ export function exportFigma() {
   title.textContent = state.floorPlan.name || 'Floor Plan';
   svg.insertBefore(title, svg.firstChild);
 
-  let svgString = new XMLSerializer().serializeToString(svg);
-  svgString = svgString.replace(/transform="[^"]*"/g, '');
+  const svgString = new XMLSerializer().serializeToString(svg);
 
   downloadBlob(new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' }), 'floor-plan-figma.svg');
   closeExportMenu();

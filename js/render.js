@@ -17,6 +17,11 @@ import { formatDist } from './units.js';
 export const wx = (x) => PAD + S(x);
 export const wy = (y) => PAD + S(y);
 
+/** Escape text for safe SVG/XML innerHTML interpolation */
+export function escapeXml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // ===== PRIMITIVE DRAWING FUNCTIONS =====
 function wallLine(x1, y1, x2, y2) {
   return `<line x1="${wx(x1)}" y1="${wy(y1)}" x2="${wx(x2)}" y2="${wy(y2)}" stroke="#555" stroke-width="5" stroke-linecap="round"/>`;
@@ -49,7 +54,7 @@ function doorArc(cx, cy, r, startAngle, endAngle) {
 
 function labelText(x, y, text, size = 8, color = '#444', rot = 0) {
   const tr = rot ? `transform="rotate(${rot} ${wx(x)} ${wy(y)})"` : '';
-  return `<text x="${wx(x)}" y="${wy(y)}" font-family="JetBrains Mono" font-size="${size}" fill="${color}" text-anchor="middle" ${tr}>${text}</text>`;
+  return `<text x="${wx(x)}" y="${wy(y)}" font-family="JetBrains Mono" font-size="${size}" fill="${color}" text-anchor="middle" ${tr}>${escapeXml(text)}</text>`;
 }
 
 // ===== ROOM RENDERING =====
@@ -64,7 +69,7 @@ function renderRooms() {
     const cy = room.vertices.reduce((s, v) => s + v[1], 0) / room.vertices.length;
     const lx = cx + (room.labelOffset?.[0] || 0);
     const ly = cy + (room.labelOffset?.[1] || 0);
-    c += `<text x="${wx(lx)}" y="${wy(ly)}" font-family="Cormorant Garamond" font-size="${room.labelSize || 14}" fill="#33335544" text-anchor="middle">${room.name}</text>`;
+    c += `<text x="${wx(lx)}" y="${wy(ly)}" font-family="Cormorant Garamond" font-size="${room.labelSize || 14}" fill="#33335544" text-anchor="middle">${escapeXml(room.name)}</text>`;
   }
   return c;
 }
@@ -138,7 +143,7 @@ function renderFixtures() {
     // Main rectangle
     const dash = fix.dashed ? 'stroke-dasharray="4 2"' : '';
     c += `<rect x="${wx(fix.x)}" y="${wy(fix.y)}" width="${S(fix.w)}" height="${S(fix.h)}" fill="${fix.color}" stroke="${fix.stroke || '#555'}" stroke-width="1" ${dash} rx="1"/>`;
-    c += `<text x="${wx(fix.x + fix.w/2)}" y="${wy(fix.y + fix.h/2)}" font-family="JetBrains Mono" font-size="7" fill="${fix.dashed ? '#3a3a4a' : '#888'}" text-anchor="middle" dominant-baseline="central">${fix.label}</text>`;
+    c += `<text x="${wx(fix.x + fix.w/2)}" y="${wy(fix.y + fix.h/2)}" font-family="JetBrains Mono" font-size="7" fill="${fix.dashed ? '#3a3a4a' : '#888'}" text-anchor="middle" dominant-baseline="central">${escapeXml(fix.label)}</text>`;
 
     // Closet doors
     if (fix.doors) {

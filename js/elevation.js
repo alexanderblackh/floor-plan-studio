@@ -12,6 +12,7 @@
 
 import { state, getFurnitureDef, getElevationWalls, getWalls } from './data.js';
 import { formatDist } from './units.js';
+import { escapeXml } from './render.js';
 
 const ELEV_PPI = 1.5; // Slightly smaller scale for elevation
 const ES = (i) => i * ELEV_PPI;
@@ -208,7 +209,7 @@ export function renderElevation() {
   }
 
   // Wall name
-  c += `<text x="${ELEV_PAD + ES(wallLength)/2}" y="${svgH - 5}" font-family="JetBrains Mono" font-size="9" fill="#666" text-anchor="middle">${wallDef.name}</text>`;
+  c += `<text x="${ELEV_PAD + ES(wallLength)/2}" y="${svgH - 5}" font-family="JetBrains Mono" font-size="9" fill="#666" text-anchor="middle">${escapeXml(wallDef.name)}</text>`;
 
   // Render windows and doors from wall data
   c += renderWallOpenings(wallDef, wallLength, wallHeight, floorY);
@@ -225,7 +226,7 @@ export function renderElevation() {
     const opacity = Math.max(0.3, 1 - item.depth / DEPTH_THRESHOLD * 0.7);
 
     c += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${item.def.color}" stroke="${item.def.stroke}" stroke-width="1" rx="2" opacity="${opacity}"/>`;
-    c += `<text x="${x + w/2}" y="${y + h/2}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${item.def.label}</text>`;
+    c += `<text x="${x + w/2}" y="${y + h/2}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(item.def.label)}</text>`;
 
     // Height dimension
     if (item.elevation > 0) {
