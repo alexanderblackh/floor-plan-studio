@@ -236,7 +236,7 @@ const furnitureDefs = [
   // Living room — all start in staging (dx/dy = null)
   { id:'bar', name:'Vintage Bar', w:62, h:22, color:'#8B6914', stroke:'#a07d1c', room:'living', label:'BAR', dx:null, dy:null },
   { id:'tv', name:'58" TV', w:52, h:4, color:'#1a1a2a', stroke:'#2a2a3a', room:'living', label:'TV 58"', dx:null, dy:null },
-  { id:'couch', name:'Couch', w:80, h:38, color:'#4a6741', stroke:'#5a7a51', room:'living', label:'COUCH', dx:null, dy:null },
+  { id:'couch', name:'Couch', w:73, h:38, color:'#4a6741', stroke:'#5a7a51', room:'living', label:'COUCH', dx:null, dy:null },
   { id:'coffee', name:'Coffee Table', w:48, h:24, color:'#5a4a3a', stroke:'#6a5a4a', room:'living', label:'COFFEE', dx:null, dy:null },
   { id:'bakers', name:"Baker's Rack", w:72, h:24, color:'#555566', stroke:'#666677', room:'living', label:"BAKER'S", dx:null, dy:null },
   { id:'console', name:'Console Table', w:31.5, h:9.8, color:'#6a5a44', stroke:'#7a6a54', room:'living', label:'CONSOLE', dx:null, dy:null },
@@ -250,11 +250,17 @@ const furnitureDefs = [
   { id:'zigzag', name:'Zigzag Stand', w:24, h:12, color:'#7a5a8a', stroke:'#8a6a9a', room:'bedroom', label:'ZIGZAG', dx:null, dy:null },
   { id:'desk', name:'Rolling Desk', w:34, h:24, color:'#5a5a44', stroke:'#6a6a54', room:'bedroom', label:'DESK', dx:null, dy:null },
   { id:'dresser', name:'Dresser', w:34, h:17, color:'#5a4a6a', stroke:'#6a5a7a', room:'bedroom', label:'DRESSER', dx:null, dy:null },
-  { id:'bookstand', name:'Book Stand', w:36, h:12, color:'#4a5a3a', stroke:'#5a6a4a', room:'bedroom', label:'BOOKS', dx:null, dy:null },
+  { id:'bookshelf', name:'Book Shelf', w:25, h:10, color:'#4a5a3a', stroke:'#5a6a4a', room:'bedroom', label:'BOOKS', dx:null, dy:null },
   { id:'nightstand', name:'Night Stand', w:16, h:16, color:'#4a3a2a', stroke:'#5a4a3a', room:'bedroom', label:'NSTAND', dx:null, dy:null },
   // Kitchen items (can go in kitchen or elsewhere)
   { id:'microwave', name:'Microwave', w:20, h:15, color:'#4a4a4a', stroke:'#5a5a5a', room:'kitchen', label:'MICRO', dx:null, dy:null },
   { id:'pantry', name:'Pantry', w:24, h:24, color:'#3a3a5a', stroke:'#4a4a6a', room:'kitchen', label:'PANTRY', dx:null, dy:null },
+  // Wire shelves
+  { id:'wire_shelf_1', name:'Wire Shelf 1', w:16, h:12, color:'#707070', stroke:'#888', room:'living', label:'WIRE 1', dx:null, dy:null },
+  { id:'wire_shelf_2', name:'Wire Shelf 2', w:16, h:12, color:'#707070', stroke:'#888', room:'living', label:'WIRE 2', dx:null, dy:null },
+  // Laundry
+  { id:'washer', name:'Washer', w:20, h:20, color:'#e8e8e8', stroke:'#bbb', room:'kitchen', label:'WASHER', dx:null, dy:null },
+  { id:'dryer', name:'Dryer', w:24, h:20, color:'#d8d8e8', stroke:'#aab', room:'kitchen', label:'DRYER', dx:null, dy:null },
 ];
 
 let placedFurniture = [];
