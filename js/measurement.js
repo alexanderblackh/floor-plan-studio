@@ -6,7 +6,7 @@
  * Anchors: link two pieces to show persistent distance between them
  */
 
-import { S, PAD, state, getFurnitureDef, saveToCache } from './data.js';
+import { S, PAD, state, getFurnitureDef, getFixtures, saveToCache } from './data.js';
 import { getRoomBounds, findRoomAt } from './collision.js';
 import { formatDist } from './units.js';
 import { pushHistory } from './history.js';
@@ -315,8 +315,15 @@ export function renderAnchors() {
 
       if (anchor.type === 'wall') {
         c += renderWallAnchor(p, d, pw, ph, anchor, furnitureIdx, anchorIdx, isSelected);
+      } else if (anchor.type === 'fixture') {
+        // Fixture anchor
+        const fixtures = getFixtures();
+        const fixtureTarget = fixtures.find(f => f.id === anchor.id);
+        if (!fixtureTarget) continue;
+
+        c += renderFixtureAnchor(p, d, pw, ph, fixtureTarget, furnitureIdx, anchorIdx, isSelected);
       } else {
-        // Furniture/fixture anchor
+        // Furniture anchor
         const target = state.placedFurniture.find(t => t.id === (anchor.id || anchor));
         if (!target || target.x < 0 || target.y < 0) continue;
         const td = getFurnitureDef(target.id);
@@ -348,6 +355,34 @@ function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, t
   const lineWidth = isSelected ? 3 : 2;
 
   let c = `<g class="anchor-link" data-furniture-idx="${furnitureIdx}" data-target-idx="${targetIdx}" data-anchor-idx="${anchorIdx}" style="cursor:pointer">`;
+
+  c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${linkColor}" stroke-width="${lineWidth}" stroke-dasharray="6 4"/>`;
+  c += `<circle cx="${sx1}" cy="${sy1}" r="${isSelected ? 6 : 4}" fill="${linkColor}" stroke="${bgColor}" stroke-width="${isSelected ? 2 : 1}"/>`;
+  c += `<circle cx="${sx2}" cy="${sy2}" r="${isSelected ? 6 : 4}" fill="${linkColor}" stroke="${bgColor}" stroke-width="${isSelected ? 2 : 1}"/>`;
+
+  const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
+  const label = formatDist(gap);
+  const lw = label.length * 7 + 10;
+  c += `<rect x="${mx-lw/2}" y="${my-9}" width="${lw}" height="18" fill="${bgColor}" stroke="${linkColor}" stroke-width="${isSelected ? 2 : 1.5}" rx="4"/>`;
+  c += `<text x="${mx}" y="${my+1}" font-family="JetBrains Mono" font-size="9" font-weight="600" fill="${linkColor}" text-anchor="middle" dominant-baseline="central">${label}</text>`;
+
+  c += `</g>`;
+  return c;
+}
+
+function renderFixtureAnchor(p, d, pw, ph, fixtureTarget, furnitureIdx, anchorIdx, isSelected) {
+  // Calculate edge-to-edge distance from furniture to fixture
+  const gap = edgeGap(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+  const pts = closestEdgePoints(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+
+  const sx1 = PAD + S(pts.x1), sy1 = PAD + S(pts.y1);
+  const sx2 = PAD + S(pts.x2), sy2 = PAD + S(pts.y2);
+
+  const linkColor = isSelected ? '#cc66ff' : '#9966cc';
+  const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-tertiary').trim() || '#1a1a24';
+  const lineWidth = isSelected ? 3 : 2;
+
+  let c = `<g class="anchor-link" data-furniture-idx="${furnitureIdx}" data-anchor-idx="${anchorIdx}" data-type="fixture" data-fixture-id="${fixtureTarget.id}" style="cursor:pointer">`;
 
   c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${linkColor}" stroke-width="${lineWidth}" stroke-dasharray="6 4"/>`;
   c += `<circle cx="${sx1}" cy="${sy1}" r="${isSelected ? 6 : 4}" fill="${linkColor}" stroke="${bgColor}" stroke-width="${isSelected ? 2 : 1}"/>`;
@@ -467,6 +502,7 @@ function attachAnchorEvents() {
     el.addEventListener('mouseenter', e => {
       const furnitureIdx = parseInt(el.dataset.furnitureIdx);
       const targetIdx = el.dataset.targetIdx ? parseInt(el.dataset.targetIdx) : null;
+      const fixtureId = el.dataset.fixtureId;
 
       // Highlight source furniture
       const sourceFurniture = document.querySelector(`.furniture-piece[data-idx="${furnitureIdx}"]`);
@@ -481,11 +517,20 @@ function attachAnchorEvents() {
           targetFurniture.style.filter = 'brightness(1.3) drop-shadow(0 0 8px #9966cc)';
         }
       }
+
+      // Highlight target fixture if exists
+      if (fixtureId) {
+        const fixtureGroup = document.querySelector(`#fixtureGroup [data-id="${fixtureId}"]`);
+        if (fixtureGroup) {
+          fixtureGroup.style.filter = 'brightness(1.3) drop-shadow(0 0 8px #9966cc)';
+        }
+      }
     });
 
     el.addEventListener('mouseleave', e => {
       const furnitureIdx = parseInt(el.dataset.furnitureIdx);
       const targetIdx = el.dataset.targetIdx ? parseInt(el.dataset.targetIdx) : null;
+      const fixtureId = el.dataset.fixtureId;
 
       // Remove highlight from source
       const sourceFurniture = document.querySelector(`.furniture-piece[data-idx="${furnitureIdx}"]`);
@@ -498,6 +543,14 @@ function attachAnchorEvents() {
         const targetFurniture = document.querySelector(`.furniture-piece[data-idx="${targetIdx}"]`);
         if (targetFurniture) {
           targetFurniture.style.filter = '';
+        }
+      }
+
+      // Remove highlight from fixture
+      if (fixtureId) {
+        const fixtureGroup = document.querySelector(`#fixtureGroup [data-id="${fixtureId}"]`);
+        if (fixtureGroup) {
+          fixtureGroup.style.filter = '';
         }
       }
     });

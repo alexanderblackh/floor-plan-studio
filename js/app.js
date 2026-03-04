@@ -198,17 +198,43 @@ function attachCanvasEvents() {
       if (handleDividerClick(clickX, clickY)) return;
     }
 
-    // Anchor mode: clicking empty space creates a wall anchor
+    // Anchor mode: check if clicking a fixture, otherwise create wall anchor
     if (state.anchorMode && state.anchorSource !== null && e.button === 0) {
       e.stopPropagation();
+
+      // Check if clicking on a fixture
+      const fixtures = window.getFixtures ? window.getFixtures() : [];
+      let clickedFixture = null;
+      let fixtureId = null;
+
+      for (const fix of fixtures) {
+        if (clickX >= fix.x && clickX <= fix.x + fix.w &&
+            clickY >= fix.y && clickY <= fix.y + fix.h) {
+          clickedFixture = fix;
+          fixtureId = fix.id;
+          break;
+        }
+      }
+
       const src = state.placedFurniture[state.anchorSource];
       if (src) {
         if (!src.anchors) src.anchors = [];
-        const wallSide = determineWallSide(state.anchorSource, clickX, clickY);
-        if (wallSide && !src.anchors.find(a => a.type === 'wall' && a.wallSide === wallSide)) {
-          src.anchors.push({ type: 'wall', wallSide });
-          saveToCache();
+
+        if (clickedFixture && fixtureId) {
+          // Create anchor to fixture
+          if (!src.anchors.find(a => a.type === 'fixture' && a.id === fixtureId)) {
+            src.anchors.push({ type: 'fixture', id: fixtureId });
+            saveToCache();
+          }
+        } else {
+          // Create anchor to wall
+          const wallSide = determineWallSide(state.anchorSource, clickX, clickY);
+          if (wallSide && !src.anchors.find(a => a.type === 'wall' && a.wallSide === wallSide)) {
+            src.anchors.push({ type: 'wall', wallSide });
+            saveToCache();
+          }
         }
+
         state.anchorSource = null;
         renderAnchors();
       }

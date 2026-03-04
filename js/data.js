@@ -342,6 +342,11 @@ export function getFixtures() {
   return state.floorPlan.fixtures;
 }
 
+// Expose getFixtures globally for anchor mode
+if (typeof window !== 'undefined') {
+  window.getFixtures = getFixtures;
+}
+
 export function getDimensions() {
   return state.floorPlan.dimensions;
 }
