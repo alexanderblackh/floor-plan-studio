@@ -15,9 +15,9 @@ import { formatDist } from './units.js';
 import { escapeXml } from './render.js';
 import { pushHistory } from './history.js';
 
-const ELEV_PPI = 1.5; // Slightly smaller scale for elevation
+const ELEV_PPI = 3.5; // Scale for elevation view (larger for better visibility)
 const ES = (i) => i * ELEV_PPI;
-const ELEV_PAD = 20;
+const ELEV_PAD = 40;
 const DEPTH_THRESHOLD = 36; // How close to wall (inches) to show in elevation
 
 /**
@@ -129,6 +129,12 @@ function renderWallOpenings(wallDef, wallLength, wallHeight, floorY) {
       // Window cross
       c += `<line x1="${winX}" y1="${winY + winH/2}" x2="${winX + winW}" y2="${winY + winH/2}" stroke="#4a9eff55" stroke-width="0.5"/>`;
       c += `<line x1="${winX + winW/2}" y1="${winY}" x2="${winX + winW/2}" y2="${winY + winH}" stroke="#4a9eff55" stroke-width="0.5"/>`;
+
+      // Window measurements
+      const winWidth = Math.abs(winTo - winFrom);
+      c += `<text x="${winX + winW/2}" y="${winY - 3}" font-family="JetBrains Mono" font-size="8" fill="#4a9eff" text-anchor="middle">${formatDist(winWidth)}</text>`;
+      c += `<text x="${winX - 8}" y="${winY + winH/2}" font-family="JetBrains Mono" font-size="7" fill="#4a9eff88" text-anchor="end">H:${formatDist(WINDOW_HEIGHT)}</text>`;
+      c += `<text x="${winX - 8}" y="${floorY - ES(WINDOW_SILL) + 3}" font-family="JetBrains Mono" font-size="6" fill="#4a9eff66" text-anchor="end">sill:${formatDist(WINDOW_SILL)}</text>`;
     }
 
     // Render door
@@ -144,6 +150,11 @@ function renderWallOpenings(wallDef, wallLength, wallHeight, floorY) {
       c += `<rect x="${doorX}" y="${doorY}" width="${doorW}" height="${doorH}" fill="#c5975b11" stroke="#c5975b" stroke-width="1.5" rx="1"/>`;
       // Door handle
       c += `<circle cx="${doorX + doorW - ES(4)}" cy="${floorY - ES(36)}" r="2" fill="#c5975b66"/>`;
+
+      // Door measurements
+      const doorWidth = Math.abs(doorTo - doorFrom);
+      c += `<text x="${doorX + doorW/2}" y="${doorY - 3}" font-family="JetBrains Mono" font-size="8" fill="#c5975b" text-anchor="middle">${formatDist(doorWidth)}</text>`;
+      c += `<text x="${doorX + doorW + 8}" y="${doorY + doorH/2}" font-family="JetBrains Mono" font-size="7" fill="#c5975b88" text-anchor="start">H:${formatDist(DOOR_HEIGHT)}</text>`;
     }
   }
 
