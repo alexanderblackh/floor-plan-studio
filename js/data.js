@@ -43,15 +43,9 @@ export const DEFAULT_FLOOR_PLAN = {
     },
     {
       id: "bathroom", name: "Bathroom",
-      vertices: [[158,0],[217,0],[217,83],[158,83]],
-      color: "#15151d88", placeable: false,
+      vertices: [[158,0],[217,0],[217,83],[202.5,83],[202.5,93],[168.5,93],[168.5,83],[158,83]],
+      color: "#15151d88", placeable: true,
       labelSize: 11
-    },
-    {
-      id: "hallway", name: "Hallway",
-      vertices: [[168.5,66],[202.5,66],[202.5,93],[168.5,93]],
-      color: "#14141c88", placeable: true,
-      labelSize: 9
     },
     {
       id: "bedroom", name: "Bedroom",
