@@ -354,7 +354,7 @@ function attachCanvasEvents() {
       e.preventDefault();
     }
 
-    // Delete key - delete selected measurement or divider
+    // Delete key - delete selected measurement, divider, or anchor
     if (e.key === 'Delete' || e.key === 'Backspace') {
       if (state.selectedMeasurement?.type === 'locked') {
         if (confirm('Delete this locked measurement?')) {
@@ -363,6 +363,21 @@ function attachCanvasEvents() {
           state.selectedMeasurement = null;
           saveToCache();
           if (window._renderMeasurement) window._renderMeasurement();
+        }
+        e.preventDefault();
+      } else if (state.selectedMeasurement?.type === 'anchor') {
+        if (confirm('Delete this anchor?')) {
+          pushHistory();
+          const piece = state.placedFurniture[state.selectedMeasurement.furnitureIdx];
+          if (piece && piece.anchors) {
+            piece.anchors.splice(state.selectedMeasurement.anchorIdx, 1);
+            if (piece.anchors.length === 0) {
+              delete piece.anchors;
+            }
+          }
+          state.selectedMeasurement = null;
+          saveToCache();
+          if (window._renderAnchors) window._renderAnchors();
         }
         e.preventDefault();
       } else if (state.selectedDivider !== null) {
