@@ -311,6 +311,60 @@ function attachElevationFurnitureEvents() {
   const pieces = document.querySelectorAll('.elev-furniture-piece');
 
   pieces.forEach(el => {
+    let isDragging = false;
+    let dragStartY = 0;
+    let initialElevation = 0;
+
+    el.addEventListener('mousedown', e => {
+      // Only left click
+      if (e.button !== 0) return;
+
+      e.stopPropagation();
+      e.preventDefault();
+
+      const idx = parseInt(el.dataset.idx);
+      const piece = state.placedFurniture[idx];
+      if (!piece) return;
+
+      isDragging = true;
+      dragStartY = e.clientY;
+      initialElevation = piece.elevation || 0;
+
+      // Select this piece
+      if (!state.selectedFurniture.has(idx)) {
+        if (!e.shiftKey) state.selectedFurniture.clear();
+        state.selectedFurniture.add(idx);
+        renderElevation();
+        if (window._renderFurniture) window._renderFurniture();
+        if (window._updateAlignToolbar) window._updateAlignToolbar();
+      }
+
+      const handleMouseMove = (moveEvent) => {
+        if (!isDragging) return;
+
+        const deltaY = moveEvent.clientY - dragStartY;
+        // Convert screen pixels to inches (inverted because Y goes down but elevation goes up)
+        const elevationChange = -Math.round(deltaY / ELEV_PPI);
+        const newElevation = Math.max(0, initialElevation + elevationChange);
+
+        piece.elevation = newElevation;
+        renderElevation();
+      };
+
+      const handleMouseUp = () => {
+        if (isDragging) {
+          isDragging = false;
+          pushHistory();
+          saveToCache();
+        }
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
+
     el.addEventListener('click', e => {
       e.stopPropagation();
       const idx = parseInt(el.dataset.idx);
@@ -343,11 +397,9 @@ function attachElevationFurnitureEvents() {
       if (window._renderFurniture) window._renderFurniture();
       saveToCache();
     });
-
-    // TODO: Implement drag in elevation view
-    // This is more complex as it requires converting elevation coordinates back to floor plan coordinates
   });
 }
 
-// Expose for inline handlers (toggleElevation is exposed in app.js)
+// Expose for inline handlers and auto-updates
 window.selectElevationWall = selectElevationWall;
+window._renderElevation = renderElevation;

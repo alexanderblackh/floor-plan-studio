@@ -53,6 +53,9 @@ export function updateSelectedColor(color) {
   saveToCache();
   renderFurniture();
   renderStagingFurniture();
+
+  // Update elevation view
+  if (window._renderElevation && state.showElevation) window._renderElevation();
 }
 
 // Expose globally

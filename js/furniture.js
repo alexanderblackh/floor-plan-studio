@@ -151,6 +151,8 @@ export function returnToStaging(idx) {
   state.selectedFurniture.delete(idx);
   renderFurniture();
   renderStagingFurniture();
+  // Update elevation view
+  if (window._renderElevation && state.showElevation) window._renderElevation();
   saveToCache();
 }
 
@@ -272,6 +274,8 @@ function attachFurnitureEvents() {
       renderFurniture();
       renderStagingFurniture();
       saveToCache();
+      // Update elevation view
+      if (window._renderElevation && state.showElevation) window._renderElevation();
       console.log('Rotation complete, new state:', state.placedFurniture[i].rotated);
     });
 
@@ -299,6 +303,8 @@ function attachStagingFurnitureEvents() {
       renderFurniture();
       renderStagingFurniture();
       saveToCache();
+      // Update elevation view
+      if (window._renderElevation && state.showElevation) window._renderElevation();
     });
 
     el.addEventListener('dblclick', e => {
@@ -312,6 +318,8 @@ function attachStagingFurnitureEvents() {
       renderFurniture();
       renderStagingFurniture();
       saveToCache();
+      // Update elevation view
+      if (window._renderElevation && state.showElevation) window._renderElevation();
       console.log('Staging rotation complete, new state:', state.placedFurniture[i].rotated);
     });
   });
@@ -412,6 +420,9 @@ export function handleDragEnd() {
 
   // Update dimension links after drag ends
   if (window._renderAnchors) window._renderAnchors();
+
+  // Update elevation view
+  if (window._renderElevation && state.showElevation) window._renderElevation();
 
   return true;
 }
