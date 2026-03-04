@@ -438,19 +438,41 @@ function buildSVG() {
   // === CLOSETS (span full top wall of bedroom) ===
   // Hallway gap centered
   const bHallX = LOWER_IWX + (M.bedroomL - M.hallwayW) / 2;
+
   // Left closet
   const lcW = bHallX - LOWER_IWX;
   c += `<rect x="${wx(LOWER_IWX)}" y="${wy(bedTopY)}" width="${S(lcW)}" height="${S(M.closetDepth)}" fill="#2a2a3a55" stroke="#33334488" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
   c += `<text x="${wx(LOWER_IWX + lcW/2)}" y="${wy(bedTopY + M.closetDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#3a3a4a" text-anchor="middle" dominant-baseline="central">Closet</text>`;
+
+  // Left closet doors: 16" wide double doors opening outward
+  const leftDoorW = 16;
+  const leftDoorX = LOWER_IWX + (lcW - leftDoorW) / 2; // Center doors on closet
+  const leftDoorY = bedTopY + M.closetDepth;
+  c += doorOpen(leftDoorX, leftDoorY, leftDoorX + leftDoorW, leftDoorY);
+  // Double doors opening outward (into bedroom) - left door swings left, right door swings right
+  c += doorArc(leftDoorX, leftDoorY, leftDoorW / 2, 90, 175); // Left door
+  c += doorArc(leftDoorX + leftDoorW, leftDoorY, leftDoorW / 2, 5, 90); // Right door
+
   // Right closet
   const rcX = bHallX + M.hallwayW;
   const rcW = LOWER_IWX + M.bedroomL - rcX;
   c += `<rect x="${wx(rcX)}" y="${wy(bedTopY)}" width="${S(rcW)}" height="${S(M.closetDepth)}" fill="#2a2a3a55" stroke="#33334488" stroke-width="1" stroke-dasharray="4 2" rx="1"/>`;
   c += `<text x="${wx(rcX + rcW/2)}" y="${wy(bedTopY + M.closetDepth/2)}" font-family="JetBrains Mono" font-size="7" fill="#3a3a4a" text-anchor="middle" dominant-baseline="central">Closet</text>`;
 
-  // Closet front walls
-  c += thinWall(LOWER_IWX, bedTopY + M.closetDepth, bHallX, bedTopY + M.closetDepth);
-  c += thinWall(rcX, bedTopY + M.closetDepth, LOWER_IWX + M.bedroomL, bedTopY + M.closetDepth);
+  // Right closet doors: 21" wide double doors opening outward
+  const rightDoorW = 21;
+  const rightDoorX = rcX + (rcW - rightDoorW) / 2; // Center doors on closet
+  const rightDoorY = bedTopY + M.closetDepth;
+  c += doorOpen(rightDoorX, rightDoorY, rightDoorX + rightDoorW, rightDoorY);
+  // Double doors opening outward (into bedroom) - left door swings left, right door swings right
+  c += doorArc(rightDoorX, rightDoorY, rightDoorW / 2, 90, 175); // Left door
+  c += doorArc(rightDoorX + rightDoorW, rightDoorY, rightDoorW / 2, 5, 90); // Right door
+
+  // Closet front walls (with door gaps)
+  c += thinWall(LOWER_IWX, bedTopY + M.closetDepth, leftDoorX, bedTopY + M.closetDepth); // Left side of left closet
+  c += thinWall(leftDoorX + leftDoorW, bedTopY + M.closetDepth, bHallX, bedTopY + M.closetDepth); // Right side of left closet
+  c += thinWall(rcX, bedTopY + M.closetDepth, rightDoorX, bedTopY + M.closetDepth); // Left side of right closet
+  c += thinWall(rightDoorX + rightDoorW, bedTopY + M.closetDepth, LOWER_IWX + M.bedroomL, bedTopY + M.closetDepth); // Right side of right closet
 
   // Hallway walls (closet side walls)
   c += thinWall(bHallX, bedTopY, bHallX, bedTopY - M.hallwayD);
