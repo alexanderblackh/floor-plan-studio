@@ -450,9 +450,9 @@ function buildSVG() {
   const leftDoorY = bedTopY + M.closetDepth;
   const leftDoorCenter = leftDoorX + leftDoorW / 2;
   c += doorOpen(leftDoorX, leftDoorY, leftDoorX + leftDoorW, leftDoorY);
-  // Double doors hinged at center, opening outward - left door swings left, right door swings right
-  c += doorArc(leftDoorCenter, leftDoorY, leftDoorW / 2, 90, 175); // Left door (from center)
-  c += doorArc(leftDoorCenter, leftDoorY, leftDoorW / 2, 5, 90); // Right door (from center)
+  // Double doors hinged at center, opening downward into bedroom
+  c += doorArc(leftDoorCenter, leftDoorY, leftDoorW / 2, 185, 270); // Left door (swings left-down)
+  c += doorArc(leftDoorCenter, leftDoorY, leftDoorW / 2, 270, 355); // Right door (swings down-right)
 
   // Right closet
   const rcX = bHallX + M.hallwayW;
@@ -466,9 +466,9 @@ function buildSVG() {
   const rightDoorY = bedTopY + M.closetDepth;
   const rightDoorCenter = rightDoorX + rightDoorW / 2;
   c += doorOpen(rightDoorX, rightDoorY, rightDoorX + rightDoorW, rightDoorY);
-  // Double doors hinged at center, opening outward - left door swings left, right door swings right
-  c += doorArc(rightDoorCenter, rightDoorY, rightDoorW / 2, 90, 175); // Left door (from center)
-  c += doorArc(rightDoorCenter, rightDoorY, rightDoorW / 2, 5, 90); // Right door (from center)
+  // Double doors hinged at center, opening downward into bedroom
+  c += doorArc(rightDoorCenter, rightDoorY, rightDoorW / 2, 185, 270); // Left door (swings left-down)
+  c += doorArc(rightDoorCenter, rightDoorY, rightDoorW / 2, 270, 355); // Right door (swings down-right)
 
   // Closet front walls (with door gaps)
   c += thinWall(LOWER_IWX, bedTopY + M.closetDepth, leftDoorX, bedTopY + M.closetDepth); // Left side of left closet
