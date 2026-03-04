@@ -310,6 +310,9 @@ export const state = {
   anchorMode: false,
   anchorSource: null,
   selectedFurniture: new Set(),
+  selectedMeasurement: null, // { type: 'locked', idx: number } | { type: 'anchor', furnitureIdx: number, anchorIdx: number }
+  selectedDivider: null, // index of selected divider
+  draggingMeasurementPoint: null, // { type: 'locked'|'divider'|'anchor', idx: number, point: 'start'|'end' }
   elevationWall: null, // currently viewed elevation wall id
   showElevation: false,
   displayUnit: 'in',  // 'in' | 'ft' | 'cm' | 'm'

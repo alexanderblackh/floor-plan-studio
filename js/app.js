@@ -329,6 +329,14 @@ function attachCanvasEvents() {
       if (state.selectedFurniture.size > 0) {
         clearSelection();
       }
+      if (state.selectedMeasurement) {
+        state.selectedMeasurement = null;
+        if (window._renderMeasurement) window._renderMeasurement();
+      }
+      if (state.selectedDivider !== null) {
+        state.selectedDivider = null;
+        if (window._renderDividers) window._renderDividers();
+      }
       if (state.anchorMode) {
         state.anchorMode = false;
         state.anchorSource = null;
@@ -344,6 +352,29 @@ function attachCanvasEvents() {
         renderDividers();
       }
       e.preventDefault();
+    }
+
+    // Delete key - delete selected measurement or divider
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (state.selectedMeasurement?.type === 'locked') {
+        if (confirm('Delete this locked measurement?')) {
+          pushHistory();
+          state.lockedMeasurements.splice(state.selectedMeasurement.idx, 1);
+          state.selectedMeasurement = null;
+          saveToCache();
+          if (window._renderMeasurement) window._renderMeasurement();
+        }
+        e.preventDefault();
+      } else if (state.selectedDivider !== null) {
+        if (confirm('Delete this divider?')) {
+          pushHistory();
+          state.softDividers.splice(state.selectedDivider, 1);
+          state.selectedDivider = null;
+          saveToCache();
+          if (window._renderDividers) window._renderDividers();
+        }
+        e.preventDefault();
+      }
     }
 
     // Arrow key movement for selected furniture

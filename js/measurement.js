@@ -117,6 +117,7 @@ function renderMeasureLine(start, end, isPreview = false, lockedIdx = -1, forceS
   const isLocked = lockedIdx >= 0;
   const dataAttr = isLocked ? ` data-locked-idx="${lockedIdx}"` : '';
   const lockedClass = isLocked ? ' locked-measurement' : '';
+  const isSelected = state.selectedMeasurement?.type === 'locked' && state.selectedMeasurement?.idx === lockedIdx;
 
   let c = '';
 
@@ -125,15 +126,19 @@ function renderMeasureLine(start, end, isPreview = false, lockedIdx = -1, forceS
     c += `<g class="locked-measurement-group" data-locked-idx="${lockedIdx}" style="cursor:pointer">`;
   }
 
-  // Line - thicker and more visible
-  c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${accentColor}" stroke-width="3" stroke-dasharray="8 4"${opacity}${dataAttr}/>`;
+  // Line - thicker and more visible, highlight if selected
+  const lineWidth = isSelected ? 4 : 3;
+  const lineOpacity = isSelected ? '' : opacity;
+  c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${accentColor}" stroke-width="${lineWidth}" stroke-dasharray="8 4"${lineOpacity}${dataAttr}/>`;
 
-  // Endpoints - larger
-  c += `<circle cx="${sx1}" cy="${sy1}" r="6" fill="${accentColor}" stroke="${bgPanel}" stroke-width="2"${opacity}${dataAttr}/>`;
+  // Endpoints - larger, draggable if selected
+  const endpointRadius = isSelected ? 8 : 6;
+  const endpointStroke = isSelected ? 3 : 2;
+  c += `<circle class="measure-handle-start" cx="${sx1}" cy="${sy1}" r="${endpointRadius}" fill="${accentColor}" stroke="${bgPanel}" stroke-width="${endpointStroke}"${opacity}${dataAttr} style="cursor:${isSelected ? 'move' : 'pointer'}" data-locked-idx="${lockedIdx}" data-point="start"/>`;
   if (start.edge) {
     c += `<text x="${sx1}" y="${sy1 - 12}" font-family="JetBrains Mono" font-size="9" fill="${accentColor}" text-anchor="middle" font-weight="600"${opacity}>${start.edge[0].toUpperCase()}</text>`;
   }
-  c += `<circle cx="${sx2}" cy="${sy2}" r="6" fill="${accentColor}" stroke="${bgPanel}" stroke-width="2"${opacity}${dataAttr}/>`;
+  c += `<circle class="measure-handle-end" cx="${sx2}" cy="${sy2}" r="${endpointRadius}" fill="${accentColor}" stroke="${bgPanel}" stroke-width="${endpointStroke}"${opacity}${dataAttr} style="cursor:${isSelected ? 'move' : 'pointer'}" data-locked-idx="${lockedIdx}" data-point="end"/>`;
   if (end.edge && !isPreview) {
     c += `<text x="${sx2}" y="${sy2 - 12}" font-family="JetBrains Mono" font-size="9" fill="${accentColor}" text-anchor="middle" font-weight="600"${opacity}>${end.edge[0].toUpperCase()}</text>`;
   }
@@ -141,7 +146,8 @@ function renderMeasureLine(start, end, isPreview = false, lockedIdx = -1, forceS
   // Label - larger and more prominent
   const label = formatDist(dist);
   const labelWidth = label.length * 8 + 12;
-  c += `<rect x="${midX - labelWidth/2}" y="${midY - 14}" width="${labelWidth}" height="28" fill="${bgColor}" stroke="${accentColor}" stroke-width="2" rx="6"${opacity}${dataAttr}/>`;
+  const labelStroke = isSelected ? 3 : 2;
+  c += `<rect x="${midX - labelWidth/2}" y="${midY - 14}" width="${labelWidth}" height="28" fill="${bgColor}" stroke="${accentColor}" stroke-width="${labelStroke}" rx="6"${opacity}${dataAttr}/>`;
   c += `<text x="${midX}" y="${midY + 3}" font-family="JetBrains Mono" font-size="13" font-weight="bold" fill="${accentColor}" text-anchor="middle" dominant-baseline="central"${opacity}>${label}</text>`;
 
   // Lock indicator icon for locked measurements
@@ -441,6 +447,14 @@ function deleteLockedMeasurement(idx) {
  */
 function attachLockedMeasurementEvents() {
   document.querySelectorAll('.locked-measurement-group').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const idx = parseInt(el.dataset.lockedIdx);
+      state.selectedMeasurement = { type: 'locked', idx };
+      state.selectedDivider = null;
+      renderMeasurement();
+    });
+
     el.addEventListener('contextmenu', e => {
       e.preventDefault();
       e.stopPropagation();
@@ -456,6 +470,80 @@ function attachLockedMeasurementEvents() {
 
     el.addEventListener('mouseleave', e => {
       el.style.opacity = '1';
+    });
+  });
+
+  // Attach drag handlers to measurement endpoints
+  document.querySelectorAll('.measure-handle-start, .measure-handle-end').forEach(handle => {
+    handle.addEventListener('mousedown', e => {
+      e.stopPropagation();
+      e.preventDefault();
+
+      const idx = parseInt(handle.dataset.lockedIdx);
+      const point = handle.dataset.point;
+
+      if (idx < 0 || idx >= state.lockedMeasurements.length) return;
+
+      state.draggingMeasurementPoint = { type: 'locked', idx, point };
+
+      const handleMouseMove = (moveEvent) => {
+        if (!state.draggingMeasurementPoint) return;
+
+        const r = document.getElementById('canvasContainer').getBoundingClientRect();
+        let newX = Math.round(((moveEvent.clientX - r.left - state.panX) / state.zoom - PAD) / PPI);
+        let newY = Math.round(((moveEvent.clientY - r.top - state.panY) / state.zoom - PAD) / PPI);
+
+        const measurement = state.lockedMeasurements[idx];
+        const otherPoint = point === 'start' ? measurement.end : measurement.start;
+
+        // Apply angle snap if Shift is held
+        if (moveEvent.shiftKey) {
+          const dx = newX - otherPoint.x;
+          const dy = newY - otherPoint.y;
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+          // Snap to nearest 45-degree increment
+          const snapAngles = [0, 45, 90, 135, 180, -135, -90, -45];
+          let nearestAngle = snapAngles[0];
+          let minDiff = Math.abs(angle - nearestAngle);
+
+          for (const snapAngle of snapAngles) {
+            const diff = Math.abs(angle - snapAngle);
+            if (diff < minDiff) {
+              minDiff = diff;
+              nearestAngle = snapAngle;
+            }
+          }
+
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          const radians = nearestAngle * Math.PI / 180;
+          newX = Math.round(otherPoint.x + dist * Math.cos(radians));
+          newY = Math.round(otherPoint.y + dist * Math.sin(radians));
+        }
+
+        if (point === 'start') {
+          measurement.start.x = newX;
+          measurement.start.y = newY;
+        } else {
+          measurement.end.x = newX;
+          measurement.end.y = newY;
+        }
+
+        renderMeasurement();
+      };
+
+      const handleMouseUp = () => {
+        if (state.draggingMeasurementPoint) {
+          pushHistory();
+          saveToCache();
+          state.draggingMeasurementPoint = null;
+        }
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
     });
   });
 }
