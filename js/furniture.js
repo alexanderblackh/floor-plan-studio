@@ -160,6 +160,37 @@ export function returnToStaging(idx) {
 function attachFurnitureEvents() {
   console.log('Attaching furniture events to', document.querySelectorAll('.furniture-piece').length, 'pieces');
   document.querySelectorAll('.furniture-piece').forEach(el => {
+    const idx = parseInt(el.dataset.idx);
+
+    // Hover effect - highlight on hover
+    el.addEventListener('mouseenter', () => {
+      const rect = el.querySelector('rect');
+      if (rect) {
+        rect.setAttribute('data-original-opacity', rect.getAttribute('opacity') || '1');
+        rect.setAttribute('opacity', '0.7');
+      }
+
+      // In anchor mode with source selected, show target anchor points
+      if (state.anchorMode && state.anchorSource !== null && state.anchorSource !== idx) {
+        state.anchorHoverTarget = idx;
+        if (window._renderAnchors) window._renderAnchors();
+      }
+    });
+
+    el.addEventListener('mouseleave', () => {
+      const rect = el.querySelector('rect');
+      if (rect && !state.selectedFurniture.has(idx)) {
+        const origOpacity = rect.getAttribute('data-original-opacity') || '1';
+        rect.setAttribute('opacity', origOpacity);
+      }
+
+      // Clear hover target in anchor mode
+      if (state.anchorMode && state.anchorHoverTarget === idx) {
+        state.anchorHoverTarget = null;
+        if (window._renderAnchors) window._renderAnchors();
+      }
+    });
+
     el.addEventListener('mousedown', e => {
       console.log('Mousedown on furniture', el.dataset.idx);
       if (e.button === 2) return;

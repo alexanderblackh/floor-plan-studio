@@ -95,9 +95,23 @@ export function renderFixtureHandles() {
 
   // Attach events to handles
   g.querySelectorAll('.fixture-handle').forEach(el => {
+    const idx = parseInt(el.dataset.fixtureIdx);
+
+    // Hover effect
+    el.addEventListener('mouseenter', () => {
+      el.setAttribute('data-original-opacity', el.getAttribute('opacity') || '1');
+      el.setAttribute('opacity', '0.7');
+    });
+
+    el.addEventListener('mouseleave', () => {
+      if (state.fixtureEditIdx !== idx) {
+        const origOpacity = el.getAttribute('data-original-opacity') || '1';
+        el.setAttribute('opacity', origOpacity);
+      }
+    });
+
     el.addEventListener('mousedown', e => {
       e.stopPropagation();
-      const idx = parseInt(el.dataset.fixtureIdx);
       state.fixtureEditIdx = idx;
       state.draggingFixture = idx;
 

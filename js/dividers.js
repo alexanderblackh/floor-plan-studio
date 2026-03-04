@@ -172,7 +172,7 @@ function attachDividerEvents() {
         let newY = Math.round(((moveEvent.clientY - r.top - state.panY) / state.zoom - PAD) / PPI);
 
         const divider = state.softDividers[idx];
-        const otherPoint = point === 'from' ? divider.to : divider.from;
+        const otherPoint = point === 'start' ? divider.to : divider.from;
 
         // Apply angle snap if Shift is held
         if (moveEvent.shiftKey) {
@@ -202,7 +202,7 @@ function attachDividerEvents() {
         if (point === 'start') {
           divider.from.x = newX;
           divider.from.y = newY;
-        } else {
+        } else if (point === 'end') {
           divider.to.x = newX;
           divider.to.y = newY;
         }

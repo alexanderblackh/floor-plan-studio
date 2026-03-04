@@ -301,7 +301,7 @@ function closestEdgePoints(ax, ay, aw, ah, bx, by, bw, bh) {
 /**
  * Render anchor points (9 dots) on an object when hovering or selected for anchoring
  */
-function renderAnchorPoints(x, y, w, h, isSource = false) {
+function renderAnchorPoints(x, y, w, h, isSource = false, objectType = null) {
   const points = getAnchorPoints(x, y, w, h);
   const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
   const sourceColor = '#9966cc'; // Purple for source points
@@ -314,7 +314,9 @@ function renderAnchorPoints(x, y, w, h, isSource = false) {
     const r = isSource ? 5 : 4;
     const strokeW = isSource ? 2 : 1.5;
 
-    c += `<circle class="anchor-point" data-point-name="${name}" cx="${sx}" cy="${sy}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="${strokeW}" style="cursor:pointer" opacity="0.9"/>`;
+    // Add data attributes for click handling
+    const dataAttrs = objectType ? `data-anchor-object-type="${objectType}" data-point-name="${name}"` : `data-point-name="${name}"`;
+    c += `<circle class="anchor-point ${objectType ? 'anchor-point-clickable' : ''}" ${dataAttrs} cx="${sx}" cy="${sy}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="${strokeW}" style="cursor:pointer" opacity="0.9"/>`;
   }
   return c;
 }
@@ -346,7 +348,7 @@ export function renderAnchors() {
         c += `<text x="${sx + S(sw)/2}" y="${sy - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">SOURCE</text>`;
 
         // Show anchor points on source object
-        c += renderAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh, true);
+        c += renderAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh, true, 'source');
 
         // If a source point is selected, highlight it
         if (state.anchorSourcePoint) {
@@ -358,8 +360,32 @@ export function renderAnchors() {
             c += `<circle cx="${spx}" cy="${spy}" r="8" fill="none" stroke="#9966cc" stroke-width="3">
               <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
             </circle>`;
+            // Add lock icon
+            c += `<text x="${spx + 12}" y="${spy - 10}" font-family="sans-serif" font-size="12" fill="#9966cc">🔒</text>`;
           }
         }
+      }
+    }
+  }
+
+  // Render anchor points on hovered target
+  if (state.anchorMode && state.anchorHoverTarget !== null) {
+    const targetPiece = state.placedFurniture[state.anchorHoverTarget];
+    if (targetPiece && targetPiece.x >= 0 && targetPiece.y >= 0) {
+      const targetDef = getFurnitureDef(targetPiece.id);
+      if (targetDef) {
+        const tw = targetPiece.rotated ? targetDef.h : targetDef.w;
+        const th = targetPiece.rotated ? targetDef.w : targetDef.h;
+        const tx = PAD + S(targetPiece.x);
+        const ty = PAD + S(targetPiece.y);
+        const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
+
+        // Glow around target
+        c += `<rect x="${tx - 4}" y="${ty - 4}" width="${S(tw) + 8}" height="${S(th) + 8}" fill="none" stroke="${accentColor}" stroke-width="2" stroke-dasharray="4 2" rx="4" opacity="0.6"/>`;
+        c += `<text x="${tx + S(tw)/2}" y="${ty - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">TARGET</text>`;
+
+        // Show anchor points on target object
+        c += renderAnchorPoints(targetPiece.x, targetPiece.y, tw, th, false, 'target');
       }
     }
   }
@@ -471,9 +497,10 @@ function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, t
 
   const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
   const label = formatDist(gap);
-  const lw = label.length * 7 + 10;
+  const lockIcon = anchor.locked ? ' 🔒' : '';
+  const lw = (label.length + lockIcon.length) * 7 + 10;
   c += `<rect x="${mx-lw/2}" y="${my-9}" width="${lw}" height="18" fill="${bgColor}" stroke="${linkColor}" stroke-width="${isSelected ? 2 : 1.5}" rx="4"/>`;
-  c += `<text x="${mx}" y="${my+1}" font-family="JetBrains Mono" font-size="9" font-weight="600" fill="${linkColor}" text-anchor="middle" dominant-baseline="central">${label}</text>`;
+  c += `<text x="${mx}" y="${my+1}" font-family="JetBrains Mono" font-size="9" font-weight="600" fill="${linkColor}" text-anchor="middle" dominant-baseline="central">${label}${lockIcon}</text>`;
 
   c += `</g>`;
   return c;
@@ -542,9 +569,10 @@ function renderFixtureAnchor(p, d, pw, ph, fixtureTarget, furnitureIdx, anchorId
 
   const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
   const label = formatDist(gap);
-  const lw = label.length * 7 + 10;
+  const lockIcon = anchor.locked ? ' 🔒' : '';
+  const lw = (label.length + lockIcon.length) * 7 + 10;
   c += `<rect x="${mx-lw/2}" y="${my-9}" width="${lw}" height="18" fill="${bgColor}" stroke="${linkColor}" stroke-width="${isSelected ? 2 : 1.5}" rx="4"/>`;
-  c += `<text x="${mx}" y="${my+1}" font-family="JetBrains Mono" font-size="9" font-weight="600" fill="${linkColor}" text-anchor="middle" dominant-baseline="central">${label}</text>`;
+  c += `<text x="${mx}" y="${my+1}" font-family="JetBrains Mono" font-size="9" font-weight="600" fill="${linkColor}" text-anchor="middle" dominant-baseline="central">${label}${lockIcon}</text>`;
 
   c += `</g>`;
   return c;
@@ -610,6 +638,55 @@ function renderWallAnchor(p, d, pw, ph, anchor, furnitureIdx, anchorIdx, isSelec
  * Attach event handlers to anchor links
  */
 function attachAnchorEvents() {
+  // Handle anchor point clicks during anchor creation
+  document.querySelectorAll('.anchor-point-clickable').forEach(el => {
+    el.addEventListener('click', e => {
+      e.stopPropagation();
+      const objectType = el.dataset.anchorObjectType;
+      const pointName = el.dataset.pointName;
+
+      if (objectType === 'source') {
+        // Select source point
+        state.anchorSourcePoint = pointName;
+        renderAnchors();
+      } else if (objectType === 'target' && state.anchorSourcePoint) {
+        // Complete anchor with selected points
+        if (state.anchorHoverTarget !== null) {
+          const src = state.placedFurniture[state.anchorSource];
+          const target = state.placedFurniture[state.anchorHoverTarget];
+          if (src && target) {
+            if (!src.anchors) src.anchors = [];
+            const targetId = target.id;
+            if (!src.anchors.find(a => a.id === targetId && a.type === 'furniture')) {
+              src.anchors.push({
+                type: 'furniture',
+                id: targetId,
+                sourcePoint: state.anchorSourcePoint,
+                targetPoint: pointName,
+                locked: true  // Mark as manually locked
+              });
+              saveToCache();
+            }
+          }
+          state.anchorSource = null;
+          state.anchorSourcePoint = null;
+          state.anchorHoverTarget = null;
+          renderAnchors();
+          if (window._renderFurniture) window._renderFurniture();
+        }
+      }
+    });
+
+    // Hover effects for anchor points
+    el.addEventListener('mouseenter', () => {
+      el.setAttribute('r', parseFloat(el.getAttribute('r')) + 2);
+    });
+
+    el.addEventListener('mouseleave', () => {
+      el.setAttribute('r', parseFloat(el.getAttribute('r')) - 2);
+    });
+  });
+
   document.querySelectorAll('.anchor-link').forEach(el => {
     el.addEventListener('click', e => {
       e.stopPropagation();
