@@ -4,13 +4,13 @@
  * This is the entry point that wires everything together.
  */
 
-import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache } from './data.js';
+import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache, getFurnitureDef } from './data.js';
 import { buildSVG, buildStagingSVG } from './render.js';
 import { renderFurniture, renderStagingFurniture, handleDragMove, handleDragEnd } from './furniture.js';
 import { clearSelection, updateAlignToolbar } from './selection.js';
 import { renderMeasurement, renderAnchors, toggleMeasure, toggleShowAll, toggleAnchorMode } from './measurement.js';
 import { renderElevation, toggleElevation, buildElevationSelector } from './elevation.js';
-import { cycleUnit, getUnit, setUnit, formatDist } from './units.js';
+import { cycleUnit, getUnit, formatDist } from './units.js';
 import { toggleFixtureEditMode, handleFixtureClick, handleFixtureDragMove, handleFixtureDragEnd, renderFixtureHandles } from './fixtures.js';
 import './io.js'; // registers global export/import functions
 
@@ -110,8 +110,10 @@ function updateUnitDisplay() {
 function determineWallSide(sourceIdx, clickX, clickY) {
   const p = state.placedFurniture[sourceIdx];
   if (!p || p.x < 0 || p.y < 0) return null;
-  const pw = p.rotated ? (state.floorPlan.furniture.find(f=>f.id===p.id)?.h||0) : (state.floorPlan.furniture.find(f=>f.id===p.id)?.w||0);
-  const ph = p.rotated ? (state.floorPlan.furniture.find(f=>f.id===p.id)?.w||0) : (state.floorPlan.furniture.find(f=>f.id===p.id)?.h||0);
+  const d = getFurnitureDef(p.id);
+  if (!d) return null;
+  const pw = p.rotated ? d.h : d.w;
+  const ph = p.rotated ? d.w : d.h;
   const cx = p.x + pw/2, cy = p.y + ph/2;
   const dx = clickX - cx, dy = clickY - cy;
 
@@ -268,6 +270,7 @@ window.toggleFixtureEditMode = toggleFixtureEditMode;
 window.handleUnitToggle = handleUnitToggle;
 window.clearAllFurniture = clearAllFurniture;
 window.resetFurniture = resetFurniture;
+window.toggleElevation = toggleElevation;
 window.fitToView = fitToView;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;

@@ -335,6 +335,8 @@ export function initDefaults() {
 export function saveToCache() {
   try {
     localStorage.setItem('fps-layout', JSON.stringify(state.placedFurniture));
+    // Also persist fixture positions (they can be edited in fixture mode)
+    localStorage.setItem('fps-fixtures', JSON.stringify(state.floorPlan.fixtures));
   } catch(e) { /* quota exceeded or private browsing */ }
 }
 
@@ -353,6 +355,16 @@ export function loadFromCache() {
         elevation: p.elevation ?? 0,
         stackedOn: p.stackedOn ?? null
       }));
+      // Restore fixture positions if saved
+      const fixtureData = localStorage.getItem('fps-fixtures');
+      if (fixtureData) {
+        const savedFixtures = JSON.parse(fixtureData);
+        // Update fixture positions from cache (match by id)
+        for (const saved of savedFixtures) {
+          const fix = state.floorPlan.fixtures.find(f => f.id === saved.id);
+          if (fix) { fix.x = saved.x; fix.y = saved.y; }
+        }
+      }
       return true;
     }
   } catch(e) { /* corrupted data */ }

@@ -272,6 +272,8 @@ export function selectElevationWall(wallId) {
 /**
  * Build the elevation wall selector dropdown
  */
+let elevSelectorBound = false;
+
 export function buildElevationSelector() {
   const sel = document.getElementById('elevWallSelect');
   if (!sel) return;
@@ -284,7 +286,11 @@ export function buildElevationSelector() {
     sel.appendChild(opt);
   }
 
-  sel.addEventListener('change', () => selectElevationWall(sel.value));
+  // Only bind the change listener once
+  if (!elevSelectorBound) {
+    sel.addEventListener('change', () => selectElevationWall(sel.value));
+    elevSelectorBound = true;
+  }
 }
 
 // Expose for inline handlers (toggleElevation is exposed in app.js)

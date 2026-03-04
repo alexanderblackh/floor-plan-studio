@@ -15,13 +15,24 @@
  * - CSV: furniture definitions
  */
 
-import { state, getFurnitureDefs, saveToCache, initDefaults, validateFloorPlan, DEFAULT_FLOOR_PLAN } from './data.js';
+import { state, getFurnitureDefs, saveToCache, initDefaults, validateFloorPlan } from './data.js';
 import { buildSVG, buildStagingSVG } from './render.js';
 import { renderFurniture, renderStagingFurniture } from './furniture.js';
+import { buildElevationSelector } from './elevation.js';
 
 function closeExportMenu() {
   const menu = document.getElementById('exportMenu');
   if (menu) menu.style.display = 'none';
+}
+
+/** Download a Blob as a file, cleaning up the object URL after */
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // ===== EXPORT SVG =====
@@ -29,10 +40,7 @@ export function exportSVG() {
   const cl = document.getElementById('svgPlan').cloneNode(true);
   cl.style.transform = '';
   const b = new Blob([new XMLSerializer().serializeToString(cl)], { type: 'image/svg+xml' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(b);
-  a.download = 'floor-plan.svg';
-  a.click();
+  downloadBlob(b, 'floor-plan.svg');
   closeExportMenu();
 }
 
@@ -60,12 +68,9 @@ export function exportPNG() {
     ctx.fillStyle = '#0f0f14';
     ctx.fillRect(0, 0, w, h);
     ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
     canvas.toBlob(function (blob) {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = 'floor-plan.png';
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadBlob(blob, 'floor-plan.png');
     }, 'image/png');
   };
   img.src = url;
@@ -86,11 +91,7 @@ export function exportFigma() {
   let svgString = new XMLSerializer().serializeToString(svg);
   svgString = svgString.replace(/transform="[^"]*"/g, '');
 
-  const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'floor-plan-figma.svg';
-  a.click();
+  downloadBlob(new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' }), 'floor-plan-figma.svg');
   closeExportMenu();
 }
 
@@ -115,12 +116,7 @@ export function exportJSON() {
     panY: state.panY
   };
 
-  const json = JSON.stringify(layoutData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'floor-plan-layout.json';
-  a.click();
+  downloadBlob(new Blob([JSON.stringify(layoutData, null, 2)], { type: 'application/json' }), 'floor-plan-layout.json');
   closeExportMenu();
 }
 
@@ -146,12 +142,7 @@ export function exportFullJSON() {
     }
   };
 
-  const json = JSON.stringify(fullData, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'floor-plan-full.json';
-  a.click();
+  downloadBlob(new Blob([JSON.stringify(fullData, null, 2)], { type: 'application/json' }), 'floor-plan-full.json');
   closeExportMenu();
 }
 
@@ -164,12 +155,28 @@ export function exportCSV() {
     csv += `${p.id},"${d.name}",${p.x},${p.y},${d.w},${d.h},${p.rotated || false},${p.elevation || 0},${p.stackedOn || ''},${d.room}\n`;
   }
 
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'floor-plan-furniture.csv';
-  a.click();
+  downloadBlob(new Blob([csv], { type: 'text/csv' }), 'floor-plan-furniture.csv');
   closeExportMenu();
+}
+
+/** Parse a CSV line, handling quoted fields that may contain commas */
+function parseCSVLine(line) {
+  const cols = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      inQuotes = !inQuotes;
+    } else if (ch === ',' && !inQuotes) {
+      cols.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  cols.push(current.trim());
+  return cols;
 }
 
 // ===== IMPORT JSON =====
@@ -218,8 +225,15 @@ function importFullPlan(data) {
     return;
   }
 
+  // Strip non-plan metadata before storing
+  const planData = JSON.parse(JSON.stringify(data));
+  delete planData.type;
+  delete planData.timestamp;
+  delete planData.placement;
+  delete planData.viewState;
+
   // Replace floor plan
-  state.floorPlan = JSON.parse(JSON.stringify(data));
+  state.floorPlan = planData;
 
   // Apply placement if included
   if (data.placement) {
@@ -248,6 +262,7 @@ function importFullPlan(data) {
   buildStagingSVG();
   renderFurniture();
   renderStagingFurniture();
+  buildElevationSelector();
   if (window._applyTransform) window._applyTransform();
   saveToCache();
 
@@ -321,15 +336,15 @@ export function importCSV() {
         }
 
         for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].split(',').map(c => c.trim().replace(/^"(.*)"$/, '$1'));
+          const cols = parseCSVLine(lines[i]);
           const id = cols[idCol];
           const piece = state.placedFurniture.find(p => p.id === id);
           if (!piece) continue;
 
-          if (xCol >= 0) piece.x = parseFloat(cols[xCol]) || piece.x;
-          if (yCol >= 0) piece.y = parseFloat(cols[yCol]) || piece.y;
+          if (xCol >= 0) { const v = parseFloat(cols[xCol]); if (!isNaN(v)) piece.x = v; }
+          if (yCol >= 0) { const v = parseFloat(cols[yCol]); if (!isNaN(v)) piece.y = v; }
           if (rotCol >= 0) piece.rotated = cols[rotCol] === 'true';
-          if (elevCol >= 0) piece.elevation = parseFloat(cols[elevCol]) || 0;
+          if (elevCol >= 0) { const v = parseFloat(cols[elevCol]); if (!isNaN(v)) piece.elevation = v; }
         }
 
         renderFurniture();

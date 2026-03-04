@@ -14,13 +14,6 @@ import { S, PPI, PAD, state, getFurnitureDef, getFurnitureDefs, saveToCache } fr
 import { checkCollision, autoStack } from './collision.js';
 import { formatDist } from './units.js';
 
-// ===== EXTERNAL CALLBACKS (set by app.js) =====
-let onRenderComplete = null;
-let onStagingRenderComplete = null;
-
-export function setRenderCallback(cb) { onRenderComplete = cb; }
-export function setStagingRenderCallback(cb) { onStagingRenderComplete = cb; }
-
 // ===== RENDER PLACED FURNITURE =====
 export function renderFurniture() {
   const svg = document.getElementById('svgPlan');
@@ -66,7 +59,6 @@ export function renderFurniture() {
   }).join('');
 
   attachFurnitureEvents();
-  if (onRenderComplete) onRenderComplete();
 }
 
 // ===== RENDER STAGING FURNITURE =====
@@ -139,7 +131,6 @@ export function renderStagingFurniture() {
 
   g.innerHTML = c;
   attachStagingFurnitureEvents();
-  if (onStagingRenderComplete) onStagingRenderComplete();
 }
 
 // ===== RETURN TO STAGING =====

@@ -14,7 +14,10 @@
 
 import { S, PAD, PPI, state, getFixtures, saveToCache } from './data.js';
 import { buildSVG } from './render.js';
-import { renderFurniture, renderStagingFurniture } from './furniture.js';
+import { renderFurniture } from './furniture.js';
+
+/** Track whether a full SVG rebuild is needed after drag ends */
+let needsRebuild = false;
 
 /**
  * Toggle fixture edit mode
@@ -155,10 +158,9 @@ export function handleFixtureDragMove(e) {
   if (fix) {
     fix.x = newX;
     fix.y = newY;
+    needsRebuild = true;
 
-    // Rebuild SVG to show updated fixture position
-    buildSVG();
-    renderFurniture();
+    // Update handles only during drag (defer full SVG rebuild to dragEnd)
     renderFixtureHandles();
   }
 
@@ -171,10 +173,15 @@ export function handleFixtureDragMove(e) {
 export function handleFixtureDragEnd() {
   if (state.draggingFixture !== null) {
     state.draggingFixture = null;
-    // Save the updated fixture positions
-    saveToCache();
 
-    // Also update heater positions if we moved a wall with a heater
-    // (heaters are stored in walls, not fixtures, but this is fine for now)
+    // Full rebuild now that dragging is done
+    if (needsRebuild) {
+      buildSVG();
+      renderFurniture();
+      renderFixtureHandles();
+      needsRebuild = false;
+    }
+
+    saveToCache();
   }
 }
