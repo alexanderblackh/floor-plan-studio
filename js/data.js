@@ -92,7 +92,7 @@ export const DEFAULT_FLOOR_PLAN = {
     { from: [158,0], to: [158,93], type: "exterior" },
     // --- Bathroom Walls ---
     { from: [158,0], to: [217,0], type: "exterior",
-      window: { from: [168,0], to: [192,0] } },
+      window: { from: [192,0], to: [216,0], sillHeight: 72 } },
     { from: [217,0], to: [217,83], type: "exterior" },
     { from: [158,83], to: [168.5,83], type: "exterior" },
     { from: [202.5,83], to: [217,83], type: "exterior" },
@@ -164,7 +164,12 @@ export const DEFAULT_FLOOR_PLAN = {
     { id: "fridge", type: "appliance",
       x: 126, y: 65, w: 30, h: 28,
       color: "#3a3a3a", stroke: "#555", label: "FRIDGE",
-      obstacle: false, surfaceHeight: 70 }
+      obstacle: false, surfaceHeight: 70 },
+    // --- Bathroom Fixtures ---
+    { id: "bathroom-sink", type: "sink",
+      x: 158, y: 0, w: 20, h: 18,
+      color: "#3a3a4a", stroke: "#555", label: "SINK",
+      obstacle: false, surfaceHeight: 36 }
   ],
 
   dimensions: [

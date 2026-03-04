@@ -10,7 +10,7 @@
  * (within a configurable depth threshold) onto the wall plane.
  */
 
-import { state, getFurnitureDef, getElevationWalls, getWalls, saveToCache } from './data.js';
+import { state, getFurnitureDef, getElevationWalls, getWalls, getFixtures, saveToCache } from './data.js';
 import { formatDist } from './units.js';
 import { escapeXml } from './render.js';
 import { pushHistory } from './history.js';
@@ -19,6 +19,68 @@ const ELEV_PPI = 3.5; // Scale for elevation view (larger for better visibility)
 const ES = (i) => i * ELEV_PPI;
 const ELEV_PAD = 40;
 const DEPTH_THRESHOLD = 36; // How close to wall (inches) to show in elevation
+
+/**
+ * Get fixtures near a wall for elevation projection
+ */
+function getFixturesNearWall(wallDef) {
+  const [wx1, wy1] = wallDef.from;
+  const [wx2, wy2] = wallDef.to;
+  const results = [];
+
+  const isHorizontal = Math.abs(wy2 - wy1) < 1;
+  const isVertical = Math.abs(wx2 - wx1) < 1;
+
+  for (const fixture of getFixtures()) {
+    const fx = fixture.x;
+    const fy = fixture.y;
+    const fw = fixture.w;
+    const fh = fixture.h;
+
+    if (isHorizontal) {
+      // Wall runs left-right (e.g., front/back walls)
+      const wallY = wy1;
+      const nearTop = Math.abs(fy - wallY) < DEPTH_THRESHOLD;
+      const nearBottom = Math.abs((fy + fh) - wallY) < DEPTH_THRESHOLD;
+      if (nearTop || nearBottom) {
+        // Project onto wall: X position stays, Y becomes depth
+        const wallMinX = Math.min(wx1, wx2);
+        const wallMaxX = Math.max(wx1, wx2);
+        if (fx + fw > wallMinX && fx < wallMaxX) {
+          results.push({
+            fixture: fixture,
+            projX: fx - wallMinX, // position along wall
+            projW: fw,
+            height: fixture.surfaceHeight || 36,
+            depth: Math.min(Math.abs(fy - wallY), Math.abs(fy + fh - wallY))
+          });
+        }
+      }
+    } else if (isVertical) {
+      // Wall runs top-bottom (e.g., left/right walls)
+      const wallX = wx1;
+      const nearLeft = Math.abs(fx - wallX) < DEPTH_THRESHOLD;
+      const nearRight = Math.abs((fx + fw) - wallX) < DEPTH_THRESHOLD;
+      if (nearLeft || nearRight) {
+        const wallMinY = Math.min(wy1, wy2);
+        const wallMaxY = Math.max(wy1, wy2);
+        if (fy + fh > wallMinY && fy < wallMaxY) {
+          results.push({
+            fixture: fixture,
+            projX: fy - wallMinY, // position along wall
+            projW: fh, // depth becomes width in elevation
+            height: fixture.surfaceHeight || 36,
+            depth: Math.min(Math.abs(fx - wallX), Math.abs(fx + fw - wallX))
+          });
+        }
+      }
+    }
+  }
+
+  // Sort by depth (closest to wall first)
+  results.sort((a, b) => a.depth - b.depth);
+  return results;
+}
 
 /**
  * Get furniture pieces near a wall for elevation projection
@@ -122,7 +184,10 @@ function renderWallOpenings(wallDef, wallLength, wallHeight, floorY) {
         : [wall.window.from[1] - wallMin, wall.window.to[1] - wallMin];
       const winX = ELEV_PAD + ES(Math.min(winFrom, winTo));
       const winW = ES(Math.abs(winTo - winFrom));
-      const winY = floorY - ES(WINDOW_SILL + WINDOW_HEIGHT);
+
+      // Use custom sillHeight if specified, otherwise default
+      const sillHeight = wall.window.sillHeight || WINDOW_SILL;
+      const winY = floorY - ES(sillHeight + WINDOW_HEIGHT);
       const winH = ES(WINDOW_HEIGHT);
 
       c += `<rect x="${winX}" y="${winY}" width="${winW}" height="${winH}" fill="#4a9eff11" stroke="#4a9eff" stroke-width="1.5" rx="1"/>`;
@@ -134,7 +199,7 @@ function renderWallOpenings(wallDef, wallLength, wallHeight, floorY) {
       const winWidth = Math.abs(winTo - winFrom);
       c += `<text x="${winX + winW/2}" y="${winY - 3}" font-family="JetBrains Mono" font-size="8" fill="#4a9eff" text-anchor="middle">${formatDist(winWidth)}</text>`;
       c += `<text x="${winX - 8}" y="${winY + winH/2}" font-family="JetBrains Mono" font-size="7" fill="#4a9eff88" text-anchor="end">H:${formatDist(WINDOW_HEIGHT)}</text>`;
-      c += `<text x="${winX - 8}" y="${floorY - ES(WINDOW_SILL) + 3}" font-family="JetBrains Mono" font-size="6" fill="#4a9eff66" text-anchor="end">sill:${formatDist(WINDOW_SILL)}</text>`;
+      c += `<text x="${winX - 8}" y="${floorY - ES(sillHeight) + 3}" font-family="JetBrains Mono" font-size="6" fill="#4a9eff66" text-anchor="end">sill:${formatDist(sillHeight)}</text>`;
     }
 
     // Render door
@@ -255,6 +320,25 @@ export function renderElevation() {
     const topH = item.elevation + item.height;
     c += `<line x1="${x + w + 1}" y1="${y}" x2="${x + w + 8}" y2="${y}" stroke="#ffffff22" stroke-width="0.5"/>`;
     c += `<text x="${x + w + 10}" y="${y + 4}" font-family="JetBrains Mono" font-size="5" fill="#ffffff44" text-anchor="start">${formatDist(topH)}</text>`;
+  }
+
+  // Render fixtures near this wall
+  const fixtures = getFixturesNearWall(wallDef);
+  for (const item of fixtures) {
+    const x = ELEV_PAD + ES(item.projX);
+    const w = ES(item.projW);
+    const h = ES(item.height);
+    const y = floorY - h; // Fixtures sit on floor at their surface height
+
+    // Opacity based on depth (closer = more opaque)
+    const opacity = Math.max(0.3, 1 - item.depth / DEPTH_THRESHOLD * 0.7);
+
+    // Render fixture (not interactive)
+    c += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${item.fixture.color}" stroke="${item.fixture.stroke}" stroke-width="1" rx="2" opacity="${opacity}"/>`;
+    c += `<text x="${x + w/2}" y="${y + h/2}" font-family="JetBrains Mono" font-size="8" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${escapeXml(item.fixture.label)}</text>`;
+
+    // Height label
+    c += `<text x="${x + w + 8}" y="${y + h/2}" font-family="JetBrains Mono" font-size="6" fill="#66666699" text-anchor="start">H:${formatDist(item.height)}</text>`;
   }
 
   svg.innerHTML = c;
