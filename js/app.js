@@ -147,6 +147,50 @@ function updateUnitDisplay() {
 }
 
 // ===== WALL ANCHOR HELPER =====
+// Get all 9 anchor points for an object
+function getAnchorPoints(x, y, w, h) {
+  return {
+    topLeft: { x, y },
+    topCenter: { x: x + w/2, y },
+    topRight: { x: x + w, y },
+    rightCenter: { x: x + w, y: y + h/2 },
+    bottomRight: { x: x + w, y: y + h },
+    bottomCenter: { x: x + w/2, y: y + h },
+    bottomLeft: { x, y: y + h },
+    leftCenter: { x, y: y + h/2 },
+    center: { x: x + w/2, y: y + h/2 }
+  };
+}
+
+// Find the pair of closest anchor points between two objects
+function findClosestAnchorPointsBetween(ax, ay, aw, ah, bx, by, bw, bh) {
+  const aPts = getAnchorPoints(ax, ay, aw, ah);
+  const bPts = getAnchorPoints(bx, by, bw, bh);
+
+  let minDist = Infinity;
+  let sourcePoint = 'center';
+  let targetPoint = 'center';
+
+  for (const [aName, aPt] of Object.entries(aPts)) {
+    for (const [bName, bPt] of Object.entries(bPts)) {
+      const dx = bPt.x - aPt.x;
+      const dy = bPt.y - aPt.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+
+      if (dist < minDist) {
+        minDist = dist;
+        sourcePoint = aName;
+        targetPoint = bName;
+      }
+    }
+  }
+
+  return { sourcePoint, targetPoint };
+}
+
+// Expose for use in furniture.js
+window.findClosestAnchorPointsBetween = findClosestAnchorPointsBetween;
+
 // Determine which wall side the click is closest to, relative to the source furniture
 function determineWallSide(sourceIdx, clickX, clickY) {
   const p = state.placedFurniture[sourceIdx];
@@ -220,10 +264,26 @@ function attachCanvasEvents() {
       if (src) {
         if (!src.anchors) src.anchors = [];
 
+        const srcDef = getFurnitureDef(src.id);
+        if (!srcDef) return;
+        const srcW = src.rotated ? srcDef.h : srcDef.w;
+        const srcH = src.rotated ? srcDef.w : srcDef.h;
+
         if (clickedFixture && fixtureId) {
-          // Create anchor to fixture
+          // Create anchor to fixture with specific anchor points
           if (!src.anchors.find(a => a.type === 'fixture' && a.id === fixtureId)) {
-            src.anchors.push({ type: 'fixture', id: fixtureId });
+            // Find closest anchor points between source and fixture
+            const { sourcePoint, targetPoint } = findClosestAnchorPointsBetween(
+              src.x, src.y, srcW, srcH,
+              clickedFixture.x, clickedFixture.y, clickedFixture.w, clickedFixture.h
+            );
+
+            src.anchors.push({
+              type: 'fixture',
+              id: fixtureId,
+              sourcePoint,
+              targetPoint
+            });
             saveToCache();
           }
         } else {
@@ -294,6 +354,13 @@ function attachCanvasEvents() {
       state.measurePreview = { x: cx, y: cy, edge: 'floor' };
       state.measureShiftKey = e.shiftKey; // Update shift state for live preview
       renderMeasurement();
+    }
+
+    // Divider preview: if first point is set, show line following cursor
+    if (state.dividerMode && state.dividerStart) {
+      state.dividerPreview = { x: cx, y: cy };
+      state.dividerShiftKey = e.shiftKey; // Update shift state for live preview
+      renderDividers();
     }
 
     // Panning

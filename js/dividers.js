@@ -31,12 +31,48 @@ export function renderDividers() {
     c += renderDividerLine(div.from, div.to, i);
   }
 
-  // Render active divider being drawn
+  // Render active divider being drawn with preview
   if (state.dividerMode && state.dividerStart) {
     const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
     const sx1 = PAD + S(state.dividerStart.x);
     const sy1 = PAD + S(state.dividerStart.y);
     c += `<circle cx="${sx1}" cy="${sy1}" r="5" fill="${accentColor}" stroke="#ffffff" stroke-width="1"/>`;
+
+    // Show preview line if hovering
+    if (state.dividerPreview) {
+      let endX = state.dividerPreview.x;
+      let endY = state.dividerPreview.y;
+
+      // Apply angle snap if Shift is held
+      if (state.dividerShiftKey) {
+        const dx = endX - state.dividerStart.x;
+        const dy = endY - state.dividerStart.y;
+        const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+        // Snap to nearest 45-degree increment
+        const snapAngles = [0, 45, 90, 135, 180, -135, -90, -45];
+        let nearestAngle = snapAngles[0];
+        let minDiff = Math.abs(angle - nearestAngle);
+
+        for (const snapAngle of snapAngles) {
+          const diff = Math.abs(angle - snapAngle);
+          if (diff < minDiff) {
+            minDiff = diff;
+            nearestAngle = snapAngle;
+          }
+        }
+
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        const radians = nearestAngle * Math.PI / 180;
+        endX = Math.round(state.dividerStart.x + dist * Math.cos(radians));
+        endY = Math.round(state.dividerStart.y + dist * Math.sin(radians));
+      }
+
+      const sx2 = PAD + S(endX);
+      const sy2 = PAD + S(endY);
+      c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${accentColor}" stroke-width="2" stroke-dasharray="6 6" stroke-linecap="round" opacity="0.7"/>`;
+      c += `<circle cx="${sx2}" cy="${sy2}" r="4" fill="${accentColor}" stroke="#ffffff" stroke-width="1" opacity="0.7"/>`;
+    }
   }
 
   g.innerHTML = c;
@@ -226,14 +262,43 @@ export function handleDividerClick(clickX, clickY) {
   if (!state.dividerStart) {
     // First point
     state.dividerStart = { x: clickX, y: clickY };
+    state.dividerPreview = null;
   } else {
-    // Second point - create divider
+    // Second point - create divider with angle snap if shift was held
+    let endX = clickX;
+    let endY = clickY;
+
+    if (state.dividerShiftKey) {
+      const dx = clickX - state.dividerStart.x;
+      const dy = clickY - state.dividerStart.y;
+      const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+      // Snap to nearest 45-degree increment
+      const snapAngles = [0, 45, 90, 135, 180, -135, -90, -45];
+      let nearestAngle = snapAngles[0];
+      let minDiff = Math.abs(angle - nearestAngle);
+
+      for (const snapAngle of snapAngles) {
+        const diff = Math.abs(angle - snapAngle);
+        if (diff < minDiff) {
+          minDiff = diff;
+          nearestAngle = snapAngle;
+        }
+      }
+
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const radians = nearestAngle * Math.PI / 180;
+      endX = Math.round(state.dividerStart.x + dist * Math.cos(radians));
+      endY = Math.round(state.dividerStart.y + dist * Math.sin(radians));
+    }
+
     pushHistory();
     state.softDividers.push({
       from: { x: state.dividerStart.x, y: state.dividerStart.y },
-      to: { x: clickX, y: clickY }
+      to: { x: endX, y: endY }
     });
     state.dividerStart = null;
+    state.dividerPreview = null;
     saveToCache();
   }
 

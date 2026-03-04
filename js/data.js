@@ -306,9 +306,13 @@ export const state = {
   softDividers: [],  // Visual dividers for room zones: [{ from: {x, y}, to: {x, y} }]
   dividerMode: false,
   dividerStart: null,
+  dividerPreview: null,
+  dividerShiftKey: false,
   showAllMeasurements: false,
   anchorMode: false,
   anchorSource: null,
+  anchorSourcePoint: null, // Which anchor point on source: 'topLeft', 'center', etc.
+  anchorHoverTarget: null, // Currently hovered target for anchor creation
   selectedFurniture: new Set(),
   selectedMeasurement: null, // { type: 'locked', idx: number } | { type: 'anchor', furnitureIdx: number, anchorIdx: number }
   selectedDivider: null, // index of selected divider

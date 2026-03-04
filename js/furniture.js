@@ -201,11 +201,33 @@ function attachFurnitureEvents() {
         } else if (state.anchorSource !== idx) {
           // Link anchor: source → target furniture
           const src = state.placedFurniture[state.anchorSource];
+          const target = state.placedFurniture[idx];
           if (!src.anchors) src.anchors = [];
-          // Avoid duplicate anchors
-          const targetId = state.placedFurniture[idx].id;
-          if (!src.anchors.find(a => a.id === targetId && a.type === 'furniture')) {
-            src.anchors.push({ type: 'furniture', id: targetId });
+
+          // Get dimensions for anchor point calculation
+          const srcDef = getFurnitureDef(src.id);
+          const targetDef = getFurnitureDef(target.id);
+          if (srcDef && targetDef) {
+            const srcW = src.rotated ? srcDef.h : srcDef.w;
+            const srcH = src.rotated ? srcDef.w : srcDef.h;
+            const targetW = target.rotated ? targetDef.h : targetDef.w;
+            const targetH = target.rotated ? targetDef.w : targetDef.h;
+
+            // Avoid duplicate anchors
+            const targetId = target.id;
+            if (!src.anchors.find(a => a.id === targetId && a.type === 'furniture')) {
+              // Find closest anchor points between source and target
+              const { sourcePoint, targetPoint } = window.findClosestAnchorPointsBetween ?
+                window.findClosestAnchorPointsBetween(src.x, src.y, srcW, srcH, target.x, target.y, targetW, targetH) :
+                { sourcePoint: 'center', targetPoint: 'center' };
+
+              src.anchors.push({
+                type: 'furniture',
+                id: targetId,
+                sourcePoint,
+                targetPoint
+              });
+            }
           }
           state.anchorSource = null;
           if (window._renderAnchors) window._renderAnchors();

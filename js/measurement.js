@@ -237,6 +237,43 @@ function renderAllMeasurements() {
 }
 
 // ===== ANCHOR RENDERING =====
+/**
+ * Get all 9 anchor points for an object (x, y, w, h)
+ * Returns object with point names as keys and {x, y} as values
+ */
+function getAnchorPoints(x, y, w, h) {
+  return {
+    topLeft: { x, y },
+    topCenter: { x: x + w/2, y },
+    topRight: { x: x + w, y },
+    rightCenter: { x: x + w, y: y + h/2 },
+    bottomRight: { x: x + w, y: y + h },
+    bottomCenter: { x: x + w/2, y: y + h },
+    bottomLeft: { x, y: y + h },
+    leftCenter: { x, y: y + h/2 },
+    center: { x: x + w/2, y: y + h/2 }
+  };
+}
+
+/**
+ * Find the closest anchor point on an object to a given coordinate
+ */
+function findClosestAnchorPoint(objX, objY, objW, objH, targetX, targetY) {
+  const points = getAnchorPoints(objX, objY, objW, objH);
+  let closestName = 'center';
+  let minDist = Infinity;
+
+  for (const [name, pt] of Object.entries(points)) {
+    const dist = Math.sqrt((pt.x - targetX)**2 + (pt.y - targetY)**2);
+    if (dist < minDist) {
+      minDist = dist;
+      closestName = name;
+    }
+  }
+
+  return { name: closestName, point: points[closestName], distance: minDist };
+}
+
 // Compute edge-to-edge gap (not center-to-center) between two axis-aligned rects
 function edgeGap(ax, ay, aw, ah, bx, by, bw, bh) {
   // Horizontal gap
@@ -261,6 +298,27 @@ function closestEdgePoints(ax, ay, aw, ah, bx, by, bw, bh) {
   return { x1, y1, x2, y2 };
 }
 
+/**
+ * Render anchor points (9 dots) on an object when hovering or selected for anchoring
+ */
+function renderAnchorPoints(x, y, w, h, isSource = false) {
+  const points = getAnchorPoints(x, y, w, h);
+  const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
+  const sourceColor = '#9966cc'; // Purple for source points
+
+  let c = '';
+  for (const [name, pt] of Object.entries(points)) {
+    const sx = PAD + S(pt.x);
+    const sy = PAD + S(pt.y);
+    const color = isSource ? sourceColor : accentColor;
+    const r = isSource ? 5 : 4;
+    const strokeW = isSource ? 2 : 1.5;
+
+    c += `<circle class="anchor-point" data-point-name="${name}" cx="${sx}" cy="${sy}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="${strokeW}" style="cursor:pointer" opacity="0.9"/>`;
+  }
+  return c;
+}
+
 export function renderAnchors() {
   const svg = document.getElementById('svgPlan');
   if (!svg) return;
@@ -269,7 +327,7 @@ export function renderAnchors() {
 
   let c = '';
 
-  // Render anchor mode source indicator
+  // Render anchor mode source indicator with anchor points
   if (state.anchorMode && state.anchorSource !== null) {
     const sourcePiece = state.placedFurniture[state.anchorSource];
     if (sourcePiece && sourcePiece.x >= 0 && sourcePiece.y >= 0) {
@@ -286,6 +344,22 @@ export function renderAnchors() {
           <animate attributeName="opacity" values="0.4;1;0.4" dur="1.5s" repeatCount="indefinite"/>
         </rect>`;
         c += `<text x="${sx + S(sw)/2}" y="${sy - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">SOURCE</text>`;
+
+        // Show anchor points on source object
+        c += renderAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh, true);
+
+        // If a source point is selected, highlight it
+        if (state.anchorSourcePoint) {
+          const points = getAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh);
+          const pt = points[state.anchorSourcePoint];
+          if (pt) {
+            const spx = PAD + S(pt.x);
+            const spy = PAD + S(pt.y);
+            c += `<circle cx="${spx}" cy="${spy}" r="8" fill="none" stroke="#9966cc" stroke-width="3">
+              <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
+            </circle>`;
+          }
+        }
       }
     }
   }
@@ -334,12 +408,47 @@ export function renderAnchors() {
 }
 
 function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, targetIdx, anchorIdx, isSelected) {
-  // Edge-to-edge distance and line points
-  const gap = edgeGap(p.x, p.y, pw, ph, target.x, target.y, tw, th);
-  const pts = closestEdgePoints(p.x, p.y, pw, ph, target.x, target.y, tw, th);
+  const anchor = p.anchors[anchorIdx];
 
-  const sx1 = PAD + S(pts.x1), sy1 = PAD + S(pts.y1);
-  const sx2 = PAD + S(pts.x2), sy2 = PAD + S(pts.y2);
+  // If anchor has stored points, use them; otherwise calculate closest edges
+  let sx1, sy1, sx2, sy2, gap;
+
+  if (anchor.sourcePoint && anchor.targetPoint) {
+    // Use stored anchor points
+    const sourcePts = getAnchorPoints(p.x, p.y, pw, ph);
+    const targetPts = getAnchorPoints(target.x, target.y, tw, th);
+
+    const pt1 = sourcePts[anchor.sourcePoint];
+    const pt2 = targetPts[anchor.targetPoint];
+
+    if (pt1 && pt2) {
+      sx1 = PAD + S(pt1.x);
+      sy1 = PAD + S(pt1.y);
+      sx2 = PAD + S(pt2.x);
+      sy2 = PAD + S(pt2.y);
+
+      // Calculate distance between specific points
+      const dx = pt2.x - pt1.x;
+      const dy = pt2.y - pt1.y;
+      gap = Math.sqrt(dx*dx + dy*dy);
+    } else {
+      // Fallback to edge calculation if points not found
+      gap = edgeGap(p.x, p.y, pw, ph, target.x, target.y, tw, th);
+      const pts = closestEdgePoints(p.x, p.y, pw, ph, target.x, target.y, tw, th);
+      sx1 = PAD + S(pts.x1);
+      sy1 = PAD + S(pts.y1);
+      sx2 = PAD + S(pts.x2);
+      sy2 = PAD + S(pts.y2);
+    }
+  } else {
+    // Legacy anchors: use edge-to-edge distance
+    gap = edgeGap(p.x, p.y, pw, ph, target.x, target.y, tw, th);
+    const pts = closestEdgePoints(p.x, p.y, pw, ph, target.x, target.y, tw, th);
+    sx1 = PAD + S(pts.x1);
+    sy1 = PAD + S(pts.y1);
+    sx2 = PAD + S(pts.x2);
+    sy2 = PAD + S(pts.y2);
+  }
 
   // Use theme colors for links
   const linkColor = isSelected ? '#cc66ff' : '#9966cc';
@@ -349,8 +458,16 @@ function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, t
   let c = `<g class="anchor-link" data-furniture-idx="${furnitureIdx}" data-target-idx="${targetIdx}" data-anchor-idx="${anchorIdx}" style="cursor:pointer">`;
 
   c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${linkColor}" stroke-width="${lineWidth}" stroke-dasharray="6 4"/>`;
-  c += `<circle cx="${sx1}" cy="${sy1}" r="${isSelected ? 6 : 4}" fill="${linkColor}" stroke="${bgColor}" stroke-width="${isSelected ? 2 : 1}"/>`;
-  c += `<circle cx="${sx2}" cy="${sy2}" r="${isSelected ? 6 : 4}" fill="${linkColor}" stroke="${bgColor}" stroke-width="${isSelected ? 2 : 1}"/>`;
+
+  // Larger, more visible endpoint markers with labels
+  const endpointR = isSelected ? 7 : 5;
+  const endpointStroke = isSelected ? 2.5 : 1.5;
+  c += `<circle cx="${sx1}" cy="${sy1}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
+  c += `<circle cx="${sx2}" cy="${sy2}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
+
+  // Add "S" and "T" labels for Source and Target
+  c += `<text x="${sx1}" y="${sy1 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">S</text>`;
+  c += `<text x="${sx2}" y="${sy2 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">T</text>`;
 
   const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
   const label = formatDist(gap);
@@ -363,12 +480,47 @@ function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, t
 }
 
 function renderFixtureAnchor(p, d, pw, ph, fixtureTarget, furnitureIdx, anchorIdx, isSelected) {
-  // Calculate edge-to-edge distance from furniture to fixture
-  const gap = edgeGap(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
-  const pts = closestEdgePoints(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+  const anchor = p.anchors[anchorIdx];
 
-  const sx1 = PAD + S(pts.x1), sy1 = PAD + S(pts.y1);
-  const sx2 = PAD + S(pts.x2), sy2 = PAD + S(pts.y2);
+  // If anchor has stored points, use them; otherwise calculate closest edges
+  let sx1, sy1, sx2, sy2, gap;
+
+  if (anchor.sourcePoint && anchor.targetPoint) {
+    // Use stored anchor points
+    const sourcePts = getAnchorPoints(p.x, p.y, pw, ph);
+    const targetPts = getAnchorPoints(fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+
+    const pt1 = sourcePts[anchor.sourcePoint];
+    const pt2 = targetPts[anchor.targetPoint];
+
+    if (pt1 && pt2) {
+      sx1 = PAD + S(pt1.x);
+      sy1 = PAD + S(pt1.y);
+      sx2 = PAD + S(pt2.x);
+      sy2 = PAD + S(pt2.y);
+
+      // Calculate distance between specific points
+      const dx = pt2.x - pt1.x;
+      const dy = pt2.y - pt1.y;
+      gap = Math.sqrt(dx*dx + dy*dy);
+    } else {
+      // Fallback
+      gap = edgeGap(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+      const pts = closestEdgePoints(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+      sx1 = PAD + S(pts.x1);
+      sy1 = PAD + S(pts.y1);
+      sx2 = PAD + S(pts.x2);
+      sy2 = PAD + S(pts.y2);
+    }
+  } else {
+    // Legacy anchors: use edge-to-edge calculation
+    gap = edgeGap(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+    const pts = closestEdgePoints(p.x, p.y, pw, ph, fixtureTarget.x, fixtureTarget.y, fixtureTarget.w, fixtureTarget.h);
+    sx1 = PAD + S(pts.x1);
+    sy1 = PAD + S(pts.y1);
+    sx2 = PAD + S(pts.x2);
+    sy2 = PAD + S(pts.y2);
+  }
 
   const linkColor = isSelected ? '#cc66ff' : '#9966cc';
   const bgColor = getComputedStyle(document.documentElement).getPropertyValue('--bg-tertiary').trim() || '#1a1a24';
@@ -377,8 +529,16 @@ function renderFixtureAnchor(p, d, pw, ph, fixtureTarget, furnitureIdx, anchorId
   let c = `<g class="anchor-link" data-furniture-idx="${furnitureIdx}" data-anchor-idx="${anchorIdx}" data-type="fixture" data-fixture-id="${fixtureTarget.id}" style="cursor:pointer">`;
 
   c += `<line x1="${sx1}" y1="${sy1}" x2="${sx2}" y2="${sy2}" stroke="${linkColor}" stroke-width="${lineWidth}" stroke-dasharray="6 4"/>`;
-  c += `<circle cx="${sx1}" cy="${sy1}" r="${isSelected ? 6 : 4}" fill="${linkColor}" stroke="${bgColor}" stroke-width="${isSelected ? 2 : 1}"/>`;
-  c += `<circle cx="${sx2}" cy="${sy2}" r="${isSelected ? 6 : 4}" fill="${linkColor}" stroke="${bgColor}" stroke-width="${isSelected ? 2 : 1}"/>`;
+
+  // Larger, more visible endpoint markers with labels
+  const endpointR = isSelected ? 7 : 5;
+  const endpointStroke = isSelected ? 2.5 : 1.5;
+  c += `<circle cx="${sx1}" cy="${sy1}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
+  c += `<circle cx="${sx2}" cy="${sy2}" r="${endpointR}" fill="${linkColor}" stroke="#ffffff" stroke-width="${endpointStroke}"/>`;
+
+  // Add "S" and "T" labels for Source and Target
+  c += `<text x="${sx1}" y="${sy1 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">S</text>`;
+  c += `<text x="${sx2}" y="${sy2 - 12}" font-family="JetBrains Mono" font-size="9" fill="${linkColor}" text-anchor="middle" font-weight="bold" stroke="#00000088" stroke-width="2" paint-order="stroke">T</text>`;
 
   const mx = (sx1+sx2)/2, my = (sy1+sy2)/2;
   const label = formatDist(gap);
