@@ -312,6 +312,8 @@ export const state = {
   anchorMode: false,
   anchorSource: null,
   anchorSourcePoint: null, // Which anchor point on source: 'topLeft', 'center', etc.
+  anchorTarget: null, // Selected target for anchor creation
+  anchorTargetPoint: null, // Which anchor point on target
   anchorHoverTarget: null, // Currently hovered target for anchor creation
   selectedFurniture: new Set(),
   selectedMeasurement: null, // { type: 'locked', idx: number } | { type: 'anchor', furnitureIdx: number, anchorIdx: number }

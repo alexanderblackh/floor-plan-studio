@@ -169,12 +169,6 @@ function attachFurnitureEvents() {
         rect.setAttribute('data-original-opacity', rect.getAttribute('opacity') || '1');
         rect.setAttribute('opacity', '0.7');
       }
-
-      // In anchor mode with source selected, show target anchor points
-      if (state.anchorMode && state.anchorSource !== null && state.anchorSource !== idx) {
-        state.anchorHoverTarget = idx;
-        if (window._renderAnchors) window._renderAnchors();
-      }
     });
 
     el.addEventListener('mouseleave', () => {
@@ -182,12 +176,6 @@ function attachFurnitureEvents() {
       if (rect && !state.selectedFurniture.has(idx)) {
         const origOpacity = rect.getAttribute('data-original-opacity') || '1';
         rect.setAttribute('opacity', origOpacity);
-      }
-
-      // Clear hover target in anchor mode
-      if (state.anchorMode && state.anchorHoverTarget === idx) {
-        state.anchorHoverTarget = null;
-        if (window._renderAnchors) window._renderAnchors();
       }
     });
 
@@ -225,45 +213,26 @@ function attachFurnitureEvents() {
         return;
       }
 
-      // Anchor mode: Alt+click on furniture, or click canvas for wall anchor
+      // Anchor mode: Click to select source and target, then use save button
       if (state.anchorMode) {
         if (!state.anchorSource) {
+          // Select source
           state.anchorSource = idx;
-        } else if (state.anchorSource !== idx) {
-          // Link anchor: source → target furniture
-          const src = state.placedFurniture[state.anchorSource];
-          const target = state.placedFurniture[idx];
-          if (!src.anchors) src.anchors = [];
-
-          // Get dimensions for anchor point calculation
-          const srcDef = getFurnitureDef(src.id);
-          const targetDef = getFurnitureDef(target.id);
-          if (srcDef && targetDef) {
-            const srcW = src.rotated ? srcDef.h : srcDef.w;
-            const srcH = src.rotated ? srcDef.w : srcDef.h;
-            const targetW = target.rotated ? targetDef.h : targetDef.w;
-            const targetH = target.rotated ? targetDef.w : targetDef.h;
-
-            // Avoid duplicate anchors
-            const targetId = target.id;
-            if (!src.anchors.find(a => a.id === targetId && a.type === 'furniture')) {
-              // Find closest anchor points between source and target
-              const { sourcePoint, targetPoint } = window.findClosestAnchorPointsBetween ?
-                window.findClosestAnchorPointsBetween(src.x, src.y, srcW, srcH, target.x, target.y, targetW, targetH) :
-                { sourcePoint: 'center', targetPoint: 'center' };
-
-              src.anchors.push({
-                type: 'furniture',
-                id: targetId,
-                sourcePoint,
-                targetPoint
-              });
-            }
-          }
-          state.anchorSource = null;
-          if (window._renderAnchors) window._renderAnchors();
-          saveToCache();
+          state.anchorSourcePoint = null;
+        } else if (!state.anchorTarget && state.anchorSource !== idx) {
+          // Select target
+          state.anchorTarget = idx;
+          state.anchorTargetPoint = null;
+        } else if (state.anchorSource === idx || state.anchorTarget === idx) {
+          // Clicking already selected item - do nothing (let them pick points)
+        } else {
+          // Clicking a third item - reset and start over
+          state.anchorSource = idx;
+          state.anchorSourcePoint = null;
+          state.anchorTarget = null;
+          state.anchorTargetPoint = null;
         }
+        if (window._renderAnchors) window._renderAnchors();
         return;
       }
 
@@ -444,14 +413,15 @@ export function handleDragMove(e) {
     for (const selectedIdx of state.selectedFurniture) {
       const initial = state.dragInitialPositions.get(selectedIdx);
       if (initial) {
-        state.placedFurniture[selectedIdx].x = initial.x + dx;
-        state.placedFurniture[selectedIdx].y = initial.y + dy;
+        // Clamp to prevent negative coordinates (no auto-staging)
+        state.placedFurniture[selectedIdx].x = Math.max(0, initial.x + dx);
+        state.placedFurniture[selectedIdx].y = Math.max(0, initial.y + dy);
       }
     }
   } else {
-    // Single item drag
-    state.placedFurniture[state.dragging].x = Math.round(ix);
-    state.placedFurniture[state.dragging].y = Math.round(iy);
+    // Single item drag - clamp to prevent negative coordinates
+    state.placedFurniture[state.dragging].x = Math.max(0, Math.round(ix));
+    state.placedFurniture[state.dragging].y = Math.max(0, Math.round(iy));
   }
 
   renderFurniture();

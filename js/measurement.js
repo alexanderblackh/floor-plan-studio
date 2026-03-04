@@ -321,6 +321,130 @@ function renderAnchorPoints(x, y, w, h, isSource = false, objectType = null) {
   return c;
 }
 
+/**
+ * Update anchor save toolbar visibility and text
+ */
+export function updateAnchorSaveToolbar() {
+  const toolbar = document.getElementById('anchorSaveToolbar');
+  const btn = document.getElementById('btnSaveAnchor');
+
+  if (!toolbar || !btn) return;
+
+  // Show toolbar only when both source and target are selected
+  if (state.anchorMode && state.anchorSource !== null && state.anchorTarget !== null) {
+    toolbar.classList.add('visible');
+
+    // Update button text based on whether points are selected
+    if (state.anchorSourcePoint || state.anchorTargetPoint) {
+      btn.textContent = 'Save Anchor';
+    } else {
+      btn.textContent = 'Save Adaptive';
+    }
+  } else {
+    toolbar.classList.remove('visible');
+  }
+}
+
+/**
+ * Save the anchor with selected points or adaptive
+ */
+window.saveAnchor = function() {
+  if (state.anchorSource === null || state.anchorTarget === null) return;
+
+  const src = state.placedFurniture[state.anchorSource];
+  const target = state.placedFurniture[state.anchorTarget];
+
+  if (!src || !target) return;
+  if (!src.anchors) src.anchors = [];
+
+  const srcDef = getFurnitureDef(src.id);
+  const targetDef = getFurnitureDef(target.id);
+
+  if (!srcDef || !targetDef) return;
+
+  const srcW = src.rotated ? srcDef.h : srcDef.w;
+  const srcH = src.rotated ? srcDef.w : srcDef.h;
+  const targetW = target.rotated ? targetDef.h : targetDef.w;
+  const targetH = target.rotated ? targetDef.w : targetDef.h;
+
+  // Avoid duplicate anchors
+  const targetId = target.id;
+  if (src.anchors.find(a => a.id === targetId && a.type === 'furniture')) {
+    alert('An anchor already exists between these items');
+    return;
+  }
+
+  let sourcePoint, targetPoint;
+  const hasManualPoints = state.anchorSourcePoint || state.anchorTargetPoint;
+
+  if (hasManualPoints) {
+    // Use selected points, or find closest if one is missing
+    if (state.anchorSourcePoint && state.anchorTargetPoint) {
+      sourcePoint = state.anchorSourcePoint;
+      targetPoint = state.anchorTargetPoint;
+    } else if (state.anchorSourcePoint && !state.anchorTargetPoint) {
+      // Source selected, find closest target point
+      const srcPts = getAnchorPoints(src.x, src.y, srcW, srcH);
+      const srcPt = srcPts[state.anchorSourcePoint];
+      const tgtPts = getAnchorPoints(target.x, target.y, targetW, targetH);
+
+      let closestName = 'center';
+      let minDist = Infinity;
+      for (const [name, pt] of Object.entries(tgtPts)) {
+        const dist = Math.sqrt((pt.x - srcPt.x)**2 + (pt.y - srcPt.y)**2);
+        if (dist < minDist) {
+          minDist = dist;
+          closestName = name;
+        }
+      }
+
+      sourcePoint = state.anchorSourcePoint;
+      targetPoint = closestName;
+    } else {
+      // Target selected, find closest source point
+      const tgtPts = getAnchorPoints(target.x, target.y, targetW, targetH);
+      const tgtPt = tgtPts[state.anchorTargetPoint];
+      const srcPts = getAnchorPoints(src.x, src.y, srcW, srcH);
+
+      let closestName = 'center';
+      let minDist = Infinity;
+      for (const [name, pt] of Object.entries(srcPts)) {
+        const dist = Math.sqrt((pt.x - tgtPt.x)**2 + (pt.y - tgtPt.y)**2);
+        if (dist < minDist) {
+          minDist = dist;
+          closestName = name;
+        }
+      }
+
+      sourcePoint = closestName;
+      targetPoint = state.anchorTargetPoint;
+    }
+  } else {
+    // Adaptive mode - find closest points automatically
+    const result = findClosestAnchorPointsBetween(src.x, src.y, srcW, srcH, target.x, target.y, targetW, targetH);
+    sourcePoint = result.sourcePoint;
+    targetPoint = result.targetPoint;
+  }
+
+  src.anchors.push({
+    type: 'furniture',
+    id: targetId,
+    sourcePoint,
+    targetPoint,
+    locked: hasManualPoints  // Mark as manually locked if user selected any points
+  });
+
+  // Reset anchor mode state
+  state.anchorSource = null;
+  state.anchorSourcePoint = null;
+  state.anchorTarget = null;
+  state.anchorTargetPoint = null;
+
+  saveToCache();
+  renderAnchors();
+  if (window._renderFurniture) window._renderFurniture();
+};
+
 export function renderAnchors() {
   const svg = document.getElementById('svgPlan');
   if (!svg) return;
@@ -329,7 +453,7 @@ export function renderAnchors() {
 
   let c = '';
 
-  // Render anchor mode source indicator with anchor points
+  // Render anchor mode: show source and target with anchor points
   if (state.anchorMode && state.anchorSource !== null) {
     const sourcePiece = state.placedFurniture[state.anchorSource];
     if (sourcePiece && sourcePiece.x >= 0 && sourcePiece.y >= 0) {
@@ -347,45 +471,58 @@ export function renderAnchors() {
         </rect>`;
         c += `<text x="${sx + S(sw)/2}" y="${sy - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">SOURCE</text>`;
 
-        // Show anchor points on source object
-        c += renderAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh, true, 'source');
+        // Show anchor points if target is also selected
+        if (state.anchorTarget !== null) {
+          c += renderAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh, true, 'source');
 
-        // If a source point is selected, highlight it
-        if (state.anchorSourcePoint) {
-          const points = getAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh);
-          const pt = points[state.anchorSourcePoint];
-          if (pt) {
-            const spx = PAD + S(pt.x);
-            const spy = PAD + S(pt.y);
-            c += `<circle cx="${spx}" cy="${spy}" r="8" fill="none" stroke="#9966cc" stroke-width="3">
-              <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
-            </circle>`;
-            // Add lock icon
-            c += `<text x="${spx + 12}" y="${spy - 10}" font-family="sans-serif" font-size="12" fill="#9966cc">🔒</text>`;
+          // If a source point is selected, highlight it
+          if (state.anchorSourcePoint) {
+            const points = getAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh);
+            const pt = points[state.anchorSourcePoint];
+            if (pt) {
+              const spx = PAD + S(pt.x);
+              const spy = PAD + S(pt.y);
+              c += `<circle cx="${spx}" cy="${spy}" r="8" fill="none" stroke="#9966cc" stroke-width="3">
+                <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
+              </circle>`;
+            }
           }
         }
       }
     }
-  }
 
-  // Render anchor points on hovered target
-  if (state.anchorMode && state.anchorHoverTarget !== null) {
-    const targetPiece = state.placedFurniture[state.anchorHoverTarget];
-    if (targetPiece && targetPiece.x >= 0 && targetPiece.y >= 0) {
-      const targetDef = getFurnitureDef(targetPiece.id);
-      if (targetDef) {
-        const tw = targetPiece.rotated ? targetDef.h : targetDef.w;
-        const th = targetPiece.rotated ? targetDef.w : targetDef.h;
-        const tx = PAD + S(targetPiece.x);
-        const ty = PAD + S(targetPiece.y);
-        const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
+    // Render target if selected
+    if (state.anchorTarget !== null) {
+      const targetPiece = state.placedFurniture[state.anchorTarget];
+      if (targetPiece && targetPiece.x >= 0 && targetPiece.y >= 0) {
+        const targetDef = getFurnitureDef(targetPiece.id);
+        if (targetDef) {
+          const tw = targetPiece.rotated ? targetDef.h : targetDef.w;
+          const th = targetPiece.rotated ? targetDef.w : targetDef.h;
+          const tx = PAD + S(targetPiece.x);
+          const ty = PAD + S(targetPiece.y);
+          const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-gold').trim() || '#c5975b';
 
-        // Glow around target
-        c += `<rect x="${tx - 4}" y="${ty - 4}" width="${S(tw) + 8}" height="${S(th) + 8}" fill="none" stroke="${accentColor}" stroke-width="2" stroke-dasharray="4 2" rx="4" opacity="0.6"/>`;
-        c += `<text x="${tx + S(tw)/2}" y="${ty - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">TARGET</text>`;
+          // Glow around target
+          c += `<rect x="${tx - 4}" y="${ty - 4}" width="${S(tw) + 8}" height="${S(th) + 8}" fill="none" stroke="${accentColor}" stroke-width="2" stroke-dasharray="4 2" rx="4" opacity="0.6"/>`;
+          c += `<text x="${tx + S(tw)/2}" y="${ty - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">TARGET</text>`;
 
-        // Show anchor points on target object
-        c += renderAnchorPoints(targetPiece.x, targetPiece.y, tw, th, false, 'target');
+          // Show anchor points on target object
+          c += renderAnchorPoints(targetPiece.x, targetPiece.y, tw, th, false, 'target');
+
+          // If a target point is selected, highlight it
+          if (state.anchorTargetPoint) {
+            const points = getAnchorPoints(targetPiece.x, targetPiece.y, tw, th);
+            const pt = points[state.anchorTargetPoint];
+            if (pt) {
+              const tpx = PAD + S(pt.x);
+              const tpy = PAD + S(pt.y);
+              c += `<circle cx="${tpx}" cy="${tpy}" r="8" fill="none" stroke="${accentColor}" stroke-width="3">
+                <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
+              </circle>`;
+            }
+          }
+        }
       }
     }
   }
@@ -431,6 +568,7 @@ export function renderAnchors() {
 
   g.innerHTML = c;
   attachAnchorEvents();
+  updateAnchorSaveToolbar();
 }
 
 function renderFurnitureAnchor(p, d, pw, ph, target, td, tw, th, furnitureIdx, targetIdx, anchorIdx, isSelected) {
@@ -646,34 +784,15 @@ function attachAnchorEvents() {
       const pointName = el.dataset.pointName;
 
       if (objectType === 'source') {
-        // Select source point
-        state.anchorSourcePoint = pointName;
+        // Select/toggle source point
+        state.anchorSourcePoint = state.anchorSourcePoint === pointName ? null : pointName;
         renderAnchors();
-      } else if (objectType === 'target' && state.anchorSourcePoint) {
-        // Complete anchor with selected points
-        if (state.anchorHoverTarget !== null) {
-          const src = state.placedFurniture[state.anchorSource];
-          const target = state.placedFurniture[state.anchorHoverTarget];
-          if (src && target) {
-            if (!src.anchors) src.anchors = [];
-            const targetId = target.id;
-            if (!src.anchors.find(a => a.id === targetId && a.type === 'furniture')) {
-              src.anchors.push({
-                type: 'furniture',
-                id: targetId,
-                sourcePoint: state.anchorSourcePoint,
-                targetPoint: pointName,
-                locked: true  // Mark as manually locked
-              });
-              saveToCache();
-            }
-          }
-          state.anchorSource = null;
-          state.anchorSourcePoint = null;
-          state.anchorHoverTarget = null;
-          renderAnchors();
-          if (window._renderFurniture) window._renderFurniture();
-        }
+        updateAnchorSaveToolbar();
+      } else if (objectType === 'target') {
+        // Select/toggle target point
+        state.anchorTargetPoint = state.anchorTargetPoint === pointName ? null : pointName;
+        renderAnchors();
+        updateAnchorSaveToolbar();
       }
     });
 
@@ -814,7 +933,12 @@ export function toggleShowAll() {
 export function toggleAnchorMode() {
   state.anchorMode = !state.anchorMode;
   state.anchorSource = null;
+  state.anchorSourcePoint = null;
+  state.anchorTarget = null;
+  state.anchorTargetPoint = null;
   document.getElementById('btnAnchor')?.classList.toggle('active', state.anchorMode);
+  updateAnchorSaveToolbar();
+  renderAnchors();
 }
 
 // ===== LOCKED MEASUREMENTS =====
