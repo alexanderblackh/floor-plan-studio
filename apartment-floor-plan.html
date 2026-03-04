@@ -49,6 +49,21 @@
   }
   .btn:hover { background: #2a2a3a; color: #c5975b; border-color: #c5975b55; }
   .btn.active { background: #c5975b22; color: #c5975b; border-color: #c5975b; }
+  .export-dropdown { position: relative; display: inline-block; }
+  .export-menu {
+    position: absolute; top: 100%; right: 0; margin-top: 4px;
+    background: #1a1a24; border: 1px solid #333; border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5); min-width: 180px; z-index: 1000;
+  }
+  .export-menu button {
+    display: block; width: 100%; text-align: left;
+    background: transparent; border: none; color: #aaa;
+    padding: 10px 16px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; cursor: pointer; transition: all 0.15s;
+    border-bottom: 1px solid #222;
+  }
+  .export-menu button:last-child { border-bottom: none; }
+  .export-menu button:hover { background: #2a2a3a; color: #c5975b; }
   .main-layout { display: flex; height: calc(100vh - 52px); margin-top: 52px; }
   .staging-panel {
     width: 280px; background: #141420; border-right: 1px solid #2a2a3a;
@@ -141,7 +156,16 @@
     <button class="btn" onclick="clearAllFurniture()">Clear All</button>
     <button class="btn" onclick="resetFurniture()">Reset</button>
     <button class="btn" onclick="fitToView()">Fit</button>
-    <button class="btn" onclick="exportSVG()">Export SVG</button>
+    <div class="export-dropdown">
+      <button class="btn" onclick="toggleExportMenu()">Export ▾</button>
+      <div class="export-menu" id="exportMenu" style="display:none;">
+        <button onclick="exportSVG()">Export SVG</button>
+        <button onclick="exportPNG()">Export PNG</button>
+        <button onclick="exportFigma()">Export for Figma</button>
+        <button onclick="exportJSON()">Export JSON Layout</button>
+        <button onclick="importJSON()">Import JSON Layout</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1175,10 +1199,185 @@ function clearAllFurniture() {
   initDefaults(); renderFurniture(); renderStagingFurniture(); saveToCache();
 }
 function resetFurniture() { initDefaults(); renderFurniture(); renderStagingFurniture(); saveToCache(); }
+
+// ===== EXPORT / IMPORT =====
+function toggleExportMenu() {
+  const menu = document.getElementById('exportMenu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+
+  // Close menu when clicking outside
+  if (menu.style.display === 'block') {
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu(e) {
+        if (!e.target.closest('.export-dropdown')) {
+          menu.style.display = 'none';
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    }, 0);
+  }
+}
+
 function exportSVG() {
-  const cl=document.getElementById('svgPlan').cloneNode(true);cl.style.transform='';
-  const b=new Blob([new XMLSerializer().serializeToString(cl)],{type:'image/svg+xml'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='wizard-study-floor-plan.svg';a.click();
+  const cl = document.getElementById('svgPlan').cloneNode(true);
+  cl.style.transform = '';
+  const b = new Blob([new XMLSerializer().serializeToString(cl)], {type:'image/svg+xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = 'wizard-study-floor-plan.svg';
+  a.click();
+  document.getElementById('exportMenu').style.display = 'none';
+}
+
+function exportPNG() {
+  const svg = document.getElementById('svgPlan');
+  const svgClone = svg.cloneNode(true);
+  svgClone.style.transform = '';
+
+  // Create canvas with 2x resolution for quality
+  const canvas = document.createElement('canvas');
+  const bbox = svg.getBoundingClientRect();
+  const scale = 2; // 2x for retina
+  canvas.width = bbox.width * scale;
+  canvas.height = bbox.height * scale;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(scale, scale);
+
+  // Convert SVG to image
+  const svgData = new XMLSerializer().serializeToString(svgClone);
+  const img = new Image();
+  const svgBlob = new Blob([svgData], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(svgBlob);
+
+  img.onload = function() {
+    ctx.fillStyle = '#0f0f14'; // Background color
+    ctx.fillRect(0, 0, bbox.width, bbox.height);
+    ctx.drawImage(img, 0, 0);
+
+    canvas.toBlob(function(blob) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'wizard-study-floor-plan.png';
+      a.click();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  };
+
+  img.src = url;
+  document.getElementById('exportMenu').style.display = 'none';
+}
+
+function exportFigma() {
+  // Export a clean, layer-organized SVG optimized for Figma import
+  const svg = document.getElementById('svgPlan').cloneNode(true);
+  svg.style.transform = '';
+
+  // Add layer names as Figma-friendly groups
+  const svgElement = svg;
+  svgElement.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svgElement.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+
+  // Add title for Figma layer name
+  const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+  title.textContent = 'Wizard Study Floor Plan';
+  svgElement.insertBefore(title, svgElement.firstChild);
+
+  const serializer = new XMLSerializer();
+  let svgString = serializer.serializeToString(svgElement);
+
+  // Clean up for Figma (remove transform artifacts)
+  svgString = svgString.replace(/transform="[^"]*"/g, '');
+
+  const blob = new Blob([svgString], {type: 'image/svg+xml;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'wizard-study-floor-plan-figma.svg';
+  a.click();
+  document.getElementById('exportMenu').style.display = 'none';
+}
+
+function exportJSON() {
+  // Export furniture placement data
+  const layoutData = {
+    version: '2.0',
+    timestamp: new Date().toISOString(),
+    furniture: placedFurniture.map(p => ({
+      id: p.id,
+      x: p.x,
+      y: p.y,
+      rotated: p.rotated || false
+    })),
+    zoom: zoom,
+    panX: panX,
+    panY: panY
+  };
+
+  const json = JSON.stringify(layoutData, null, 2);
+  const blob = new Blob([json], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'wizard-study-layout.json';
+  a.click();
+  document.getElementById('exportMenu').style.display = 'none';
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+
+  input.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        const layoutData = JSON.parse(event.target.result);
+
+        // Validate data structure
+        if (!layoutData.furniture || !Array.isArray(layoutData.furniture)) {
+          alert('Invalid layout file format');
+          return;
+        }
+
+        // Confirm import
+        if (!confirm(`Import layout from ${layoutData.timestamp ? new Date(layoutData.timestamp).toLocaleString() : 'unknown date'}?\n\nThis will replace your current furniture placement.`)) {
+          return;
+        }
+
+        // Apply furniture positions
+        layoutData.furniture.forEach(savedPiece => {
+          const piece = placedFurniture.find(p => p.id === savedPiece.id);
+          if (piece) {
+            piece.x = savedPiece.x;
+            piece.y = savedPiece.y;
+            piece.rotated = savedPiece.rotated || false;
+          }
+        });
+
+        // Apply view settings if available
+        if (layoutData.zoom !== undefined) zoom = layoutData.zoom;
+        if (layoutData.panX !== undefined) panX = layoutData.panX;
+        if (layoutData.panY !== undefined) panY = layoutData.panY;
+
+        // Re-render everything
+        buildSVG();
+        buildStagingSVG();
+        updateInfo();
+        saveToCache();
+
+        alert('Layout imported successfully!');
+      } catch (err) {
+        alert('Error reading layout file: ' + err.message);
+      }
+    };
+
+    reader.readAsText(file);
+  };
+
+  input.click();
+  document.getElementById('exportMenu').style.display = 'none';
 }
 
 // ===== INIT =====
