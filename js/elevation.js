@@ -185,10 +185,11 @@ function renderWallOpenings(wallDef, wallLength, wallHeight, floorY) {
       const winX = ELEV_PAD + ES(Math.min(winFrom, winTo));
       const winW = ES(Math.abs(winTo - winFrom));
 
-      // Use custom sillHeight if specified, otherwise default
+      // Use custom sillHeight and height if specified, otherwise defaults
       const sillHeight = wall.window.sillHeight || WINDOW_SILL;
-      const winY = floorY - ES(sillHeight + WINDOW_HEIGHT);
-      const winH = ES(WINDOW_HEIGHT);
+      const windowHeight = wall.window.height || WINDOW_HEIGHT;
+      const winY = floorY - ES(sillHeight + windowHeight);
+      const winH = ES(windowHeight);
 
       c += `<rect x="${winX}" y="${winY}" width="${winW}" height="${winH}" fill="#4a9eff11" stroke="#4a9eff" stroke-width="1.5" rx="1"/>`;
       // Window cross
@@ -198,7 +199,7 @@ function renderWallOpenings(wallDef, wallLength, wallHeight, floorY) {
       // Window measurements
       const winWidth = Math.abs(winTo - winFrom);
       c += `<text x="${winX + winW/2}" y="${winY - 3}" font-family="JetBrains Mono" font-size="8" fill="#4a9eff" text-anchor="middle">${formatDist(winWidth)}</text>`;
-      c += `<text x="${winX - 8}" y="${winY + winH/2}" font-family="JetBrains Mono" font-size="7" fill="#4a9eff88" text-anchor="end">H:${formatDist(WINDOW_HEIGHT)}</text>`;
+      c += `<text x="${winX - 8}" y="${winY + winH/2}" font-family="JetBrains Mono" font-size="7" fill="#4a9eff88" text-anchor="end">H:${formatDist(windowHeight)}</text>`;
       c += `<text x="${winX - 8}" y="${floorY - ES(sillHeight) + 3}" font-family="JetBrains Mono" font-size="6" fill="#4a9eff66" text-anchor="end">sill:${formatDist(sillHeight)}</text>`;
     }
 
@@ -385,11 +386,31 @@ export function buildElevationSelector() {
   if (!sel) return;
 
   sel.innerHTML = '';
+
+  // Group walls by room
+  const wallsByRoom = {};
   for (const wall of getElevationWalls()) {
-    const opt = document.createElement('option');
-    opt.value = wall.id;
-    opt.textContent = wall.name;
-    sel.appendChild(opt);
+    const room = wall.room || 'Other';
+    if (!wallsByRoom[room]) wallsByRoom[room] = [];
+    wallsByRoom[room].push(wall);
+  }
+
+  // Sort rooms alphabetically
+  const sortedRooms = Object.keys(wallsByRoom).sort();
+
+  // Create optgroup for each room
+  for (const room of sortedRooms) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = room;
+
+    for (const wall of wallsByRoom[room]) {
+      const opt = document.createElement('option');
+      opt.value = wall.id;
+      opt.textContent = wall.name;
+      optgroup.appendChild(opt);
+    }
+
+    sel.appendChild(optgroup);
   }
 
   // Only bind the change listener once
