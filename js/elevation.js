@@ -10,7 +10,8 @@
  * (within a configurable depth threshold) onto the wall plane.
  */
 
-import { S, PPI, state, getFurnitureDef, getElevationWalls } from './data.js';
+import { S, PPI, state, getFurnitureDef, getElevationWalls, getWalls } from './data.js';
+import { formatDist } from './units.js';
 
 const ELEV_PPI = 1.5; // Slightly smaller scale for elevation
 const ES = (i) => i * ELEV_PPI;
@@ -84,6 +85,70 @@ function getFurnitureNearWall(wallDef) {
 }
 
 /**
+ * Find wall data segments that match an elevation wall definition
+ * and render windows/doors in elevation view
+ */
+function renderWallOpenings(wallDef, wallLength, wallHeight, floorY) {
+  let c = '';
+  const [ewx1, ewy1] = wallDef.from;
+  const [ewx2, ewy2] = wallDef.to;
+  const isHoriz = Math.abs(ewy2 - ewy1) < 1;
+  const wallMin = isHoriz ? Math.min(ewx1, ewx2) : Math.min(ewy1, ewy2);
+
+  // Standard window/door heights in elevation
+  const WINDOW_SILL = 30;    // 30" from floor
+  const WINDOW_HEIGHT = 48;  // 48" tall
+  const DOOR_HEIGHT = 80;    // 80" tall (standard door)
+
+  for (const wall of getWalls()) {
+    const [wx1, wy1] = wall.from;
+    const [wx2, wy2] = wall.to;
+
+    // Check if this wall segment is part of the elevation wall
+    let match = false;
+    if (isHoriz) {
+      match = Math.abs(wy1 - ewy1) < 1 && Math.abs(wy2 - ewy1) < 1;
+    } else {
+      match = Math.abs(wx1 - ewx1) < 1 && Math.abs(wx2 - ewx1) < 1;
+    }
+    if (!match) continue;
+
+    // Render window
+    if (wall.window) {
+      const [winFrom, winTo] = isHoriz
+        ? [wall.window.from[0] - wallMin, wall.window.to[0] - wallMin]
+        : [wall.window.from[1] - wallMin, wall.window.to[1] - wallMin];
+      const winX = ELEV_PAD + ES(Math.min(winFrom, winTo));
+      const winW = ES(Math.abs(winTo - winFrom));
+      const winY = floorY - ES(WINDOW_SILL + WINDOW_HEIGHT);
+      const winH = ES(WINDOW_HEIGHT);
+
+      c += `<rect x="${winX}" y="${winY}" width="${winW}" height="${winH}" fill="#4a9eff11" stroke="#4a9eff" stroke-width="1.5" rx="1"/>`;
+      // Window cross
+      c += `<line x1="${winX}" y1="${winY + winH/2}" x2="${winX + winW}" y2="${winY + winH/2}" stroke="#4a9eff55" stroke-width="0.5"/>`;
+      c += `<line x1="${winX + winW/2}" y1="${winY}" x2="${winX + winW/2}" y2="${winY + winH}" stroke="#4a9eff55" stroke-width="0.5"/>`;
+    }
+
+    // Render door
+    if (wall.door) {
+      const [doorFrom, doorTo] = isHoriz
+        ? [wall.door.from[0] - wallMin, wall.door.to[0] - wallMin]
+        : [wall.door.from[1] - wallMin, wall.door.to[1] - wallMin];
+      const doorX = ELEV_PAD + ES(Math.min(doorFrom, doorTo));
+      const doorW = ES(Math.abs(doorTo - doorFrom));
+      const doorY = floorY - ES(DOOR_HEIGHT);
+      const doorH = ES(DOOR_HEIGHT);
+
+      c += `<rect x="${doorX}" y="${doorY}" width="${doorW}" height="${doorH}" fill="#c5975b11" stroke="#c5975b" stroke-width="1.5" rx="1"/>`;
+      // Door handle
+      c += `<circle cx="${doorX + doorW - ES(4)}" cy="${floorY - ES(36)}" r="2" fill="#c5975b66"/>`;
+    }
+  }
+
+  return c;
+}
+
+/**
  * Render the elevation view SVG
  */
 export function renderElevation() {
@@ -139,14 +204,14 @@ export function renderElevation() {
   for (let h = 0; h <= wallHeight; h += 12) {
     const y = floorY - ES(h);
     c += `<line x1="${ELEV_PAD - 4}" y1="${y}" x2="${ELEV_PAD}" y2="${y}" stroke="#444" stroke-width="1"/>`;
-    c += `<text x="${ELEV_PAD - 6}" y="${y + 3}" font-family="JetBrains Mono" font-size="7" fill="#555" text-anchor="end">${h}"</text>`;
+    c += `<text x="${ELEV_PAD - 6}" y="${y + 3}" font-family="JetBrains Mono" font-size="7" fill="#555" text-anchor="end">${formatDist(h)}</text>`;
   }
 
   // Wall name
   c += `<text x="${ELEV_PAD + ES(wallLength)/2}" y="${svgH - 5}" font-family="JetBrains Mono" font-size="9" fill="#666" text-anchor="middle">${wallDef.name}</text>`;
 
-  // TODO: render windows/doors on the wall in elevation view
-  // (would need to cross-reference wall data with the elevation wall definition)
+  // Render windows and doors from wall data
+  c += renderWallOpenings(wallDef, wallLength, wallHeight, floorY);
 
   // Render furniture near this wall
   const furniture = getFurnitureNearWall(wallDef);
@@ -164,8 +229,13 @@ export function renderElevation() {
 
     // Height dimension
     if (item.elevation > 0) {
-      c += `<text x="${x + w + 3}" y="${floorY - ES(item.elevation/2)}" font-family="JetBrains Mono" font-size="6" fill="#c5975b88" text-anchor="start">↑${item.elevation}"</text>`;
+      c += `<text x="${x + w + 3}" y="${floorY - ES(item.elevation/2)}" font-family="JetBrains Mono" font-size="6" fill="#c5975b88" text-anchor="start">↑${formatDist(item.elevation)}</text>`;
     }
+
+    // Top of piece height label
+    const topH = item.elevation + item.height;
+    c += `<line x1="${x + w + 1}" y1="${y}" x2="${x + w + 8}" y2="${y}" stroke="#ffffff22" stroke-width="0.5"/>`;
+    c += `<text x="${x + w + 10}" y="${y + 4}" font-family="JetBrains Mono" font-size="5" fill="#ffffff44" text-anchor="start">${formatDist(topH)}</text>`;
   }
 
   svg.innerHTML = c;

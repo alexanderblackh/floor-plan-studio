@@ -11,6 +11,7 @@
  */
 
 import { S, PAD, PPI, state, getRooms, getWalls, getFixtures, getDimensions } from './data.js';
+import { formatDist } from './units.js';
 
 // ===== SVG COORDINATE HELPERS =====
 export const wx = (x) => PAD + S(x);
@@ -168,7 +169,13 @@ function renderDimensions() {
     const [x2, y2] = dim.to;
     const mx = (x1 + x2) / 2 + (dim.dx || 0);
     const my = (y1 + y2) / 2 + (dim.offset || 0);
-    c += labelText(mx, my, dim.label, dim.size || 8, dim.color || '#444', dim.rotation || 0);
+    // Compute distance from endpoints, use formatDist for unit-aware display
+    const dx = x2 - x1, dy = y2 - y1;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    // If the label has extra text (like "jog"), append it
+    const suffix = dim.label.replace(/[\d."']+\s*/, '').trim();
+    const label = formatDist(dist) + (suffix ? ' ' + suffix : '');
+    c += labelText(mx, my, label, dim.size || 8, dim.color || '#444', dim.rotation || 0);
   }
   return c;
 }
@@ -195,7 +202,7 @@ function renderScaleBar() {
   c += `<line x1="${wx(0)}" y1="${wy(sbY)}" x2="${wx(48)}" y2="${wy(sbY)}" stroke="#444" stroke-width="1"/>`;
   c += `<line x1="${wx(0)}" y1="${wy(sbY)-3}" x2="${wx(0)}" y2="${wy(sbY)+3}" stroke="#444"/>`;
   c += `<line x1="${wx(48)}" y1="${wy(sbY)-3}" x2="${wx(48)}" y2="${wy(sbY)+3}" stroke="#444"/>`;
-  c += labelText(24, sbY - 4, '4 ft', 7);
+  c += labelText(24, sbY - 4, formatDist(48), 7);
   return c;
 }
 

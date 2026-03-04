@@ -178,6 +178,8 @@
     <button class="btn" id="btnShowAll" onclick="toggleShowAll()">Show All</button>
     <button class="btn" id="btnAnchor" onclick="toggleAnchorMode()">Anchor</button>
     <button class="btn" id="btnElevation" onclick="toggleElevation()">Elevation</button>
+    <button class="btn" id="btnFixtures" onclick="toggleFixtureEditMode()">Fixtures</button>
+    <button class="btn" id="btnUnit" onclick="handleUnitToggle()">IN</button>
     <button class="btn" onclick="clearAllFurniture()">Clear All</button>
     <button class="btn" onclick="resetFurniture()">Reset</button>
     <button class="btn" onclick="fitToView()">Fit</button>
@@ -233,6 +235,8 @@
       <div style="margin-bottom:4px;"><kbd>Dbl-click</kbd> Rotate 90&deg;</div>
       <div style="margin-bottom:4px;"><kbd>Shift+Click</kbd> Multi-select</div>
       <div style="margin-bottom:4px;"><kbd>Alt+Click</kbd> Link anchor</div>
+      <div style="margin-bottom:4px;"><kbd>U</kbd> Cycle units (in/ft/cm/m)</div>
+      <div style="margin-bottom:4px;"><kbd>F</kbd> Toggle fixture edit mode</div>
       <div style="margin-bottom:4px;"><kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd> Zoom</div>
     </div>
   </div>
@@ -260,7 +264,7 @@
 
 <div class="info-bar">
   <div class="info-item">Zoom: <span id="zoomLevel">100%</span></div>
-  <div class="info-item">Scale: <span>1" = 2px</span></div>
+  <div class="info-item">Scale: <span id="scaleDisplay">1" = 2px</span></div>
   <div class="info-item">Cursor: <span id="cursorPos">&mdash;</span></div>
   <div class="info-item" id="selectedInfo">Selected: <span>none</span></div>
 </div>

@@ -12,6 +12,7 @@
 
 import { S, PPI, PAD, state, getFurnitureDef, getFurnitureDefs, saveToCache } from './data.js';
 import { checkCollision, autoStack } from './collision.js';
+import { formatDist } from './units.js';
 
 // ===== EXTERNAL CALLBACKS (set by app.js) =====
 let onRenderComplete = null;
@@ -41,12 +42,12 @@ export function renderFurniture() {
 
     const displayW = p.rotated ? d.h : d.w;
     const displayH = p.rotated ? d.w : d.h;
-    const dimText = `${displayW}" × ${displayH}"`;
+    const dimText = `${formatDist(displayW)} × ${formatDist(displayH)}`;
 
     // Elevation badge
     const elev = p.elevation || 0;
     const elevBadge = elev > 0
-      ? `<text x="${PAD+S(p.x)+w-4}" y="${PAD+S(p.y)+12}" font-family="JetBrains Mono" font-size="7" fill="#c5975b" text-anchor="end">↑${elev}"</text>`
+      ? `<text x="${PAD+S(p.x)+w-4}" y="${PAD+S(p.y)+12}" font-family="JetBrains Mono" font-size="7" fill="#c5975b" text-anchor="end">↑${formatDist(elev)}</text>`
       : '';
 
     // Drop shadow for elevated items
@@ -124,7 +125,7 @@ export function renderStagingFurniture() {
       c += `<g class="furniture-piece-staging" data-idx="${actualIdx}">
         <rect x="${sx}" y="${sy}" width="${w}" height="${h}" fill="${def.color}" stroke="${def.stroke}" stroke-width="1.5" rx="3" opacity="0.85"/>
         <text x="${sx+w/2}" y="${sy+h/2-4}" font-family="JetBrains Mono" font-size="9" fill="#ffffffcc" text-anchor="middle" dominant-baseline="central" pointer-events="none">${def.label}</text>
-        <text x="${sx+w/2}" y="${sy+h/2+6}" font-family="JetBrains Mono" font-size="7" fill="#ffffff88" text-anchor="middle" pointer-events="none">${def.w}" × ${def.h}"</text>
+        <text x="${sx+w/2}" y="${sy+h/2+6}" font-family="JetBrains Mono" font-size="7" fill="#ffffff88" text-anchor="middle" pointer-events="none">${formatDist(def.w)} × ${formatDist(def.h)}</text>
       </g>`;
 
       piece.x = -(sx / (PPI * SCALE));
@@ -187,17 +188,22 @@ function attachFurnitureEvents() {
         return;
       }
 
-      // Anchor mode
+      // Anchor mode: Alt+click on furniture, or click canvas for wall anchor
       if (state.anchorMode) {
         if (!state.anchorSource) {
           state.anchorSource = idx;
         } else if (state.anchorSource !== idx) {
-          // Link anchor: source → target
+          // Link anchor: source → target furniture
           const src = state.placedFurniture[state.anchorSource];
           if (!src.anchors) src.anchors = [];
-          src.anchors.push(state.placedFurniture[idx].id);
+          // Avoid duplicate anchors
+          const targetId = state.placedFurniture[idx].id;
+          if (!src.anchors.find(a => a.id === targetId && a.type === 'furniture')) {
+            src.anchors.push({ type: 'furniture', id: targetId });
+          }
           state.anchorSource = null;
           if (window._renderAnchors) window._renderAnchors();
+          saveToCache();
         }
         return;
       }
@@ -312,7 +318,7 @@ export function handleDragMove(e) {
   const p = state.placedFurniture[state.dragging];
   const info = document.querySelector('#selectedInfo span');
   if (info && d) {
-    info.textContent = `${d.name} @ ${p.x}", ${p.y}"${p.elevation ? ` ↑${p.elevation}"` : ''}`;
+    info.textContent = `${d.name} @ ${formatDist(p.x)}, ${formatDist(p.y)}${p.elevation ? ` ↑${formatDist(p.elevation)}` : ''}`;
   }
   return true;
 }

@@ -269,7 +269,11 @@ export const state = {
   anchorSource: null,
   selectedFurniture: new Set(),
   elevationWall: null, // currently viewed elevation wall id
-  showElevation: false
+  showElevation: false,
+  displayUnit: 'in',  // 'in' | 'ft' | 'cm' | 'm'
+  fixtureEditMode: false,
+  draggingFixture: null,
+  fixtureEditIdx: null
 };
 
 // ===== HELPERS =====
