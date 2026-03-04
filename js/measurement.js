@@ -529,7 +529,11 @@ export function renderAnchors() {
         }
 
         // Show anchor points if target is also selected
-        if (state.anchorTarget !== null) {
+        // In edit mode, only show source points if editing the source endpoint
+        const showSourcePoints = state.anchorTarget !== null &&
+          (!state.editingAnchor || state.editingAnchor.editingPoint === 'source');
+
+        if (showSourcePoints) {
           c += renderAnchorPoints(sourcePiece.x, sourcePiece.y, sw, sh, true, 'source');
 
           // If a source point is selected, highlight it
@@ -566,19 +570,24 @@ export function renderAnchors() {
             c += `<text x="${tx + S(tw)/2}" y="${ty - 12}" font-family="JetBrains Mono" font-size="10" fill="${accentColor}" text-anchor="middle" font-weight="bold">TARGET</text>`;
           }
 
-          // Show anchor points on target object
-          c += renderAnchorPoints(targetPiece.x, targetPiece.y, tw, th, false, 'target');
+          // In edit mode, only show target points if editing the target endpoint
+          const showTargetPoints = !state.editingAnchor || state.editingAnchor.editingPoint === 'target';
 
-          // If a target point is selected, highlight it
-          if (state.anchorTargetPoint) {
-            const points = getAnchorPoints(targetPiece.x, targetPiece.y, tw, th);
-            const pt = points[state.anchorTargetPoint];
-            if (pt) {
-              const tpx = PAD + S(pt.x);
-              const tpy = PAD + S(pt.y);
-              c += `<circle cx="${tpx}" cy="${tpy}" r="8" fill="none" stroke="${accentColor}" stroke-width="3">
-                <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
-              </circle>`;
+          if (showTargetPoints) {
+            // Show anchor points on target object
+            c += renderAnchorPoints(targetPiece.x, targetPiece.y, tw, th, false, 'target');
+
+            // If a target point is selected, highlight it
+            if (state.anchorTargetPoint) {
+              const points = getAnchorPoints(targetPiece.x, targetPiece.y, tw, th);
+              const pt = points[state.anchorTargetPoint];
+              if (pt) {
+                const tpx = PAD + S(pt.x);
+                const tpy = PAD + S(pt.y);
+                c += `<circle cx="${tpx}" cy="${tpy}" r="8" fill="none" stroke="${accentColor}" stroke-width="3">
+                  <animate attributeName="r" values="8;12;8" dur="1s" repeatCount="indefinite"/>
+                </circle>`;
+              }
             }
           }
         }
