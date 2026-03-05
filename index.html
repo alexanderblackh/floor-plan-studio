@@ -33,10 +33,10 @@
     --bg-tertiary: #1a1a24;
     --bg-panel: #141420;
     --text-primary: #d4c9b8;
-    --text-secondary: #999;
-    --text-muted: #777;
-    --text-faint: #666;
-    --text-dimmer: #555;
+    --text-secondary: #a0a0a0;
+    --text-muted: #8b8b8b;
+    --text-faint: #7a7a7a;
+    --text-dimmer: #6e6e6e;
     --border-primary: #2a2a3a;
     --border-secondary: #333;
     --border-tertiary: #222;
@@ -288,6 +288,8 @@
     overflow-y: auto;
     flex: 1;
     line-height: 1.7;
+    user-select: text;
+    -webkit-user-select: text;
   }
   .docs-modal-body::-webkit-scrollbar {
     width: 8px;
@@ -378,10 +380,6 @@
     align-items: center;
     gap: 4px;
     transition: all 0.2s;
-    opacity: 0;
-  }
-  .docs-modal-body pre:hover .code-copy-btn,
-  .code-copy-btn:focus {
     opacity: 1;
   }
   .code-copy-btn:hover {

@@ -205,12 +205,22 @@ This document outlines planned features and future directions for Floor Plan Stu
 - [ ] **Multi-Project Management**: Organize multiple floor plans
 - [ ] **Team Accounts**: Collaborate with team members
 
-### Accessibility
-- [ ] **Screen Reader Support**: Full ARIA compliance
-- [ ] **Keyboard-Only Navigation**: Complete keyboard control
-- [ ] **High Contrast Mode**: Enhanced visibility
-- [ ] **Text-to-Speech**: Announce measurements and actions
-- [ ] **Dyslexia-Friendly Font**: Optional font for readability
+### Accessibility & WCAG 2.1 AA Compliance
+- [ ] **Color Contrast Fixes**: Meet WCAG AA 4.5:1 ratio for all text
+- [ ] **ARIA Labels**: Add aria-label, aria-expanded, aria-pressed to all interactive elements
+- [ ] **Semantic HTML**: Replace divs with header, main, aside, nav elements
+- [ ] **Focus Indicators**: Visible focus rings on all focusable elements
+- [ ] **Keyboard Navigation**: Arrow keys for menus, Tab navigation for all UI
+- [ ] **Keyboard Drag-Drop**: Space/Enter to grab, arrow keys to move, Enter to drop
+- [ ] **SVG Accessibility**: Add roles, labels, and keyboard access to floor plan canvas
+- [ ] **Screen Reader Support**: aria-live regions for dynamic content announcements
+- [ ] **Form Labels**: Associate all inputs with visible or aria-labels
+- [ ] **Reduced Motion**: Respect prefers-reduced-motion for animations
+- [ ] **Skip Links**: Add skip-to-main-content link
+- [ ] **Heading Hierarchy**: Proper H1-H6 structure throughout app
+- [ ] **High Contrast Mode**: Test and optimize for Windows High Contrast Mode
+- [ ] **200% Zoom**: Ensure app works at 200% text size
+- [ ] **Screen Reader Testing**: Test with NVDA/VoiceOver and fix issues
 
 ### Data & Analytics
 - [ ] **Usage Analytics**: Track popular features

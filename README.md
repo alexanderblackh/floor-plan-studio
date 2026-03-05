@@ -196,4 +196,4 @@ This project is licensed under the **MIT No Attribution (MIT-0)** License - see 
 
 ---
 
-Made with ❤️ by Alexander Black
+Made with ❤️ by Alexander Black in [sunny Santa Barbara](https://santabarbaraca.com)!
