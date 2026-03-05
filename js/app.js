@@ -1180,9 +1180,9 @@ function savePlanName(name) {
 function loadPlanName() {
   try {
     const saved = localStorage.getItem('fps-plan-name');
-    return saved || 'Wizard Study Apartment';
+    return saved || 'New Floor Plan';
   } catch(e) {
-    return 'Wizard Study Apartment';
+    return 'New Floor Plan';
   }
 }
 

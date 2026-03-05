@@ -47,7 +47,7 @@ Floor Plan Studio supports multiple file formats for maximum flexibility:
   "version": "3.0",
   "type": "placement",
   "timestamp": "2024-01-15T10:30:00.000Z",
-  "planName": "Wizard Study Apartment",
+  "planName": "My Apartment",
   "furniture": [
     {
       "id": "sofa-1",
@@ -446,12 +446,12 @@ sofa-1,100,50
 
 Use descriptive names:
 ```
-floor-plan-wizard-study-full.json      // Full plan
-wizard-study-layout-cozy.json          // Placement
-wizard-study-layout-open.json          // Placement
-wizard-study-furniture-list.csv        // CSV export
-wizard-study-floorplan.svg             // Vector export
-wizard-study-preview.png               // Raster image
+floor-plan-my-apartment-full.json      // Full plan
+my-apartment-layout-cozy.json          // Placement
+my-apartment-layout-open.json          // Placement
+my-apartment-furniture-list.csv        // CSV export
+my-apartment-floorplan.svg             // Vector export
+my-apartment-preview.png               // Raster image
 ```
 
 ### Backup Strategy
