@@ -493,7 +493,8 @@
     color: var(--text-muted);
     font-style: italic;
   }
-  .plan-name-input {
+  .plan-name-input,
+  .plan-version-input {
     background: transparent;
     border: none;
     border-bottom: 1px solid transparent;
@@ -504,13 +505,23 @@
     padding: 4px 8px;
     outline: none;
     transition: all 0.2s;
+  }
+  .plan-name-input {
     min-width: 200px;
   }
-  .plan-name-input:hover {
+  .plan-version-input {
+    min-width: 60px;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+  .plan-name-input:hover,
+  .plan-version-input:hover {
     border-bottom-color: var(--border-secondary);
   }
-  .plan-name-input:focus {
+  .plan-name-input:focus,
+  .plan-version-input:focus {
     border-bottom-color: var(--accent-gold);
+    opacity: 1;
   }
   .btn {
     background: var(--btn-bg); border: 1px solid var(--border-secondary); color: var(--text-secondary);
@@ -1131,8 +1142,12 @@
     <h1 class="app-title">Floor Plan Studio</h1>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
-    <label for="planNameInput" class="sr-only">Floor plan name</label>
-    <input type="text" class="plan-name-input" id="planNameInput" value="New Floor Plan" placeholder="Untitled Plan" onchange="savePlanName(this.value)" aria-label="Floor plan name">
+    <div style="display:flex;align-items:baseline;gap:8px;">
+      <label for="planNameInput" class="sr-only">Floor plan name</label>
+      <input type="text" class="plan-name-input" id="planNameInput" value="New Floor Plan" placeholder="Untitled Plan" onchange="savePlanName(this.value)" aria-label="Floor plan name">
+      <label for="planVersionInput" class="sr-only">Plan version</label>
+      <input type="text" class="plan-version-input" id="planVersionInput" value="1.0" placeholder="v1.0" onchange="savePlanVersion(this.value)" aria-label="Plan version" style="width:60px;font-size:12px;opacity:0.7;">
+    </div>
 
     <!-- Docs Dropdown -->
     <div class="docs-dropdown-container">

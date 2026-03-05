@@ -722,6 +722,7 @@ function attachCanvasEvents() {
   let touchMidX = 0, touchMidY = 0;
 
   ctr.addEventListener('touchstart', e => {
+    if (e.target.closest('.mobile-hint')) return;
     e.preventDefault();
     const r = ctr.getBoundingClientRect();
     if (e.touches.length === 1) {
@@ -1238,20 +1239,17 @@ function toggleTheme() {
 
 // ===== PLAN NAME =====
 function savePlanName(name) {
-  try {
-    localStorage.setItem('fps-plan-name', name);
-  } catch(e) {
-    console.warn('Failed to save plan name:', e);
-  }
+  state.floorPlan.name = name;
+  saveToCache();
 }
 
 function loadPlanName() {
-  try {
-    const saved = localStorage.getItem('fps-plan-name');
-    return saved || 'New Floor Plan';
-  } catch(e) {
-    return 'New Floor Plan';
-  }
+  return state.floorPlan.name || 'New Floor Plan';
+}
+
+function savePlanVersion(version) {
+  state.floorPlan.version = version;
+  saveToCache();
 }
 
 // ===== EXPOSE GLOBAL FUNCTIONS FOR ONCLICK HANDLERS =====
@@ -1291,6 +1289,7 @@ window.selectTheme = selectTheme;
 window.showSubmenu = showSubmenu;
 window.hideSubmenu = hideSubmenu;
 window.savePlanName = savePlanName;
+window.savePlanVersion = savePlanVersion;
 window._updateViewMenuChecks = updateViewMenuChecks;
 window._updateAlignmentBarVisibility = updateAlignmentBarVisibility;
 window._updateSaveControlsVisibility = updateSaveControlsVisibility;
@@ -1341,9 +1340,12 @@ function init() {
     document.getElementById('mobileHint')?.remove();
   }
 
-  // Load plan name
+  // Load plan name and version
   const nameInput = document.getElementById('planNameInput');
   if (nameInput) nameInput.value = loadPlanName();
+
+  const versionInput = document.getElementById('planVersionInput');
+  if (versionInput) versionInput.value = state.floorPlan.planVersion || '1.0';
 
   // Update unit display
   updateUnitDisplay();

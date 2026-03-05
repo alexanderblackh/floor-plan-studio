@@ -15,7 +15,7 @@
  * - CSV: furniture definitions
  */
 
-import { state, getFurnitureDefs, saveToCache, initDefaults, validateFloorPlan } from './data.js';
+import { state, getFurnitureDefs, saveToCache, initDefaults, validateFloorPlan, generateUUID } from './data.js';
 import { buildSVG, buildStagingSVG } from './render.js';
 import { renderFurniture, renderStagingFurniture } from './furniture.js';
 import { buildElevationSelector } from './elevation.js';
@@ -243,6 +243,16 @@ export function importFullPlan(data) {
   delete planData.lockedMeasurements;
   delete planData.softDividers;
 
+  // Add UUID if missing (for backwards compatibility)
+  if (!planData.id) {
+    planData.id = generateUUID();
+  }
+
+  // Add planVersion if missing
+  if (!planData.planVersion) {
+    planData.planVersion = "1.0";
+  }
+
   // Replace floor plan
   state.floorPlan = planData;
 
@@ -268,9 +278,12 @@ export function importFullPlan(data) {
     state.panY = data.viewState.panY ?? 0;
   }
 
-  // Update plan name display
+  // Update plan name and version display
   const nameInput = document.getElementById('planNameInput');
   if (nameInput) nameInput.value = state.floorPlan.name || 'Untitled';
+
+  const versionInput = document.getElementById('planVersionInput');
+  if (versionInput) versionInput.value = state.floorPlan.planVersion || '1.0';
 
   // Rebuild everything
   buildSVG();

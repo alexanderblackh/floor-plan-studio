@@ -21,10 +21,21 @@ export const PPI = 2;
 export const S = (i) => i * PPI;
 export const PAD = S(30);
 
+// ===== UUID GENERATION =====
+export function generateUUID() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 // ===== DEFAULT FLOOR PLAN =====
 export const DEFAULT_FLOOR_PLAN = {
+  id: generateUUID(),
   name: "New Floor Plan",
   version: "3.0",
+  planVersion: "1.0",
   units: "inches",
   scale: 2,
 
