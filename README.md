@@ -4,9 +4,9 @@
 
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://opensource.org/licenses/MIT-0)
 
-![Floor Plan Studio Screenshot](screenshot.png)
-
 Floor Plan Studio is a browser-based tool for creating, editing, and arranging floor plans. Define rooms as polygons, import/export via JSON or CSV, and arrange furniture with drag-and-drop precision.
+
+**[🚀 Try it live](https://alexanderblackh.github.io/floor-plan-studio/)**
 
 ## ✨ Features
 
