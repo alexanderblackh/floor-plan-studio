@@ -5,7 +5,7 @@
  * without creating full walls.
  */
 
-import { S, PAD, state, saveToCache } from './data.js';
+import { S, PAD, PPI, state, saveToCache } from './data.js';
 import { pushHistory } from './history.js';
 
 /**
@@ -25,10 +25,19 @@ export function renderDividers() {
 
   let c = '';
 
-  // Render all permanent dividers
-  for (let i = 0; i < state.softDividers.length; i++) {
-    const div = state.softDividers[i];
-    c += renderDividerLine(div.from, div.to, i);
+  // Render all permanent dividers (if show all or show all dividers is enabled)
+  const shouldShowAll = state.showAll || state.showAllDividers;
+  if (shouldShowAll) {
+    for (let i = 0; i < state.softDividers.length; i++) {
+      const div = state.softDividers[i];
+      c += renderDividerLine(div.from, div.to, i);
+    }
+  } else if (state.selectedDivider !== null) {
+    // Only show selected divider
+    const div = state.softDividers[state.selectedDivider];
+    if (div) {
+      c += renderDividerLine(div.from, div.to, state.selectedDivider);
+    }
   }
 
   // Render active divider being drawn with preview

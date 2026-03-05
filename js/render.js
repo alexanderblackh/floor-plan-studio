@@ -210,10 +210,11 @@ function renderDimensions() {
 // ===== GRID RENDERING =====
 function renderGrid(svgW, svgH) {
   let c = '';
-  const gridColor = getCSSVar('--grid-line') || '#ffffff06';
-  for (let x = PAD; x < svgW; x += S(12))
+  const gridColor = getCSSVar('--grid-line') || '#ffffff15';
+  const gridSpacing = state.gridDensity || 12; // Use state.gridDensity
+  for (let x = PAD; x < svgW; x += S(gridSpacing))
     c += `<line x1="${x}" y1="${PAD}" x2="${x}" y2="${svgH-PAD}" stroke="${gridColor}" stroke-width="0.5"/>`;
-  for (let y = PAD; y < svgH; y += S(12))
+  for (let y = PAD; y < svgH; y += S(gridSpacing))
     c += `<line x1="${PAD}" y1="${y}" x2="${svgW-PAD}" y2="${y}" stroke="${gridColor}" stroke-width="0.5"/>`;
   return c;
 }

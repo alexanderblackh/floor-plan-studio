@@ -405,23 +405,30 @@ export function handleDragMove(e) {
     state.dragAxisLocked = null;
   }
 
+  // Helper function to snap to grid if enabled
+  const snapToGrid = (value) => {
+    if (!state.snapToGrid) return Math.round(value);
+    const gridSize = state.gridDensity || 12;
+    return Math.round(value / gridSize) * gridSize;
+  };
+
   if (draggingInitial && state.selectedFurniture.size > 1) {
-    const dx = Math.round(ix) - draggingInitial.x;
-    const dy = Math.round(iy) - draggingInitial.y;
+    let dx = Math.round(ix) - draggingInitial.x;
+    let dy = Math.round(iy) - draggingInitial.y;
 
     // Move all selected items by the same delta
     for (const selectedIdx of state.selectedFurniture) {
       const initial = state.dragInitialPositions.get(selectedIdx);
       if (initial) {
-        // Clamp to prevent negative coordinates (no auto-staging)
-        state.placedFurniture[selectedIdx].x = Math.max(0, initial.x + dx);
-        state.placedFurniture[selectedIdx].y = Math.max(0, initial.y + dy);
+        // Apply snap to grid and clamp to prevent negative coordinates
+        state.placedFurniture[selectedIdx].x = Math.max(0, snapToGrid(initial.x + dx));
+        state.placedFurniture[selectedIdx].y = Math.max(0, snapToGrid(initial.y + dy));
       }
     }
   } else {
-    // Single item drag - clamp to prevent negative coordinates
-    state.placedFurniture[state.dragging].x = Math.max(0, Math.round(ix));
-    state.placedFurniture[state.dragging].y = Math.max(0, Math.round(iy));
+    // Single item drag - apply snap to grid and clamp to prevent negative coordinates
+    state.placedFurniture[state.dragging].x = Math.max(0, snapToGrid(ix));
+    state.placedFurniture[state.dragging].y = Math.max(0, snapToGrid(iy));
   }
 
   renderFurniture();
@@ -433,7 +440,7 @@ export function handleDragMove(e) {
 
   const d = getFurnitureDef(state.placedFurniture[state.dragging].id);
   const p = state.placedFurniture[state.dragging];
-  const info = document.querySelector('#selectedInfo span');
+  const info = document.querySelector('#selectedInfo .metadata-value');
   if (info && d) {
     const itemCount = state.selectedFurniture.size;
     const countText = itemCount > 1 ? ` (${itemCount} items)` : '';
@@ -458,7 +465,7 @@ export function handleDragEnd() {
 
   state.dragging = null;
   state.dragInitialPositions = null;
-  const info = document.querySelector('#selectedInfo span');
+  const info = document.querySelector('#selectedInfo .metadata-value');
   if (info) info.textContent = 'none';
   saveToCache();
   renderFurniture(); // Re-render to show elevation after auto-stack

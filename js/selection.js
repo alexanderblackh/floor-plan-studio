@@ -14,10 +14,8 @@ import { pushHistory } from './history.js';
  * Update the alignment toolbar visibility
  */
 export function updateAlignToolbar() {
-  const toolbar = document.getElementById('alignToolbar');
-  if (!toolbar) return;
-  // Show toolbar for single or multi-select (>= 1)
-  toolbar.classList.toggle('visible', state.selectedFurniture.size >= 1);
+  // Use the new alignment bar visibility function
+  if (window._updateAlignmentBarVisibility) window._updateAlignmentBarVisibility();
 
   // Update color picker visibility
   if (window._updateColorPicker) window._updateColorPicker();

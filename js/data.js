@@ -290,6 +290,9 @@ export const state = {
   placedFurniture: [],
   showGrid: true,
   showDims: true,
+  snapToGrid: false,
+  gridDensity: 12, // Grid spacing in inches (12" = 1 foot)
+  renderQuality: 'auto', // 'auto' | '4k' | 'hd' | 'sd'
   zoom: 1,
   panX: 0,
   panY: 0,
@@ -308,7 +311,13 @@ export const state = {
   dividerStart: null,
   dividerPreview: null,
   dividerShiftKey: false,
+  showAll: false, // Master toggle - enables all measurements, links, and dividers
   showAllMeasurements: false,
+  showAllLinks: false,
+  showAllDividers: false,
+  alwaysShowAlignment: false,
+  alwaysShowSaveControls: false,
+  alwaysShowShortcuts: false,
   anchorMode: false,
   anchorSource: null,
   anchorSourcePoint: null, // Which anchor point on source: 'topLeft', 'center', etc.

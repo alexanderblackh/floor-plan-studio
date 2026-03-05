@@ -51,7 +51,7 @@
     --door-color: #c5975b;
     --door-arc: #c5975b33;
     --label-color: #33335544;
-    --grid-line: #ffffff06;
+    --grid-line: #ffffff15;
     --room-fill-default: #18182288;
     --fixture-fill: #4a4a3a;
     --fixture-stroke: #5a5a4a;
@@ -112,12 +112,25 @@
     letter-spacing: 1px;
     transition: color 0.3s ease;
   }
-  .app-subtitle {
-    font-size: 9px; color: var(--text-faint); margin-left: 12px;
-    letter-spacing: 1px; text-transform: uppercase;
-    transition: color 0.3s ease;
+  .plan-name-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid transparent;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 4px 8px;
+    outline: none;
+    transition: all 0.2s;
+    min-width: 200px;
   }
-  .controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .plan-name-input:hover {
+    border-bottom-color: var(--border-secondary);
+  }
+  .plan-name-input:focus {
+    border-bottom-color: var(--accent-gold);
+  }
   .btn {
     background: var(--btn-bg); border: 1px solid var(--border-secondary); color: var(--text-secondary);
     padding: 6px 12px; font-family: 'JetBrains Mono', monospace;
@@ -126,28 +139,6 @@
   }
   .btn:hover { background: var(--btn-hover); color: var(--accent-gold); border-color: var(--accent-gold-dim); }
   .btn.active { background: var(--accent-gold-bg); color: var(--accent-gold); border-color: var(--accent-gold); }
-  .theme-toggle { padding: 6px 10px; }
-  .export-dropdown { position: relative; display: inline-block; }
-  .export-menu {
-    position: absolute; top: 100%; right: 0; margin-top: 4px;
-    background: var(--bg-tertiary); border: 1px solid var(--border-secondary); border-radius: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3); min-width: 200px; z-index: 1000;
-    transition: background 0.3s ease, border-color 0.3s ease;
-  }
-  body.light-mode .export-menu { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-  .export-menu button {
-    display: block; width: 100%; text-align: left;
-    background: transparent; border: none; color: var(--text-secondary);
-    padding: 10px 16px; font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; cursor: pointer; transition: all 0.15s;
-    border-bottom: 1px solid var(--border-tertiary);
-  }
-  .export-menu button:last-child { border-bottom: none; }
-  .export-menu button:hover { background: var(--btn-hover); color: var(--accent-gold); }
-  .export-menu .menu-divider {
-    border-bottom: 1px solid var(--border-secondary); margin: 2px 0; padding: 0; height: 0;
-    pointer-events: none;
-  }
   .main-layout { display: flex; height: calc(100vh - 52px); margin-top: 52px; }
   .staging-panel {
     width: 280px; background: var(--bg-panel); border-right: 1px solid var(--border-primary);
@@ -172,7 +163,19 @@
     transition: background 0.3s ease;
   }
   .canvas-container.panning { cursor: grabbing; }
-  .floor-plan { transform-origin: 0 0; }
+  .floor-plan {
+    transform-origin: 0 0;
+    shape-rendering: geometricPrecision;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  svg {
+    shape-rendering: geometricPrecision;
+  }
+  svg text {
+    text-rendering: optimizeLegibility;
+  }
 
   /* Elevation panel */
   .elevation-panel {
@@ -206,72 +209,357 @@
   }
   .elevation-content { overflow-x: auto; overflow-y: hidden; padding: 10px; }
 
-  /* Zoom controls */
-  .zoom-controls {
-    position: fixed; bottom: 40px; right: 20px; z-index: 50;
-    display: flex; flex-direction: column; gap: 4px;
+  /* Floating Toolbar Container (Figma-style) */
+  .floating-toolbar-container {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    max-width: 90vw;
   }
-  .zoom-btn {
-    width: 32px; height: 32px; background: var(--bg-tertiary); border: 1px solid var(--border-secondary);
-    color: var(--text-secondary); font-size: 16px; cursor: pointer; border-radius: 4px;
-    display: flex; align-items: center; justify-content: center;
-    font-family: 'JetBrains Mono', monospace;
-    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-  }
-  .zoom-btn:hover { background: var(--btn-hover); color: var(--accent-gold); }
-
-  /* Info bar */
-  .info-bar {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background: var(--bg-secondary); border-top: 1px solid var(--border-primary);
-    padding: 4px 24px; display: flex; gap: 20px;
-    font-size: 9px; color: var(--text-faint); z-index: 50;
-    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
-  }
-  .info-item { display: flex; gap: 4px; }
-
-  /* Alignment toolbar */
-  .align-toolbar {
-    position: fixed; top: 58px; left: 50%; transform: translateX(-50%);
-    background: var(--bg-tertiary); border: 2px solid var(--accent-gold-dim); border-radius: 8px;
-    padding: 8px 12px; display: none; gap: 4px; z-index: 90;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  .floating-toolbar {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px 12px 0 0;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     transition: background 0.3s ease, border-color 0.3s ease;
   }
-  body.light-mode .align-toolbar {
-    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  body.light-mode .floating-toolbar {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .toolbar-metadata {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    font-size: 9px;
+    white-space: nowrap;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    transition: background 0.3s ease, border-color 0.3s ease;
+  }
+  body.light-mode .toolbar-metadata {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .metadata-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .metadata-label {
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .metadata-value {
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .toolbar-section {
+    display: flex; align-items: center; gap: 4px;
+  }
+  .toolbar-divider {
+    width: 1px; height: 32px;
+    background: var(--border-primary);
+    margin: 0 4px;
+    transition: background 0.3s ease;
+  }
+  .toolbar-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    padding: 6px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .toolbar-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+  }
+  .toolbar-btn:hover {
+    background: var(--btn-hover);
+    color: var(--accent-gold);
+    border-color: var(--accent-gold-dim);
+  }
+  .toolbar-btn.active {
+    background: var(--accent-gold-bg);
+    color: var(--accent-gold);
     border-color: var(--accent-gold);
   }
-  .align-toolbar.visible { display: flex; }
-  .align-toolbar .sep { width: 2px; background: var(--border-primary); margin: 0 6px; transition: background 0.3s ease; }
-  .align-btn {
-    width: 36px; height: 36px; background: transparent; border: 1px solid transparent;
-    color: var(--text-secondary); cursor: pointer; border-radius: 4px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.15s; position: relative;
+  .toolbar-dropdown {
+    position: relative;
   }
-  .align-btn svg { width: 18px; height: 18px; stroke-width: 2; }
-  .align-btn:hover {
+  .toolbar-menu {
+    position: fixed;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    min-width: 200px;
+    z-index: 10000;
+    transition: all 0.3s ease;
+  }
+  body.light-mode .toolbar-menu {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .toolbar-menu button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-bottom: 1px solid var(--border-tertiary);
+    gap: 24px;
+  }
+  .toolbar-menu button:last-child {
+    border-bottom: none;
+  }
+  .toolbar-menu button:hover,
+  .toolbar-menu button.submenu-trigger:hover {
+    background: var(--btn-hover);
+    color: var(--accent-gold);
+  }
+  .menu-shortcut {
+    font-size: 9px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    margin-left: auto;
+  }
+  .toolbar-menu .menu-divider {
+    border-bottom: 1px solid var(--border-secondary);
+    margin: 2px 0;
+    padding: 0;
+    height: 0;
+    pointer-events: none;
+  }
+  .toolbar-submenu {
+    position: fixed;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    min-width: 180px;
+    z-index: 10001;
+  }
+  body.light-mode .toolbar-submenu {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .toolbar-submenu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-bottom: 1px solid var(--border-tertiary);
+  }
+  .toolbar-submenu button:last-child {
+    border-bottom: none;
+  }
+  .toolbar-submenu button:hover {
+    background: var(--btn-hover);
+    color: var(--accent-gold);
+  }
+  .zoom-section {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .zoom-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-secondary);
+    min-width: 45px;
+    text-align: center;
+  }
+
+  /* Top toolbar bars (alignment, save controls) */
+  .toolbar-top-bar {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-bottom: none;
+    padding: 6px 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.3s ease, border-color 0.3s ease;
+    align-self: center;
+  }
+  .toolbar-top-bar:first-child {
+    border-radius: 8px 8px 0 0;
+  }
+  .toolbar-bar-sep {
+    width: 1px;
+    height: 24px;
+    background: var(--border-primary);
+    margin: 0 4px;
+    transition: background 0.3s ease;
+  }
+  .align-btn {
+    height: 32px;
+    padding: 0 12px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s;
+    position: relative;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    white-space: nowrap;
+  }
+  .align-btn svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+  }
+  .align-btn:hover:not(:disabled) {
     background: var(--accent-gold-bg);
     color: var(--accent-gold);
     border-color: var(--accent-gold-dim);
   }
+  .align-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
   .align-btn::after {
     content: attr(title);
-    position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
-    margin-top: 8px; padding: 4px 8px; background: var(--bg-secondary);
-    border: 1px solid var(--border-primary); border-radius: 4px;
-    font-size: 9px; white-space: nowrap; pointer-events: none;
-    opacity: 0; transition: opacity 0.2s;
-    z-index: 100; font-family: 'JetBrains Mono', monospace;
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    font-size: 9px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 100;
+    font-family: 'JetBrains Mono', monospace;
     color: var(--text-primary);
   }
-  .align-btn:hover::after { opacity: 1; }
+  .align-btn:hover:not(:disabled)::after {
+    opacity: 1;
+  }
 
   kbd {
     background: var(--btn-bg); border: 1px solid var(--border-secondary);
     padding: 1px 4px; border-radius: 2px; font-size: 8px;
     transition: background 0.3s ease, border-color 0.3s ease;
+  }
+
+  .btn-shortcut {
+    font-size: 9px;
+    color: var(--text-muted);
+    opacity: 0.7;
+    margin-left: 4px;
+    font-weight: 400;
+  }
+
+  /* Responsive toolbar for smaller screens */
+  @media (max-width: 1400px) {
+    .floating-toolbar-container {
+      max-width: calc(100vw - 40px);
+    }
+    .floating-toolbar {
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      max-width: 100%;
+    }
+    .floating-toolbar::-webkit-scrollbar {
+      height: 4px;
+    }
+    .floating-toolbar::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+    }
+    .floating-toolbar::-webkit-scrollbar-thumb {
+      background: var(--border-secondary);
+      border-radius: 2px;
+    }
+    .toolbar-metadata {
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+    .toolbar-metadata::-webkit-scrollbar {
+      height: 4px;
+    }
+    .toolbar-metadata::-webkit-scrollbar-track {
+      background: var(--bg-primary);
+    }
+    .toolbar-metadata::-webkit-scrollbar-thumb {
+      background: var(--border-secondary);
+      border-radius: 2px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    .toolbar-btn span {
+      display: none;
+    }
+    .toolbar-btn {
+      width: 36px;
+      height: 36px;
+      padding: 8px;
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .toolbar-divider {
+      display: none;
+    }
+    .floating-toolbar {
+      gap: 4px;
+      padding: 6px 8px;
+    }
+    .toolbar-metadata {
+      gap: 12px;
+      padding: 4px 12px;
+      font-size: 8px;
+    }
   }
 </style>
 </head>
@@ -280,105 +568,12 @@
 <div class="app-header">
   <div style="display:flex;align-items:baseline;">
     <div class="app-title">Floor Plan Studio</div>
-    <div class="app-subtitle" id="planName">Wizard Study Apartment</div>
   </div>
-  <div class="controls">
-    <button class="btn theme-toggle" id="btnTheme" onclick="window.toggleTheme()" title="Toggle light/dark mode">☀</button>
-    <button class="btn active" id="btnGrid" onclick="toggleGrid()">Grid</button>
-    <button class="btn active" id="btnDims" onclick="toggleDims()">Dims</button>
-    <button class="btn" id="btnMeasure" onclick="toggleMeasure()">Measure</button>
-    <button class="btn" id="btnShowAll" onclick="toggleShowAll()">Show All</button>
-    <button class="btn" id="btnAnchor" onclick="toggleAnchorMode()">Link</button>
-    <button class="btn" id="btnDivider" onclick="toggleDividerMode()">Dividers</button>
-    <button class="btn" id="btnElevation" onclick="toggleElevation()">Elevation</button>
-    <button class="btn" id="btnFixtures" onclick="toggleFixtureEditMode()">Fixtures</button>
-    <div class="export-dropdown">
-      <button class="btn" id="btnUnit" onclick="toggleUnitMenu()">IN &#x25BE;</button>
-      <div class="export-menu" id="unitMenu" style="display:none;">
-        <button onclick="selectUnit('in')">Inches (")</button>
-        <button onclick="selectUnit('ft')">Feet (')</button>
-        <button onclick="selectUnit('cm')">Centimeters (cm)</button>
-        <button onclick="selectUnit('m')">Meters (m)</button>
-      </div>
-    </div>
-    <button class="btn" onclick="clearAllFurniture()">Clear All</button>
-    <button class="btn" onclick="resetFurniture()">Reset</button>
-    <button class="btn" onclick="fitToView()">Fit</button>
-    <div class="export-dropdown">
-      <button class="btn" onclick="toggleExportMenu()">Export &#x25BE;</button>
-      <div class="export-menu" id="exportMenu" style="display:none;">
-        <button onclick="exportSVG()">Export SVG</button>
-        <button onclick="exportPNG()">Export PNG</button>
-        <button onclick="exportFigma()">Export for Figma</button>
-        <div class="menu-divider"></div>
-        <button onclick="exportJSON()">Export Placement JSON</button>
-        <button onclick="exportFullJSON()">Export Full Floor Plan</button>
-        <button onclick="exportCSV()">Export Furniture CSV</button>
-        <div class="menu-divider"></div>
-        <button onclick="importJSON()">Import JSON</button>
-        <button onclick="importCSV()">Import Furniture CSV</button>
-      </div>
-    </div>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <input type="text" class="plan-name-input" id="planNameInput" value="Wizard Study Apartment" placeholder="Untitled Plan" onchange="savePlanName(this.value)">
   </div>
 </div>
 
-<div class="align-toolbar" id="alignToolbar">
-  <button class="align-btn" onclick="alignSelection('left')" title="Align Left">
-    <i data-lucide="align-horizontal-distribute-start"></i>
-  </button>
-  <button class="align-btn" onclick="alignSelection('centerH')" title="Center Horizontal">
-    <i data-lucide="align-horizontal-distribute-center"></i>
-  </button>
-  <button class="align-btn" onclick="alignSelection('right')" title="Align Right">
-    <i data-lucide="align-horizontal-distribute-end"></i>
-  </button>
-  <div class="sep"></div>
-  <button class="align-btn" onclick="alignSelection('top')" title="Align Top">
-    <i data-lucide="align-vertical-distribute-start"></i>
-  </button>
-  <button class="align-btn" onclick="alignSelection('centerV')" title="Center Vertical">
-    <i data-lucide="align-vertical-distribute-center"></i>
-  </button>
-  <button class="align-btn" onclick="alignSelection('bottom')" title="Align Bottom">
-    <i data-lucide="align-vertical-distribute-end"></i>
-  </button>
-  <div class="sep"></div>
-  <button class="align-btn" onclick="alignToWall('left')" title="Snap to Left Wall">
-    <i data-lucide="arrow-left-to-line"></i>
-  </button>
-  <button class="align-btn" onclick="alignToWall('right')" title="Snap to Right Wall">
-    <i data-lucide="arrow-right-to-line"></i>
-  </button>
-  <button class="align-btn" onclick="alignToWall('top')" title="Snap to Top Wall">
-    <i data-lucide="arrow-up-to-line"></i>
-  </button>
-  <button class="align-btn" onclick="alignToWall('bottom')" title="Snap to Bottom Wall">
-    <i data-lucide="arrow-down-to-line"></i>
-  </button>
-  <button class="align-btn" onclick="alignToWall('center')" title="Center in Room">
-    <i data-lucide="maximize-2"></i>
-  </button>
-</div>
-
-<div class="align-toolbar" id="anchorSaveToolbar" style="top: 100px;">
-  <button class="align-btn" onclick="saveAnchor(false)" id="btnSaveAnchor" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
-    Save Anchor
-  </button>
-  <div class="sep"></div>
-  <button class="align-btn" onclick="saveAnchor(true)" id="btnSaveAdaptive" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
-    Save Adaptive
-  </button>
-</div>
-
-<div class="align-toolbar" id="anchorEditToolbar" style="top: 100px;">
-  <button class="align-btn" onclick="saveEditedAnchor()" id="btnSaveEditedAnchor" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
-    Save Changes
-  </button>
-  <div class="sep"></div>
-  <button class="align-btn" onclick="switchAnchorToAdaptive()" id="btnSwitchAdaptive" style="width: auto; padding: 0 16px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;">
-    Switch to Adaptive
-  </button>
-</div>
 
 <div class="main-layout">
   <div class="staging-panel">
@@ -427,20 +622,323 @@
   </div>
 </div>
 
-<div class="zoom-controls">
-  <button class="zoom-btn" onclick="zoomIn()">+</button>
-  <button class="zoom-btn" onclick="zoomOut()">&minus;</button>
-  <button class="zoom-btn" onclick="fitToView()" style="font-size:12px">&#x22A1;</button>
+<div class="floating-toolbar-container">
+
+  <!-- Anchor Save Toolbar -->
+  <div class="toolbar-top-bar" id="anchorSaveBar" style="display:none;">
+    <button class="align-btn" onclick="saveAnchor(false)" id="btnSaveAnchor">
+      Save Anchor
+    </button>
+    <div class="toolbar-bar-sep"></div>
+    <button class="align-btn" onclick="saveAnchor(true)" id="btnSaveAdaptive">
+      Save Adaptive
+    </button>
+  </div>
+
+  <!-- Anchor Edit Toolbar -->
+  <div class="toolbar-top-bar" id="anchorEditBar" style="display:none;">
+    <button class="align-btn" onclick="saveEditedAnchor()" id="btnSaveEditedAnchor">
+      Save Changes
+    </button>
+    <div class="toolbar-bar-sep"></div>
+    <button class="align-btn" onclick="switchAnchorToAdaptive()" id="btnSwitchAdaptive">
+      Switch to Adaptive
+    </button>
+  </div>
+
+  <!-- Alignment Toolbar -->
+  <div class="toolbar-top-bar" id="alignmentBar" style="display:none;">
+    <button class="align-btn" onclick="alignSelection('left')" title="Align Left">
+      <i data-lucide="align-horizontal-distribute-start"></i>
+    </button>
+    <button class="align-btn" onclick="alignSelection('centerH')" title="Center Horizontal">
+      <i data-lucide="align-horizontal-distribute-center"></i>
+    </button>
+    <button class="align-btn" onclick="alignSelection('right')" title="Align Right">
+      <i data-lucide="align-horizontal-distribute-end"></i>
+    </button>
+    <div class="toolbar-bar-sep"></div>
+    <button class="align-btn" onclick="alignSelection('top')" title="Align Top">
+      <i data-lucide="align-vertical-distribute-start"></i>
+    </button>
+    <button class="align-btn" onclick="alignSelection('centerV')" title="Center Vertical">
+      <i data-lucide="align-vertical-distribute-center"></i>
+    </button>
+    <button class="align-btn" onclick="alignSelection('bottom')" title="Align Bottom">
+      <i data-lucide="align-vertical-distribute-end"></i>
+    </button>
+    <div class="toolbar-bar-sep"></div>
+    <button class="align-btn" onclick="alignToWall('left')" title="Snap to Left Wall">
+      <i data-lucide="arrow-left-to-line"></i>
+    </button>
+    <button class="align-btn" onclick="alignToWall('right')" title="Snap to Right Wall">
+      <i data-lucide="arrow-right-to-line"></i>
+    </button>
+    <button class="align-btn" onclick="alignToWall('top')" title="Snap to Top Wall">
+      <i data-lucide="arrow-up-to-line"></i>
+    </button>
+    <button class="align-btn" onclick="alignToWall('bottom')" title="Snap to Bottom Wall">
+      <i data-lucide="arrow-down-to-line"></i>
+    </button>
+    <button class="align-btn" onclick="alignToWall('center')" title="Center in Room">
+      <i data-lucide="maximize-2"></i>
+    </button>
+  </div>
+
+  <div class="floating-toolbar">
+    <div class="toolbar-section">
+      <div class="toolbar-dropdown">
+        <button class="toolbar-btn" onclick="toggleViewMenu()" title="View Settings">
+          <i data-lucide="eye"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-section">
+      <button class="toolbar-btn" id="btnMeasure" onclick="toggleMeasure()" title="Measure Mode">
+        <i data-lucide="move-diagonal"></i>
+        <span>Measure</span>
+      </button>
+      <button class="toolbar-btn" id="btnAnchor" onclick="toggleAnchorMode()" title="Link/Anchor Mode">
+        <i data-lucide="link"></i>
+        <span>Link</span>
+      </button>
+      <button class="toolbar-btn" id="btnDivider" onclick="toggleDividerMode()" title="Divider Mode">
+        <i data-lucide="minus"></i>
+        <span>Dividers</span>
+      </button>
+      <button class="toolbar-btn" id="btnElevation" onclick="toggleElevation()" title="Elevation View">
+        <i data-lucide="layout-panel-top"></i>
+        <span>Elevation</span>
+      </button>
+      <button class="toolbar-btn" id="btnFixtures" onclick="toggleFixtureEditMode()" title="Fixture Edit Mode">
+        <i data-lucide="wrench"></i>
+        <span>Fixtures</span>
+      </button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-section">
+      <div class="toolbar-dropdown">
+        <button class="toolbar-btn" onclick="toggleExportMenu()" title="Export">
+          <i data-lucide="download"></i>
+        </button>
+      </div>
+      <div class="toolbar-dropdown">
+        <button class="toolbar-btn" onclick="toggleImportMenu()" title="Import">
+          <i data-lucide="upload"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-section">
+      <button class="toolbar-btn" onclick="confirmReset()" title="Reset Layout">
+        <i data-lucide="rotate-ccw"></i>
+      </button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-section zoom-section">
+      <button class="toolbar-btn" onclick="zoomOut()" title="Zoom Out">
+        <i data-lucide="zoom-out"></i>
+      </button>
+      <span class="zoom-display" id="zoomLevel">100%</span>
+      <button class="toolbar-btn" onclick="zoomIn()" title="Zoom In">
+        <i data-lucide="zoom-in"></i>
+      </button>
+      <button class="toolbar-btn" onclick="fitToView()" title="Fit to View">
+        <i data-lucide="maximize-2"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="toolbar-metadata">
+    <div class="metadata-item">
+      <span class="metadata-label">Scale:</span>
+      <span class="metadata-value" id="scaleDisplay">1" = 2px</span>
+    </div>
+    <div class="metadata-item">
+      <span class="metadata-label">Cursor:</span>
+      <span class="metadata-value" id="cursorPos">—</span>
+    </div>
+    <div class="metadata-item" id="selectedInfo">
+      <span class="metadata-label">Selected:</span>
+      <span class="metadata-value">none</span>
+    </div>
+    <div class="metadata-item" id="colorPicker" style="display:none;">
+      <input type="color" id="colorInput" style="width:20px;height:20px;cursor:pointer;border:1px solid var(--border-secondary);background:transparent;padding:2px;border-radius:4px;" onchange="updateSelectedColor(this.value)">
+    </div>
+  </div>
 </div>
 
-<div class="info-bar">
-  <div class="info-item">Zoom: <span id="zoomLevel">100%</span></div>
-  <div class="info-item">Scale: <span id="scaleDisplay">1" = 2px</span></div>
-  <div class="info-item">Cursor: <span id="cursorPos">&mdash;</span></div>
-  <div class="info-item" id="selectedInfo">Selected: <span>none</span></div>
-  <div class="info-item" id="colorPicker" style="display:none;">
-    Color: <input type="color" id="colorInput" style="width:40px;height:18px;cursor:pointer;border:1px solid var(--border-secondary);background:var(--bg-tertiary);padding:2px;border-radius:3px;" onchange="updateSelectedColor(this.value)">
-  </div>
+<!-- Menus and Submenus (outside toolbar container to avoid transform positioning issues) -->
+<div class="toolbar-menu" id="viewMenu" style="display:none;">
+  <button onclick="toggleGrid()" id="menuGrid" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Grid</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="menu-shortcut">G</span>
+      <span id="gridCheck">✓</span>
+    </div>
+  </button>
+  <button onclick="toggleSnapToGrid()" id="menuSnapToGrid" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+    <span>Snap to Grid</span>
+    <span id="snapToGridCheck"></span>
+  </button>
+  <button onclick="toggleDims()" id="menuDims" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Dimensions</span>
+    <span id="dimsCheck">✓</span>
+  </button>
+  <button onclick="toggleShowAll()" id="menuShowAll" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Show All</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="menu-shortcut">⇧M</span>
+      <span id="showAllCheck"></span>
+    </div>
+  </button>
+  <button onclick="toggleShowAllMeasurements()" id="menuShowAllMeasurements" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+    <span>Measurements</span>
+    <span id="showAllMeasurementsCheck"></span>
+  </button>
+  <button onclick="toggleShowAllLinks()" id="menuShowAllLinks" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+    <span>Links</span>
+    <span id="showAllLinksCheck"></span>
+  </button>
+  <button onclick="toggleShowAllDividers()" id="menuShowAllDividers" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+    <span>Dividers</span>
+    <span id="showAllDividersCheck"></span>
+  </button>
+  <div class="menu-divider"></div>
+  <button onclick="toggleAlwaysShowAlignment()" id="menuAlwaysShowAlignment" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Always Show Alignment</span>
+    <span id="alwaysShowAlignmentCheck"></span>
+  </button>
+  <button onclick="toggleAlwaysShowSaveControls()" id="menuAlwaysShowSaveControls" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Always Show Save Controls</span>
+    <span id="alwaysShowSaveControlsCheck"></span>
+  </button>
+  <button onclick="toggleAlwaysShowShortcuts()" id="menuAlwaysShowShortcuts" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Always Show Shortcuts</span>
+    <span id="alwaysShowShortcutsCheck"></span>
+  </button>
+  <div class="menu-divider"></div>
+  <button class="submenu-trigger" onclick="showSubmenu('gridDensitySubmenu', event)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Grid Density</span>
+    <span>▸</span>
+  </button>
+  <button class="submenu-trigger" onclick="showSubmenu('renderQualitySubmenu', event)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Render Quality</span>
+    <span>▸</span>
+  </button>
+  <button class="submenu-trigger" onclick="showSubmenu('unitSubmenu', event)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Units</span>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <span class="menu-shortcut">U</span>
+      <span>▸</span>
+    </div>
+  </button>
+  <button class="submenu-trigger" onclick="showSubmenu('themeSubmenu', event)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Theme</span>
+    <span>▸</span>
+  </button>
+</div>
+
+<div class="toolbar-menu" id="exportMenu" style="display:none;">
+  <button onclick="exportSVG()" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Export SVG</span>
+    <span class="menu-shortcut">⌘S</span>
+  </button>
+  <button onclick="exportPNG()" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Export PNG</span>
+    <span class="menu-shortcut">⌘P</span>
+  </button>
+  <button onclick="exportFigma()">Export for Figma</button>
+  <div class="menu-divider"></div>
+  <button onclick="exportJSON()">Export Placement JSON</button>
+  <button onclick="exportFullJSON()">Export Full Floor Plan</button>
+  <button onclick="exportCSV()">Export Furniture CSV</button>
+</div>
+
+<div class="toolbar-menu" id="importMenu" style="display:none;">
+  <button onclick="importJSON()">Import JSON</button>
+  <button onclick="importCSV()">Import Furniture CSV</button>
+</div>
+
+<div class="toolbar-submenu" id="gridDensitySubmenu" style="display:none;">
+  <button onclick="selectGridDensity(6)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>6" (Fine)</span>
+    <span id="gridCheck6"></span>
+  </button>
+  <button onclick="selectGridDensity(12)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>12" (Standard)</span>
+    <span id="gridCheck12"></span>
+  </button>
+  <button onclick="selectGridDensity(24)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>24" (Coarse)</span>
+    <span id="gridCheck24"></span>
+  </button>
+  <button onclick="selectGridDensity(36)" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>36" (Very Coarse)</span>
+    <span id="gridCheck36"></span>
+  </button>
+</div>
+
+<div class="toolbar-submenu" id="renderQualitySubmenu" style="display:none;">
+  <button onclick="selectRenderQuality('auto')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Auto</span>
+    <span id="qualityCheckAuto"></span>
+  </button>
+  <button onclick="selectRenderQuality('4k')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>4K (Ultra HD)</span>
+    <span id="qualityCheck4k"></span>
+  </button>
+  <button onclick="selectRenderQuality('hd')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>HD (1080p)</span>
+    <span id="qualityCheckHd"></span>
+  </button>
+  <button onclick="selectRenderQuality('sd')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>SD (720p)</span>
+    <span id="qualityCheckSd"></span>
+  </button>
+</div>
+
+<div class="toolbar-submenu" id="unitSubmenu" style="display:none;">
+  <button onclick="selectUnit('in')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Inches (")</span>
+    <span id="unitCheckIn"></span>
+  </button>
+  <button onclick="selectUnit('ft')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Feet (')</span>
+    <span id="unitCheckFt"></span>
+  </button>
+  <button onclick="selectUnit('cm')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Centimeters (cm)</span>
+    <span id="unitCheckCm"></span>
+  </button>
+  <button onclick="selectUnit('m')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Meters (m)</span>
+    <span id="unitCheckM"></span>
+  </button>
+</div>
+
+<div class="toolbar-submenu" id="themeSubmenu" style="display:none;">
+  <button onclick="selectTheme('light')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Light</span>
+    <span id="themeCheckLight"></span>
+  </button>
+  <button onclick="selectTheme('dark')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Dark</span>
+    <span id="themeCheckDark"></span>
+  </button>
+  <button onclick="selectTheme('system')" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>System</span>
+    <span id="themeCheckSystem"></span>
+  </button>
 </div>
 
 <script type="module" src="js/app.js"></script>

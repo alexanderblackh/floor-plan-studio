@@ -370,7 +370,7 @@ export function toggleExportMenu() {
   if (menu.style.display === 'block') {
     setTimeout(() => {
       document.addEventListener('click', function close(e) {
-        if (!e.target.closest('.export-dropdown')) {
+        if (!e.target.closest('.toolbar-dropdown')) {
           menu.style.display = 'none';
           document.removeEventListener('click', close);
         }

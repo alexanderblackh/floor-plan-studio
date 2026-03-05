@@ -27,7 +27,8 @@ export function renderMeasurement() {
   }
 
   // Show All mode: render distances for every placed piece
-  if (state.showAllMeasurements) {
+  const shouldShowAllMeasurements = state.showAll || state.showAllMeasurements;
+  if (shouldShowAllMeasurements) {
     c += renderAllMeasurements();
   }
 
@@ -325,15 +326,9 @@ function renderAnchorPoints(x, y, w, h, isSource = false, objectType = null) {
  * Update anchor save toolbar visibility
  */
 export function updateAnchorSaveToolbar() {
-  const toolbar = document.getElementById('anchorSaveToolbar');
-
-  if (!toolbar) return;
-
-  // Show toolbar only when both source and target are selected AND not editing
-  if (state.anchorMode && state.anchorSource !== null && state.anchorTarget !== null && !state.editingAnchor) {
-    toolbar.classList.add('visible');
-  } else {
-    toolbar.classList.remove('visible');
+  // Use the new save controls visibility function
+  if (window._updateSaveControlsVisibility) {
+    window._updateSaveControlsVisibility();
   }
 }
 
@@ -341,15 +336,9 @@ export function updateAnchorSaveToolbar() {
  * Update anchor edit toolbar visibility
  */
 export function updateAnchorEditToolbar() {
-  const toolbar = document.getElementById('anchorEditToolbar');
-
-  if (!toolbar) return;
-
-  // Show toolbar only when editing an anchor
-  if (state.editingAnchor && state.anchorSource !== null && state.anchorTarget !== null) {
-    toolbar.classList.add('visible');
-  } else {
-    toolbar.classList.remove('visible');
+  // Use the new save controls visibility function
+  if (window._updateSaveControlsVisibility) {
+    window._updateSaveControlsVisibility();
   }
 }
 
@@ -595,10 +584,11 @@ export function renderAnchors() {
     }
   }
 
-  // Render all anchors
+  // Render all anchors (if show all links is enabled OR if source/target furniture is selected)
   for (let furnitureIdx = 0; furnitureIdx < state.placedFurniture.length; furnitureIdx++) {
     const p = state.placedFurniture[furnitureIdx];
     if (!p.anchors || p.x < 0 || p.y < 0) continue;
+
     const d = getFurnitureDef(p.id);
     if (!d) continue;
     const pw = p.rotated ? d.h : d.w;
@@ -609,6 +599,29 @@ export function renderAnchors() {
       const isSelected = state.selectedMeasurement?.type === 'anchor' &&
                         state.selectedMeasurement?.furnitureIdx === furnitureIdx &&
                         state.selectedMeasurement?.anchorIdx === anchorIdx;
+
+      // Determine if this anchor should be rendered
+      const shouldShowAll = state.showAll || state.showAllLinks;
+      let shouldRender = shouldShowAll || isSelected;
+
+      if (!shouldRender) {
+        // Check if source furniture is selected
+        const isSourceSelected = state.selectedFurniture.has(furnitureIdx);
+
+        // Check if target is selected (for furniture-to-furniture anchors)
+        let isTargetSelected = false;
+        if (anchor.type === 'furniture') {
+          const target = state.placedFurniture.find(t => t.id === (anchor.id || anchor));
+          if (target) {
+            const targetIdx = state.placedFurniture.indexOf(target);
+            isTargetSelected = state.selectedFurniture.has(targetIdx);
+          }
+        }
+
+        shouldRender = isSourceSelected || isTargetSelected;
+      }
+
+      if (!shouldRender) continue;
 
       if (anchor.type === 'wall') {
         c += renderWallAnchor(p, d, pw, ph, anchor, furnitureIdx, anchorIdx, isSelected);
@@ -1040,11 +1053,8 @@ export function toggleMeasure() {
   }
 }
 
-export function toggleShowAll() {
-  state.showAllMeasurements = !state.showAllMeasurements;
-  document.getElementById('btnShowAll')?.classList.toggle('active', state.showAllMeasurements);
-  renderMeasurement();
-}
+// Expose renderMeasurement for app.js
+window._renderMeasurement = renderMeasurement;
 
 export function toggleAnchorMode() {
   state.anchorMode = !state.anchorMode;
