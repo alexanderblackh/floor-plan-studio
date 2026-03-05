@@ -761,6 +761,7 @@ function attachCanvasEvents() {
   }, { passive: false });
 
   ctr.addEventListener('touchend', e => {
+    if (e.target.closest('.mobile-hint')) return;
     e.preventDefault();
     if (e.touches.length === 0) {
       state.isPanning = false;

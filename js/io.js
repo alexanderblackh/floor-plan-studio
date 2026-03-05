@@ -230,10 +230,86 @@ export function importFullPlan(data) {
     return;
   }
 
-  if (!confirm(`Import full floor plan "${data.name || 'Unknown'}"?\n\nThis will replace your current plan entirely.`)) {
+  // Check if there's existing work
+  const hasExistingData = state.floorPlan.furniture && state.floorPlan.furniture.length > 0;
+  const currentId = state.floorPlan.id;
+  const importedId = data.id;
+  const isCollision = hasExistingData && currentId && importedId && currentId === importedId;
+
+  if (hasExistingData) {
+    // Show import confirmation modal
+    showImportConfirmation(data, isCollision);
     return;
   }
 
+  // No existing data, just import directly
+  performImport(data);
+}
+
+function showImportConfirmation(data, isCollision) {
+  const modal = document.getElementById('importConfirmModal');
+  if (!modal) return;
+
+  const title = modal.querySelector('.import-confirm-title');
+  const message = modal.querySelector('.import-confirm-message');
+  const exportBtn = modal.querySelector('#btnExportAndImport');
+  const clearBtn = modal.querySelector('#btnClearAndImport');
+  const cancelBtn = modal.querySelector('#btnCancelImport');
+
+  if (isCollision) {
+    // Same plan UUID - this is an update/overwrite scenario
+    if (title) title.textContent = 'Same Plan Detected';
+    if (message) message.innerHTML = `
+      You're importing <strong>"${data.name || 'Untitled'}"</strong> which has the same ID as your current plan.<br><br>
+      This appears to be an updated version of the same floor plan.
+    `;
+    if (exportBtn) exportBtn.textContent = 'Backup & Overwrite';
+  } else {
+    // Different plan UUID - replacing with new plan
+    if (title) title.textContent = 'Replace Current Plan?';
+    if (message) message.innerHTML = `
+      You're importing <strong>"${data.name || 'Untitled'}"</strong> which will replace your current plan <strong>"${state.floorPlan.name || 'Untitled'}"</strong>.<br><br>
+      You have unsaved work. What would you like to do?
+    `;
+    if (exportBtn) exportBtn.textContent = 'Export Current & Import';
+  }
+
+  // Set up button handlers
+  if (exportBtn) {
+    exportBtn.onclick = () => {
+      exportFullJSON();
+      setTimeout(() => {
+        performImport(data);
+        modal.classList.remove('show');
+      }, 500);
+    };
+  }
+
+  if (clearBtn) {
+    clearBtn.onclick = () => {
+      performImport(data);
+      modal.classList.remove('show');
+    };
+  }
+
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      modal.classList.remove('show');
+      if (window.showToast) {
+        window.showToast('Import cancelled', 'success');
+      }
+    };
+  }
+
+  modal.classList.add('show');
+
+  // Re-initialize Lucide icons for the modal buttons
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function performImport(data) {
   // Strip non-plan metadata before storing
   const planData = JSON.parse(JSON.stringify(data));
   delete planData.type;
