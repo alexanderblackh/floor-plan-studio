@@ -977,12 +977,27 @@
       font-size: 8px;
     }
   }
+
+  /* Respect user's motion preferences */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 </style>
 </head>
 <body>
 
 <!-- Skip to main content link -->
 <a href="#svgPlan" class="skip-link">Skip to main content</a>
+
+<!-- Aria-live region for screen reader announcements -->
+<div id="ariaLiveRegion" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
 <header class="app-header" role="banner">
   <div style="display:flex;align-items:baseline;">
@@ -1047,14 +1062,17 @@
 
 
 <div class="main-layout">
-  <div class="staging-panel">
+  <aside class="staging-panel" aria-label="Furniture staging area">
     <div class="staging-header">
       Furniture Staging
       <div style="font-size:9px;color:var(--text-muted);margin-top:4px;text-transform:none;letter-spacing:0;font-weight:400;">Drag furniture onto floor plan &bull; Right-click to return here</div>
     </div>
     <div class="staging-scroll" id="stagingScroll">
       <div class="staging-canvas">
-        <svg id="svgStaging" xmlns="http://www.w3.org/2000/svg"></svg>
+        <svg id="svgStaging" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Furniture staging area">
+          <title>Furniture Staging Area</title>
+          <desc>Available furniture pieces that can be dragged onto the floor plan canvas</desc>
+        </svg>
       </div>
     </div>
 
@@ -1084,43 +1102,47 @@
         <div style="margin-bottom:4px;"><kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd> Zoom</div>
       </div>
     </div>
-  </div>
+  </aside>
 
-  <div class="canvas-area">
+  <main class="canvas-area" role="main" id="mainContent">
     <div class="canvas-container" id="canvasContainer">
-      <svg class="floor-plan" id="svgPlan" xmlns="http://www.w3.org/2000/svg"></svg>
+      <svg class="floor-plan" id="svgPlan" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive floor plan canvas">
+        <title>Floor Plan Canvas</title>
+        <desc>Interactive floor plan where furniture can be placed and arranged using drag and drop</desc>
+      </svg>
     </div>
 
     <div class="elevation-panel" id="elevationPanel">
       <div class="elevation-header">
         <span class="elevation-header-title">Elevation View</span>
-        <select id="elevWallSelect"></select>
+        <label for="elevWallSelect" class="sr-only">Select wall to view</label>
+        <select id="elevWallSelect" aria-label="Select wall to view in elevation"></select>
       </div>
       <div class="elevation-content"></div>
     </div>
-  </div>
+  </main>
 </div>
 
-<div class="floating-toolbar-container">
+<nav class="floating-toolbar-container" role="toolbar" aria-label="Floor plan tools">
 
   <!-- Anchor Save Toolbar -->
   <div class="toolbar-top-bar" id="anchorSaveBar" style="display:none;">
-    <button class="align-btn" onclick="saveAnchor(false)" id="btnSaveAnchor">
+    <button class="align-btn" onclick="saveAnchor(false)" id="btnSaveAnchor" aria-label="Save anchor measurement">
       Save Anchor
     </button>
     <div class="toolbar-bar-sep"></div>
-    <button class="align-btn" onclick="saveAnchor(true)" id="btnSaveAdaptive">
+    <button class="align-btn" onclick="saveAnchor(true)" id="btnSaveAdaptive" aria-label="Save adaptive anchor measurement">
       Save Adaptive
     </button>
   </div>
 
   <!-- Anchor Edit Toolbar -->
   <div class="toolbar-top-bar" id="anchorEditBar" style="display:none;">
-    <button class="align-btn" onclick="saveEditedAnchor()" id="btnSaveEditedAnchor">
+    <button class="align-btn" onclick="saveEditedAnchor()" id="btnSaveEditedAnchor" aria-label="Save anchor measurement changes">
       Save Changes
     </button>
     <div class="toolbar-bar-sep"></div>
-    <button class="align-btn" onclick="switchAnchorToAdaptive()" id="btnSwitchAdaptive">
+    <button class="align-btn" onclick="switchAnchorToAdaptive()" id="btnSwitchAdaptive" aria-label="Switch anchor to adaptive mode">
       Switch to Adaptive
     </button>
   </div>
@@ -1130,13 +1152,13 @@
     <div class="align-group">
       <div class="align-group-label">Horizontal</div>
       <div class="align-group-buttons">
-        <button class="align-btn" onclick="alignSelection('left')" title="Align Left">
+        <button class="align-btn" onclick="alignSelection('left')" title="Align Left" aria-label="Align selected items to the left">
           <i data-lucide="align-horizontal-distribute-start"></i>
         </button>
-        <button class="align-btn" onclick="alignSelection('centerH')" title="Center Horizontal">
+        <button class="align-btn" onclick="alignSelection('centerH')" title="Center Horizontal" aria-label="Center selected items horizontally">
           <i data-lucide="align-horizontal-distribute-center"></i>
         </button>
-        <button class="align-btn" onclick="alignSelection('right')" title="Align Right">
+        <button class="align-btn" onclick="alignSelection('right')" title="Align Right" aria-label="Align selected items to the right">
           <i data-lucide="align-horizontal-distribute-end"></i>
         </button>
       </div>
@@ -1145,13 +1167,13 @@
     <div class="align-group">
       <div class="align-group-label">Vertical</div>
       <div class="align-group-buttons">
-        <button class="align-btn" onclick="alignSelection('top')" title="Align Top">
+        <button class="align-btn" onclick="alignSelection('top')" title="Align Top" aria-label="Align selected items to the top">
           <i data-lucide="align-vertical-distribute-start"></i>
         </button>
-        <button class="align-btn" onclick="alignSelection('centerV')" title="Center Vertical">
+        <button class="align-btn" onclick="alignSelection('centerV')" title="Center Vertical" aria-label="Center selected items vertically">
           <i data-lucide="align-vertical-distribute-center"></i>
         </button>
-        <button class="align-btn" onclick="alignSelection('bottom')" title="Align Bottom">
+        <button class="align-btn" onclick="alignSelection('bottom')" title="Align Bottom" aria-label="Align selected items to the bottom">
           <i data-lucide="align-vertical-distribute-end"></i>
         </button>
       </div>
@@ -1160,19 +1182,19 @@
     <div class="align-group">
       <div class="align-group-label">Room</div>
       <div class="align-group-buttons">
-        <button class="align-btn" onclick="alignToWall('left')" title="Snap to Left Wall">
+        <button class="align-btn" onclick="alignToWall('left')" title="Snap to Left Wall" aria-label="Snap selected items to left wall">
           <i data-lucide="arrow-left-to-line"></i>
         </button>
-        <button class="align-btn" onclick="alignToWall('right')" title="Snap to Right Wall">
+        <button class="align-btn" onclick="alignToWall('right')" title="Snap to Right Wall" aria-label="Snap selected items to right wall">
           <i data-lucide="arrow-right-to-line"></i>
         </button>
-        <button class="align-btn" onclick="alignToWall('top')" title="Snap to Top Wall">
+        <button class="align-btn" onclick="alignToWall('top')" title="Snap to Top Wall" aria-label="Snap selected items to top wall">
           <i data-lucide="arrow-up-to-line"></i>
         </button>
-        <button class="align-btn" onclick="alignToWall('bottom')" title="Snap to Bottom Wall">
+        <button class="align-btn" onclick="alignToWall('bottom')" title="Snap to Bottom Wall" aria-label="Snap selected items to bottom wall">
           <i data-lucide="arrow-down-to-line"></i>
         </button>
-        <button class="align-btn" onclick="alignToWall('center')" title="Center in Room">
+        <button class="align-btn" onclick="alignToWall('center')" title="Center in Room" aria-label="Center selected items in room">
           <i data-lucide="maximize-2"></i>
         </button>
       </div>
@@ -1182,7 +1204,7 @@
   <div class="floating-toolbar">
     <div class="toolbar-section">
       <div class="toolbar-dropdown">
-        <button class="toolbar-btn" onclick="toggleViewMenu()" title="View Settings">
+        <button class="toolbar-btn" onclick="toggleViewMenu()" aria-label="View settings menu" aria-haspopup="menu" aria-expanded="false" id="btnView">
           <i data-lucide="eye"></i>
         </button>
       </div>
@@ -1191,23 +1213,23 @@
     <div class="toolbar-divider"></div>
 
     <div class="toolbar-section">
-      <button class="toolbar-btn" id="btnMeasure" onclick="toggleMeasure()" title="Measure Mode">
+      <button class="toolbar-btn" id="btnMeasure" onclick="toggleMeasure()" aria-label="Measure mode" aria-pressed="false">
         <i data-lucide="move-diagonal"></i>
         <span>Measure</span>
       </button>
-      <button class="toolbar-btn" id="btnAnchor" onclick="toggleAnchorMode()" title="Link/Anchor Mode">
+      <button class="toolbar-btn" id="btnAnchor" onclick="toggleAnchorMode()" aria-label="Link mode - create permanent measurements between items" aria-pressed="false">
         <i data-lucide="link"></i>
         <span>Link</span>
       </button>
-      <button class="toolbar-btn" id="btnDivider" onclick="toggleDividerMode()" title="Divider Mode">
+      <button class="toolbar-btn" id="btnDivider" onclick="toggleDividerMode()" aria-label="Divider mode - draw room zone separators" aria-pressed="false">
         <i data-lucide="minus"></i>
         <span>Dividers</span>
       </button>
-      <button class="toolbar-btn" id="btnElevation" onclick="toggleElevation()" title="Elevation View">
+      <button class="toolbar-btn" id="btnElevation" onclick="toggleElevation()" aria-label="Elevation view - see wall head-on" aria-pressed="false">
         <i data-lucide="layout-panel-top"></i>
         <span>Elevation</span>
       </button>
-      <button class="toolbar-btn" id="btnFixtures" onclick="toggleFixtureEditMode()" title="Fixture Edit Mode">
+      <button class="toolbar-btn" id="btnFixtures" onclick="toggleFixtureEditMode()" aria-label="Fixture edit mode - move and rotate fixtures" aria-pressed="false">
         <i data-lucide="wrench"></i>
         <span>Fixtures</span>
       </button>
@@ -1216,10 +1238,10 @@
     <div class="toolbar-divider"></div>
 
     <div class="toolbar-section">
-      <button class="toolbar-btn" id="btnUndo" onclick="undoAction()" title="Undo (Cmd+Z)">
+      <button class="toolbar-btn" id="btnUndo" onclick="undoAction()" aria-label="Undo last action">
         <i data-lucide="undo"></i>
       </button>
-      <button class="toolbar-btn" id="btnRedo" onclick="redoAction()" title="Redo (Cmd+Shift+Z)">
+      <button class="toolbar-btn" id="btnRedo" onclick="redoAction()" aria-label="Redo last undone action">
         <i data-lucide="redo"></i>
       </button>
     </div>
@@ -1228,12 +1250,12 @@
 
     <div class="toolbar-section">
       <div class="toolbar-dropdown">
-        <button class="toolbar-btn" onclick="toggleExportMenu()" title="Export">
+        <button class="toolbar-btn" onclick="toggleExportMenu()" aria-label="Export floor plan menu" aria-haspopup="menu" aria-expanded="false" id="btnExport">
           <i data-lucide="download"></i>
         </button>
       </div>
       <div class="toolbar-dropdown">
-        <button class="toolbar-btn" onclick="toggleImportMenu()" title="Import">
+        <button class="toolbar-btn" onclick="toggleImportMenu()" aria-label="Import floor plan menu" aria-haspopup="menu" aria-expanded="false" id="btnImport">
           <i data-lucide="upload"></i>
         </button>
       </div>
@@ -1242,7 +1264,7 @@
     <div class="toolbar-divider"></div>
 
     <div class="toolbar-section">
-      <button class="toolbar-btn" onclick="confirmReset()" title="Reset Layout">
+      <button class="toolbar-btn" onclick="confirmReset()" aria-label="Reset layout to default">
         <i data-lucide="rotate-ccw"></i>
       </button>
     </div>
@@ -1250,14 +1272,14 @@
     <div class="toolbar-divider"></div>
 
     <div class="toolbar-section zoom-section">
-      <button class="toolbar-btn" onclick="zoomOut()" title="Zoom Out">
+      <button class="toolbar-btn" onclick="zoomOut()" aria-label="Zoom out">
         <i data-lucide="zoom-out"></i>
       </button>
-      <span class="zoom-display" id="zoomLevel">100%</span>
-      <button class="toolbar-btn" onclick="zoomIn()" title="Zoom In">
+      <span class="zoom-display" id="zoomLevel" aria-live="polite" aria-atomic="true">100%</span>
+      <button class="toolbar-btn" onclick="zoomIn()" aria-label="Zoom in">
         <i data-lucide="zoom-in"></i>
       </button>
-      <button class="toolbar-btn" onclick="fitToView()" title="Fit to View">
+      <button class="toolbar-btn" onclick="fitToView()" aria-label="Fit floor plan to view">
         <i data-lucide="maximize-2"></i>
       </button>
     </div>
@@ -1277,59 +1299,60 @@
       <span class="metadata-value">none</span>
     </div>
     <div class="metadata-item" id="colorPicker" style="display:none;">
-      <input type="color" id="colorInput" style="width:20px;height:20px;cursor:pointer;border:1px solid var(--border-secondary);background:transparent;padding:2px;border-radius:4px;" onchange="updateSelectedColor(this.value)">
+      <label for="colorInput" class="sr-only">Furniture color</label>
+      <input type="color" id="colorInput" aria-label="Change selected furniture color" style="width:20px;height:20px;cursor:pointer;border:1px solid var(--border-secondary);background:transparent;padding:2px;border-radius:4px;" onchange="updateSelectedColor(this.value)">
     </div>
   </div>
-</div>
+</nav>
 
 <!-- Menus and Submenus (outside toolbar container to avoid transform positioning issues) -->
-<div class="toolbar-menu" id="viewMenu" style="display:none;">
-  <button onclick="toggleGrid()" id="menuGrid" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="toolbar-menu" id="viewMenu" style="display:none;" role="menu" aria-labelledby="btnView">
+  <button onclick="toggleGrid()" id="menuGrid" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="true">
     <span>Grid</span>
     <div style="display:flex;gap:8px;align-items:center;">
       <span class="menu-shortcut">G</span>
-      <span id="gridCheck">✓</span>
+      <span id="gridCheck" aria-hidden="true">✓</span>
     </div>
   </button>
-  <button onclick="toggleSnapToGrid()" id="menuSnapToGrid" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+  <button onclick="toggleSnapToGrid()" id="menuSnapToGrid" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;" role="menuitemcheckbox" aria-checked="false">
     <span>Snap to Grid</span>
-    <span id="snapToGridCheck"></span>
+    <span id="snapToGridCheck" aria-hidden="true"></span>
   </button>
-  <button onclick="toggleDims()" id="menuDims" style="display:flex;align-items:center;justify-content:space-between;">
+  <button onclick="toggleDims()" id="menuDims" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="true">
     <span>Dimensions</span>
-    <span id="dimsCheck">✓</span>
+    <span id="dimsCheck" aria-hidden="true">✓</span>
   </button>
-  <button onclick="toggleShowAll()" id="menuShowAll" style="display:flex;align-items:center;justify-content:space-between;">
+  <button onclick="toggleShowAll()" id="menuShowAll" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
     <span>Show All</span>
     <div style="display:flex;gap:8px;align-items:center;">
       <span class="menu-shortcut">⇧M</span>
-      <span id="showAllCheck"></span>
+      <span id="showAllCheck" aria-hidden="true"></span>
     </div>
   </button>
-  <button onclick="toggleShowAllMeasurements()" id="menuShowAllMeasurements" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+  <button onclick="toggleShowAllMeasurements()" id="menuShowAllMeasurements" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;" role="menuitemcheckbox" aria-checked="false">
     <span>Measurements</span>
-    <span id="showAllMeasurementsCheck"></span>
+    <span id="showAllMeasurementsCheck" aria-hidden="true"></span>
   </button>
-  <button onclick="toggleShowAllLinks()" id="menuShowAllLinks" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+  <button onclick="toggleShowAllLinks()" id="menuShowAllLinks" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;" role="menuitemcheckbox" aria-checked="false">
     <span>Links</span>
-    <span id="showAllLinksCheck"></span>
+    <span id="showAllLinksCheck" aria-hidden="true"></span>
   </button>
-  <button onclick="toggleShowAllDividers()" id="menuShowAllDividers" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;">
+  <button onclick="toggleShowAllDividers()" id="menuShowAllDividers" style="display:flex;align-items:center;justify-content:space-between;padding-left:28px;" role="menuitemcheckbox" aria-checked="false">
     <span>Dividers</span>
-    <span id="showAllDividersCheck"></span>
+    <span id="showAllDividersCheck" aria-hidden="true"></span>
   </button>
-  <div class="menu-divider"></div>
-  <button onclick="toggleAlwaysShowAlignment()" id="menuAlwaysShowAlignment" style="display:flex;align-items:center;justify-content:space-between;">
+  <div class="menu-divider" role="separator"></div>
+  <button onclick="toggleAlwaysShowAlignment()" id="menuAlwaysShowAlignment" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
     <span>Always Show Alignment</span>
-    <span id="alwaysShowAlignmentCheck"></span>
+    <span id="alwaysShowAlignmentCheck" aria-hidden="true"></span>
   </button>
-  <button onclick="toggleAlwaysShowSaveControls()" id="menuAlwaysShowSaveControls" style="display:flex;align-items:center;justify-content:space-between;">
+  <button onclick="toggleAlwaysShowSaveControls()" id="menuAlwaysShowSaveControls" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
     <span>Always Show Save Controls</span>
-    <span id="alwaysShowSaveControlsCheck"></span>
+    <span id="alwaysShowSaveControlsCheck" aria-hidden="true"></span>
   </button>
-  <button onclick="toggleAlwaysShowShortcuts()" id="menuAlwaysShowShortcuts" style="display:flex;align-items:center;justify-content:space-between;">
+  <button onclick="toggleAlwaysShowShortcuts()" id="menuAlwaysShowShortcuts" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
     <span>Always Show Shortcuts</span>
-    <span id="alwaysShowShortcutsCheck"></span>
+    <span id="alwaysShowShortcutsCheck" aria-hidden="true"></span>
   </button>
   <div class="menu-divider"></div>
   <button class="submenu-trigger" onclick="showSubmenu('gridDensitySubmenu', event)" style="display:flex;align-items:center;justify-content:space-between;">
@@ -1353,25 +1376,25 @@
   </button>
 </div>
 
-<div class="toolbar-menu" id="exportMenu" style="display:none;">
-  <button onclick="exportSVG()" style="display:flex;align-items:center;justify-content:space-between;">
+<div class="toolbar-menu" id="exportMenu" style="display:none;" role="menu" aria-labelledby="btnExport">
+  <button onclick="exportSVG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
     <span>Export SVG</span>
     <span class="menu-shortcut">⌘S</span>
   </button>
-  <button onclick="exportPNG()" style="display:flex;align-items:center;justify-content:space-between;">
+  <button onclick="exportPNG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
     <span>Export PNG</span>
     <span class="menu-shortcut">⌘P</span>
   </button>
-  <button onclick="exportFigma()">Export for Figma</button>
-  <div class="menu-divider"></div>
-  <button onclick="exportJSON()">Export Placement JSON</button>
-  <button onclick="exportFullJSON()">Export Full Floor Plan</button>
-  <button onclick="exportCSV()">Export Furniture CSV</button>
+  <button onclick="exportFigma()" role="menuitem">Export for Figma</button>
+  <div class="menu-divider" role="separator"></div>
+  <button onclick="exportJSON()" role="menuitem">Export Placement JSON</button>
+  <button onclick="exportFullJSON()" role="menuitem">Export Full Floor Plan</button>
+  <button onclick="exportCSV()" role="menuitem">Export Furniture CSV</button>
 </div>
 
-<div class="toolbar-menu" id="importMenu" style="display:none;">
-  <button onclick="importJSON()">Import JSON</button>
-  <button onclick="importCSV()">Import Furniture CSV</button>
+<div class="toolbar-menu" id="importMenu" style="display:none;" role="menu" aria-labelledby="btnImport">
+  <button onclick="importJSON()" role="menuitem">Import JSON</button>
+  <button onclick="importCSV()" role="menuitem">Import Furniture CSV</button>
 </div>
 
 <div class="toolbar-submenu" id="gridDensitySubmenu" style="display:none;">
