@@ -33,10 +33,10 @@
     --bg-tertiary: #1a1a24;
     --bg-panel: #141420;
     --text-primary: #d4c9b8;
-    --text-secondary: #888;
-    --text-muted: #666;
-    --text-faint: #555;
-    --text-dimmer: #444;
+    --text-secondary: #999;
+    --text-muted: #777;
+    --text-faint: #666;
+    --text-dimmer: #555;
     --border-primary: #2a2a3a;
     --border-secondary: #333;
     --border-tertiary: #222;
@@ -268,6 +268,7 @@
     font-size: 24px;
     font-weight: 600;
     color: var(--accent-gold);
+    margin: 0;
   }
   .docs-modal-close {
     background: transparent;
@@ -379,7 +380,8 @@
     transition: all 0.2s;
     opacity: 0;
   }
-  .docs-modal-body pre:hover .code-copy-btn {
+  .docs-modal-body pre:hover .code-copy-btn,
+  .code-copy-btn:focus {
     opacity: 1;
   }
   .code-copy-btn:hover {
@@ -387,10 +389,15 @@
     color: var(--accent-gold);
     border-color: var(--accent-gold);
   }
+  .code-copy-btn:focus {
+    outline: 2px solid var(--accent-gold);
+    outline-offset: 2px;
+  }
   .code-copy-btn.copied {
     background: var(--accent-gold-bg);
     color: var(--accent-gold);
     border-color: var(--accent-gold);
+    opacity: 1;
   }
   .docs-modal-body table {
     width: 100%;
@@ -415,6 +422,14 @@
     text-decoration: none;
     border-bottom: 1px solid transparent;
     transition: border-color 0.2s;
+  }
+  .docs-modal-body a:hover,
+  .docs-modal-body a:focus {
+    border-bottom: 1px solid var(--accent-gold);
+  }
+  .docs-modal-body a:focus {
+    outline: 2px solid var(--accent-gold);
+    outline-offset: 2px;
   }
   .docs-modal-body a:hover {
     border-bottom-color: var(--accent-gold);
@@ -1373,15 +1388,15 @@
 </div>
 
 <!-- Docs Modal -->
-<div class="docs-modal" id="docsModal" onclick="closeDocsModal(event)">
+<div class="docs-modal" id="docsModal" onclick="closeDocsModal(event)" role="dialog" aria-modal="true" aria-labelledby="docsModalTitle">
   <div class="docs-modal-content" onclick="event.stopPropagation()">
     <div class="docs-modal-header">
-      <div class="docs-modal-title" id="docsModalTitle">Documentation</div>
-      <button class="docs-modal-close" onclick="closeDocsModal()">
+      <h2 class="docs-modal-title" id="docsModalTitle">Documentation</h2>
+      <button class="docs-modal-close" onclick="closeDocsModal()" aria-label="Close documentation modal" type="button">
         <i data-lucide="x" style="width:20px;height:20px;"></i>
       </button>
     </div>
-    <div class="docs-modal-body" id="docsModalBody">
+    <div class="docs-modal-body" id="docsModalBody" role="document">
       Loading...
     </div>
   </div>
@@ -1406,7 +1421,38 @@ function toggleDocsMenu() {
   }
 }
 
+// Helper to escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Helper to detect and pretty-print JSON
+function tryPrettyPrintJson(code) {
+  const text = code.textContent.trim();
+  // Check if it looks like JSON (starts with { or [)
+  if ((text.startsWith('{') || text.startsWith('[')) && text.length > 50) {
+    try {
+      const parsed = JSON.parse(text);
+      const pretty = JSON.stringify(parsed, null, 2);
+      code.textContent = pretty;
+      return true;
+    } catch (e) {
+      // Not valid JSON, leave as-is
+      return false;
+    }
+  }
+  return false;
+}
+
+// Store the element that opened the modal for focus management
+let modalTriggerElement = null;
+
 async function openDocs(docType) {
+  // Store current active element for focus restoration
+  modalTriggerElement = document.activeElement;
+
   // Close dropdown
   document.getElementById('docsMenu').classList.remove('show');
 
@@ -1417,6 +1463,12 @@ async function openDocs(docType) {
   // Show modal with loading state
   modal.classList.add('show');
   body.innerHTML = '<p style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</p>';
+
+  // Move focus to modal for screen readers
+  setTimeout(() => {
+    const closeBtn = modal.querySelector('.docs-modal-close');
+    if (closeBtn) closeBtn.focus();
+  }, 100);
 
   // Set title
   const titles = {
@@ -1451,7 +1503,8 @@ async function openDocs(docType) {
 
     // Check if it's a plain text file (LLM instructions)
     if (files[docType].endsWith('.txt')) {
-      body.innerHTML = `<pre style="white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--text-secondary);">${content}</pre>`;
+      // Wrap in code tag so copy button works
+      body.innerHTML = `<pre style="white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;"><code style="color:var(--text-secondary);">${escapeHtml(content)}</code></pre>`;
     } else {
       // Render markdown
       const html = marked.marked ? marked.marked(content) : marked(content);
@@ -1474,6 +1527,12 @@ function closeDocsModal(event) {
   // Only close if clicking backdrop or close button, not content
   if (!event || event.target.id === 'docsModal' || event.target.closest('.docs-modal-close')) {
     document.getElementById('docsModal').classList.remove('show');
+
+    // Restore focus to trigger element
+    if (modalTriggerElement && modalTriggerElement.focus) {
+      modalTriggerElement.focus();
+      modalTriggerElement = null;
+    }
   }
 }
 
@@ -1486,7 +1545,10 @@ function addCopyButtonsToCodeBlocks() {
     // Skip if button already exists
     if (pre.querySelector('.code-copy-btn')) return;
 
-    // Only add to JSON, JavaScript, or long code blocks
+    // Pretty-print JSON if detected
+    tryPrettyPrintJson(codeBlock);
+
+    // Only add to code blocks with substantial content
     const codeText = codeBlock.textContent;
     if (codeText.trim().length < 20) return;
 
@@ -1494,13 +1556,16 @@ function addCopyButtonsToCodeBlocks() {
     const copyBtn = document.createElement('button');
     copyBtn.className = 'code-copy-btn';
     copyBtn.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px;"></i>Copy';
-    copyBtn.setAttribute('aria-label', 'Copy code');
+    copyBtn.setAttribute('aria-label', 'Copy code to clipboard');
+    copyBtn.setAttribute('type', 'button');
+    copyBtn.setAttribute('tabindex', '0');
 
     copyBtn.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(codeText);
         copyBtn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i>Copied!';
         copyBtn.classList.add('copied');
+        copyBtn.setAttribute('aria-label', 'Code copied to clipboard');
 
         // Re-initialize icons
         if (window.lucide) {
@@ -1510,6 +1575,7 @@ function addCopyButtonsToCodeBlocks() {
         setTimeout(() => {
           copyBtn.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px;"></i>Copy';
           copyBtn.classList.remove('copied');
+          copyBtn.setAttribute('aria-label', 'Copy code to clipboard');
           if (window.lucide) {
             lucide.createIcons();
           }
@@ -1517,12 +1583,22 @@ function addCopyButtonsToCodeBlocks() {
       } catch (err) {
         console.error('Failed to copy:', err);
         copyBtn.textContent = 'Failed';
+        copyBtn.setAttribute('aria-label', 'Failed to copy code');
         setTimeout(() => {
           copyBtn.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px;"></i>Copy';
+          copyBtn.setAttribute('aria-label', 'Copy code to clipboard');
           if (window.lucide) {
             lucide.createIcons();
           }
         }, 2000);
+      }
+    });
+
+    // Keyboard support for copy button
+    copyBtn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        copyBtn.click();
       }
     });
 
