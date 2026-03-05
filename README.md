@@ -2,7 +2,7 @@
 
 **A data-driven floor plan and furniture layout tool with full JSON/CSV import/export support.**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-yellow.svg)](https://opensource.org/licenses/MIT-0)
 
 ![Floor Plan Studio Screenshot](screenshot.png)
 
@@ -153,9 +153,21 @@ floor-plan-studio/
 └── README.md
 ```
 
-## 🤝 Contributing
+## 🤝 Contributing & Usage
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+**This project is completely free to use, modify, and distribute - no restrictions!**
+
+Whether you're building an open-source project, a commercial product, or just experimenting:
+- ✅ **Fork it, remix it, build on it** - no permission needed
+- ✅ **Use it in closed-source projects** - totally fine
+- ✅ **Modify and redistribute** - go for it
+- ✅ **Sell products based on this** - no problem at all
+
+**For FOSS projects:** A credit or link back is always appreciated (but not required)! It helps others discover the project.
+
+### Contributing Code
+
+Pull requests are enthusiastically welcomed! To contribute:
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
@@ -163,9 +175,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
+No contribution is too small - bug fixes, documentation improvements, new features, or just typo corrections are all valued.
+
 ## 📝 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **MIT No Attribution (MIT-0)** License - see the [LICENSE](LICENSE) file for details.
+
+**TL;DR:** Use it however you want, no strings attached. Attribution is appreciated but never required.
 
 ## 🙏 Acknowledgments
 
