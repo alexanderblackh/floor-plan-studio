@@ -171,11 +171,10 @@ export function initDefaults() {
  */
 export function saveToCache() {
   try {
+    // Save the entire floor plan (rooms, walls, furniture definitions, fixtures, etc.)
+    localStorage.setItem('fps-floor-plan', JSON.stringify(state.floorPlan));
+    // Save placement data
     localStorage.setItem('fps-layout', JSON.stringify(state.placedFurniture));
-    // Also persist fixture positions (they can be edited in fixture mode)
-    localStorage.setItem('fps-fixtures', JSON.stringify(state.floorPlan.fixtures));
-    // Persist walls (door positions can be edited in fixture mode)
-    localStorage.setItem('fps-walls', JSON.stringify(state.floorPlan.walls));
     // Persist locked measurements
     localStorage.setItem('fps-locked-measurements', JSON.stringify(state.lockedMeasurements));
     // Persist soft dividers
@@ -268,49 +267,63 @@ function detectDefaultUnit() {
  */
 export function loadFromCache() {
   try {
-    const data = localStorage.getItem('fps-layout');
-    if (data) {
-      const parsed = JSON.parse(data);
+    // Load the entire floor plan first (rooms, walls, furniture definitions, fixtures)
+    const floorPlanData = localStorage.getItem('fps-floor-plan');
+    if (floorPlanData) {
+      state.floorPlan = JSON.parse(floorPlanData);
+    }
+
+    // Load placement data
+    const layoutData = localStorage.getItem('fps-layout');
+    if (layoutData) {
+      const parsed = JSON.parse(layoutData);
       // Migrate old format: add elevation/stackedOn if missing
       state.placedFurniture = parsed.map(p => ({
         ...p,
         elevation: p.elevation ?? 0,
         stackedOn: p.stackedOn ?? null
       }));
-      // Restore fixture positions and door modifications if saved
-      const fixtureData = localStorage.getItem('fps-fixtures');
-      if (fixtureData) {
-        const savedFixtures = JSON.parse(fixtureData);
-        // Update fixture positions and doors from cache (match by id)
-        for (const saved of savedFixtures) {
-          const fix = state.floorPlan.fixtures.find(f => f.id === saved.id);
-          if (fix) {
-            fix.x = saved.x;
-            fix.y = saved.y;
-            // Restore door modifications (hinge positions, arc angles)
-            if (saved.doors) {
-              fix.doors = saved.doors;
-            }
-          }
-        }
-      }
-      // Restore walls (door positions) if saved
-      const wallData = localStorage.getItem('fps-walls');
-      if (wallData) {
-        const savedWalls = JSON.parse(wallData);
-        // Replace entire walls array to preserve door arc modifications
-        state.floorPlan.walls = savedWalls;
-      }
+
       // Restore locked measurements
       const measureData = localStorage.getItem('fps-locked-measurements');
       if (measureData) {
         state.lockedMeasurements = JSON.parse(measureData);
       }
+
       // Restore soft dividers
       const dividerData = localStorage.getItem('fps-dividers');
       if (dividerData) {
         state.softDividers = JSON.parse(dividerData);
       }
+
+      // BACKWARD COMPATIBILITY: Load old fixture/wall data if floor plan wasn't saved
+      if (!floorPlanData) {
+        // Restore fixture positions and door modifications if saved
+        const fixtureData = localStorage.getItem('fps-fixtures');
+        if (fixtureData) {
+          const savedFixtures = JSON.parse(fixtureData);
+          // Update fixture positions and doors from cache (match by id)
+          for (const saved of savedFixtures) {
+            const fix = state.floorPlan.fixtures.find(f => f.id === saved.id);
+            if (fix) {
+              fix.x = saved.x;
+              fix.y = saved.y;
+              // Restore door modifications (hinge positions, arc angles)
+              if (saved.doors) {
+                fix.doors = saved.doors;
+              }
+            }
+          }
+        }
+        // Restore walls (door positions) if saved
+        const wallData = localStorage.getItem('fps-walls');
+        if (wallData) {
+          const savedWalls = JSON.parse(wallData);
+          // Replace entire walls array to preserve door arc modifications
+          state.floorPlan.walls = savedWalls;
+        }
+      }
+
       return true;
     }
   } catch(e) { /* corrupted data */ }
