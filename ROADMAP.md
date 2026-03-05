@@ -71,25 +71,111 @@ This document outlines planned features and future directions for Floor Plan Stu
 
 ## 📱 Phase 3: Mobile Support
 
-**Goal**: Full-featured mobile experience for iOS and Android.
+**Goal**: Full-featured mobile experience for iOS and Android, delivered in two sub-phases.
 
-### Responsive Design
-- [ ] **Touch Gestures**: Pinch-zoom, two-finger pan
-- [ ] **Mobile Toolbar**: Collapsible, swipeable toolbar
-- [ ] **Touch-Optimized Controls**: Larger hit targets, gesture hints
-- [ ] **Portrait/Landscape**: Adaptive layouts for both orientations
+---
 
-### Mobile-Specific Features
-- [ ] **Photo Import**: Use camera to capture room dimensions
-- [ ] **AR Ruler**: AR-based room measurement tool
-- [ ] **Share Button**: Export and share via native share sheet
-- [ ] **Offline Mode**: Service worker for offline editing
-- [ ] **Progressive Web App**: Installable as mobile app
+### Phase 3A: Mobile Preview *(implement first)*
 
-### Performance Optimization
-- [ ] **Lazy Loading**: Only render visible furniture
-- [ ] **Reduced Rendering**: Simplified graphics for mobile
-- [ ] **Battery Optimization**: Reduce frame rate when idle
+**Goal**: Read-only mobile experience. Users can import a floor plan, explore it, and change view settings — no editing. This is the minimum useful mobile experience and the foundation all Phase 3B work builds on.
+
+#### Scope
+- Import a floor plan via JSON file picker or drag-and-drop
+- Pan around the canvas with one finger
+- Pinch-to-zoom in and out
+- Switch between view settings (units, grid, labels, room colors)
+- Open and navigate the Elevation panel
+- Switch elevation wall selection
+- Light/dark mode toggle
+- Export (PNG/SVG) — read-only output
+
+#### Out of Scope for 3A
+Anything that modifies the floor plan: furniture drag, fixture editing, measurements, dividers, anchors.
+
+#### Technical Work
+
+**Touch & Input**
+- [ ] Add `touchstart` / `touchmove` / `touchend` handlers alongside existing mouse events in `app.js`
+- [ ] Unify coordinate extraction into a helper (`getEventPoint(e)`) that handles both `e.clientX` and `e.touches[0].clientX`
+- [ ] Implement one-finger pan on the canvas (map to existing `panX`/`panY` state)
+- [ ] Implement pinch-to-zoom using two-touch distance delta (map to existing `zoom` state)
+- [ ] Add `touch-action: none` to canvas container so browser doesn't scroll the page during pan/zoom
+- [ ] Add `-webkit-touch-callout: none` to prevent iOS long-press context menus
+
+**Layout & Responsive**
+- [ ] Make canvas SVG size responsive to container width/height instead of fixed pixel values (`render.js`)
+- [ ] Add a mobile breakpoint (≤ 768px) that hides the staging/furniture panel entirely
+- [ ] Collapse the floating toolbar to a minimal icon strip on mobile; move secondary controls into a slide-up sheet or overflow menu
+- [ ] Ensure the elevation panel can be opened as a full-width overlay on small screens
+- [ ] Handle orientation change (`orientationchange` / `resize`) by recalculating SVG dimensions and re-rendering
+
+**Touch UX**
+- [ ] Increase minimum tap target size to 44px for all toolbar buttons on mobile
+- [ ] Show a brief pan/pinch hint overlay on first mobile load (dismissable)
+- [ ] Disable furniture drag initiation on touch (show a "preview only" tooltip if user tries to drag)
+
+---
+
+### Phase 3B: Full Mobile Feature Parity *(after 3A is stable)*
+
+**Goal**: Everything available on desktop works on mobile. Editing, drag-and-drop, measurements, dividers, anchors, and fixture editing all work with touch.
+
+#### Scope
+Everything in Phase 3A, plus:
+- Place and drag furniture with touch
+- Rotate furniture with double-tap or two-finger rotate gesture
+- Move fixtures in the floor plan view
+- Add, edit, and delete measurements
+- Draw and adjust soft dividers
+- Anchor mode (link furniture pieces)
+- Fixture editing panel (touch-friendly)
+- Full elevation interaction (drag furniture vertically)
+- Undo/redo via on-screen buttons (keyboard shortcut unavailable on mobile)
+- JSON/CSV export from mobile
+
+#### Technical Work
+
+**Touch Drag & Drop**
+- [ ] Implement touch drag for furniture pieces in `furniture.js` (touchstart → drag state, touchmove → reposition, touchend → drop)
+- [ ] Handle multi-touch correctly: two fingers on canvas = pan/zoom, one finger on furniture = drag
+- [ ] Implement touch drag for staging panel furniture onto canvas
+- [ ] Show drag ghost / position preview during touch drag
+- [ ] Touch drag for fixtures in fixture-edit mode
+
+**Gestures**
+- [ ] Double-tap on furniture to rotate 90°
+- [ ] Long-press on furniture to open context menu (delete, duplicate, properties)
+- [ ] Long-press on canvas (empty area) to open canvas context menu
+- [ ] Two-finger rotate gesture on selected furniture for free rotation
+
+**Elevation Touch**
+- [ ] Touch drag on elevation furniture pieces to adjust height (`elevation.js`)
+- [ ] Pinch on elevation panel to zoom the elevation view
+
+**Measurement & Dividers**
+- [ ] Touch-based measurement creation (tap first point, tap second point)
+- [ ] Touch drag to reposition locked measurements
+- [ ] Touch to draw/adjust soft dividers
+
+**Mobile UI Additions**
+- [ ] Undo/redo buttons visible in toolbar on mobile (replaces Cmd+Z)
+- [ ] Mode indicators clearly visible (measure mode, anchor mode, fixture mode)
+- [ ] Touch-optimized properties panel (bottom sheet) for selected furniture
+- [ ] Staging panel as a swipe-up drawer rather than a sidebar
+
+**Performance**
+- [ ] Lazy-load furniture catalog on mobile to reduce initial parse time
+- [ ] Throttle SVG re-renders during touch drag to 30fps on low-end devices
+- [ ] Battery optimization: pause render loop when app is backgrounded
+
+---
+
+### Shared Mobile Infrastructure (both phases)
+
+- [ ] **Progressive Web App**: Add `manifest.json` and service worker for installability and offline support
+- [ ] **Share Sheet**: Native share API (`navigator.share`) for exporting plans on mobile
+- [ ] **Portrait/Landscape**: Adaptive layout that reconfigures panels on orientation change
+- [ ] **Photo Import**: Use `<input type="file" accept="image/*" capture="environment">` for camera access (Phase 3B scope)
 
 ---
 
