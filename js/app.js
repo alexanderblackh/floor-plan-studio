@@ -4,7 +4,7 @@
  * This is the entry point that wires everything together.
  */
 
-import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache, savePreferences, loadPreferences, getFurnitureDef } from './data.js';
+import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache, savePreferences, loadPreferences, getFurnitureDef, validateFloorPlan } from './data.js';
 import { buildSVG, buildStagingSVG } from './render.js';
 import { renderFurniture, renderStagingFurniture, handleDragMove, handleDragEnd } from './furniture.js';
 import { clearSelection, updateAlignToolbar } from './selection.js';
@@ -15,6 +15,7 @@ import { toggleFixtureEditMode, handleFixtureClick, handleFixtureDragMove, handl
 import { undo, redo, initHistory, pushHistory } from './history.js';
 import { renderDividers, toggleDividerMode, handleDividerClick } from './dividers.js';
 import { updateColorPicker } from './colors.js';
+import { importFullPlan, importPlacement } from './io.js';
 import './io.js'; // registers global export/import functions
 
 // ===== ZOOM / PAN =====
@@ -1277,8 +1278,149 @@ function init() {
   // Expose color picker update function
   window._updateColorPicker = updateColorPicker;
 
+  // Setup drag-and-drop for JSON/CSV import
+  setupDragAndDrop();
+
   // Initial view
   requestAnimationFrame(fitToView);
+}
+
+/**
+ * Setup drag-and-drop file import
+ */
+function setupDragAndDrop() {
+  // Visual feedback when dragging files over window
+  window.addEventListener('dragenter', e => {
+    if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      document.body.classList.add('drag-over');
+    }
+  }, false);
+
+  window.addEventListener('dragover', e => {
+    if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      document.body.classList.add('drag-over');
+    }
+  }, false);
+
+  window.addEventListener('dragleave', e => {
+    // Only remove if leaving window entirely
+    if (e.clientX === 0 && e.clientY === 0) {
+      document.body.classList.remove('drag-over');
+    }
+  }, false);
+
+  // Handle dropped files
+  window.addEventListener('drop', handleDrop, false);
+
+  function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    document.body.classList.remove('drag-over');
+
+    console.log('Drop event triggered', e);
+
+    const dt = e.dataTransfer;
+    const files = dt.files;
+
+    console.log('Files:', files, 'Length:', files.length);
+
+    if (files.length === 0) {
+      console.log('No files dropped');
+      return;
+    }
+
+    const file = files[0]; // Only process first file
+    const fileName = file.name.toLowerCase();
+
+    console.log('File name:', fileName);
+
+    if (fileName.endsWith('.json')) {
+      console.log('Processing JSON file');
+      handleJSONDrop(file);
+    } else if (fileName.endsWith('.csv')) {
+      console.log('Processing CSV file');
+      handleCSVDrop(file);
+    } else {
+      alert('Unsupported file type. Please drop a .json or .csv file.');
+    }
+  }
+
+  function handleJSONDrop(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        const data = JSON.parse(event.target.result);
+
+        if (data.type === 'full-plan' || (data.rooms && data.walls)) {
+          importFullPlan(data);
+        } else if (data.furniture && Array.isArray(data.furniture)) {
+          importPlacement(data);
+        } else {
+          alert('Unrecognized JSON format. Expected a floor plan or placement file.');
+        }
+      } catch (err) {
+        console.error('Error parsing JSON:', err);
+        alert('Error reading JSON file: ' + err.message);
+      }
+    };
+    reader.onerror = function(err) {
+      console.error('FileReader error:', err);
+      alert('Error reading file: ' + err);
+    };
+    reader.readAsText(file);
+  }
+
+  function handleCSVDrop(file) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        const lines = event.target.result.split('\n').filter(l => l.trim());
+        if (lines.length < 2) {
+          alert('CSV file is empty or has no data rows.');
+          return;
+        }
+
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const idCol = headers.indexOf('id');
+        const xCol = headers.indexOf('x');
+        const yCol = headers.indexOf('y');
+        const rotCol = headers.indexOf('rotated');
+        const elevCol = headers.indexOf('elevation');
+
+        if (idCol === -1) {
+          alert('CSV must have an "id" column.');
+          return;
+        }
+
+        if (!confirm('Import furniture placement from CSV?\n\nThis will update positions for matching furniture IDs.')) {
+          return;
+        }
+
+        // Simple CSV parsing (handles basic cases)
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+          const id = cols[idCol];
+          const piece = state.placedFurniture.find(p => p.id === id);
+          if (!piece) continue;
+
+          if (xCol >= 0) { const v = parseFloat(cols[xCol]); if (!isNaN(v)) piece.x = v; }
+          if (yCol >= 0) { const v = parseFloat(cols[yCol]); if (!isNaN(v)) piece.y = v; }
+          if (rotCol >= 0) piece.rotated = cols[rotCol] === 'true';
+          if (elevCol >= 0) { const v = parseFloat(cols[elevCol]); if (!isNaN(v)) piece.elevation = v; }
+        }
+
+        renderFurniture();
+        renderStagingFurniture();
+        saveToCache();
+        alert('CSV imported successfully!');
+      } catch (err) {
+        alert('Error reading CSV: ' + err.message);
+      }
+    };
+    reader.readAsText(file);
+  }
 }
 
 // Start

@@ -110,6 +110,8 @@ export function exportJSON() {
       stackedOn: p.stackedOn || null,
       anchors: p.anchors || undefined
     })),
+    lockedMeasurements: state.lockedMeasurements || [],
+    softDividers: state.softDividers || [],
     zoom: state.zoom,
     panX: state.panX,
     panY: state.panY
@@ -134,6 +136,8 @@ export function exportFullJSON() {
       stackedOn: p.stackedOn || null,
       anchors: p.anchors || undefined
     })),
+    lockedMeasurements: state.lockedMeasurements || [],
+    softDividers: state.softDividers || [],
     viewState: {
       zoom: state.zoom,
       panX: state.panX,
@@ -213,7 +217,7 @@ export function importJSON() {
   closeExportMenu();
 }
 
-function importFullPlan(data) {
+export function importFullPlan(data) {
   const errors = validateFloorPlan(data);
   if (errors.length > 0) {
     alert('Floor plan validation errors:\n' + errors.join('\n'));
@@ -230,6 +234,8 @@ function importFullPlan(data) {
   delete planData.timestamp;
   delete planData.placement;
   delete planData.viewState;
+  delete planData.lockedMeasurements;
+  delete planData.softDividers;
 
   // Replace floor plan
   state.floorPlan = planData;
@@ -244,6 +250,10 @@ function importFullPlan(data) {
   } else {
     initDefaults();
   }
+
+  // Restore locked measurements and dividers
+  if (data.lockedMeasurements) state.lockedMeasurements = data.lockedMeasurements;
+  if (data.softDividers) state.softDividers = data.softDividers;
 
   // Apply view state
   if (data.viewState) {
@@ -263,12 +273,14 @@ function importFullPlan(data) {
   renderStagingFurniture();
   buildElevationSelector();
   if (window._applyTransform) window._applyTransform();
+  if (window._renderMeasurement) window._renderMeasurement();
+  if (window._renderDividers) window._renderDividers();
   saveToCache();
 
   alert('Floor plan imported successfully!');
 }
 
-function importPlacement(data) {
+export function importPlacement(data) {
   if (!confirm(`Import layout from ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'unknown date'}?\n\nThis will replace your current furniture placement.`)) {
     return;
   }
@@ -285,6 +297,10 @@ function importPlacement(data) {
     }
   });
 
+  // Restore locked measurements and dividers
+  if (data.lockedMeasurements) state.lockedMeasurements = data.lockedMeasurements;
+  if (data.softDividers) state.softDividers = data.softDividers;
+
   if (data.zoom !== undefined) state.zoom = data.zoom;
   if (data.panX !== undefined) state.panX = data.panX;
   if (data.panY !== undefined) state.panY = data.panY;
@@ -294,6 +310,8 @@ function importPlacement(data) {
   renderFurniture();
   renderStagingFurniture();
   if (window._applyTransform) window._applyTransform();
+  if (window._renderMeasurement) window._renderMeasurement();
+  if (window._renderDividers) window._renderDividers();
   saveToCache();
 
   alert('Layout imported successfully!');

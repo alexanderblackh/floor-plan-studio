@@ -1,0 +1,565 @@
+==============================================
+FLOOR PLAN STUDIO - LLM GENERATION INSTRUCTIONS
+==============================================
+
+You are helping a user create a JSON floor plan for Floor Plan Studio.
+Use these instructions to generate accurate, valid floor plan JSON from
+natural language descriptions.
+
+==============================================
+WHAT THE USER WILL PROVIDE
+==============================================
+
+The user will describe:
+- Room dimensions and layout
+- Door and window positions
+- Furniture pieces with dimensions
+- Built-in fixtures (counters, closets, appliances)
+
+==============================================
+YOUR TASK
+==============================================
+
+Generate a complete, valid JSON floor plan that can be imported directly
+into Floor Plan Studio.
+
+==============================================
+COORDINATE SYSTEM
+==============================================
+
+ORIGIN: Top-left corner (0, 0)
+X-AXIS: Left to right (horizontal, east)
+Y-AXIS: Top to bottom (vertical, south)
+UNITS: Inches by default
+SCALE: 2 pixels per inch (in the app, not in JSON)
+
+Example layout:
+```
+(0,0) ────────────────── (200,0)
+  │                         │
+  │   Floor Plan            │
+  │                         │
+(0,150) ────────────── (200,150)
+```
+
+==============================================
+FULL FLOOR PLAN JSON STRUCTURE
+==============================================
+
+{
+  "name": "Plan Name",
+  "version": "3.0",
+  "units": "inches",
+  "scale": 2,
+
+  "rooms": [
+    {
+      "id": "room-id",
+      "name": "Display Name",
+      "vertices": [[x1, y1], [x2, y2], [x3, y3], [x4, y4]],
+      "color": "#RRGGBBAA",
+      "placeable": true | false,
+      "labelSize": 14,
+      "labelOffset": [x, y]  // optional
+    }
+  ],
+
+  "walls": [
+    {
+      "from": [x, y],
+      "to": [x, y],
+      "type": "exterior" | "interior" | "door" | "sliding",
+      "window": {  // optional
+        "from": [x, y],
+        "to": [x, y],
+        "sillHeight": 36,
+        "height": 48
+      },
+      "door": {  // optional
+        "from": [x, y],
+        "to": [x, y],
+        "type": "swing" | "sliding",
+        "arc": {  // for swing doors only
+          "cx": x,
+          "cy": y,
+          "r": 30,
+          "start": 90,
+          "end": 175
+        }
+      },
+      "heater": {  // optional
+        "x": x, "y": y, "w": width, "h": height
+      },
+      "label": {  // optional
+        "text": "LABEL TEXT",
+        "x": x, "y": y
+      }
+    }
+  ],
+
+  "fixtures": [
+    {
+      "id": "fixture-id",
+      "label": "Display Name",
+      "x": x,
+      "y": y,
+      "w": width,
+      "h": depth,
+      "color": "#RRGGBBAA",
+      "doors": {  // optional - for closets
+        "x": x, "y": y, "w": width, "h": height,
+        "arcs": [
+          {
+            "cx": x, "cy": y,
+            "r": radius,
+            "start": startAngle,
+            "end": endAngle
+          }
+        ]
+      }
+    }
+  ],
+
+  "dimensions": [  // optional - measurement labels
+    {
+      "from": [x, y],
+      "to": [x, y],
+      "label": "Distance Label"
+    }
+  ],
+
+  "furniture": [
+    {
+      "id": "furniture-id",
+      "name": "Display Name",
+      "w": width,
+      "h": depth,
+      "height": physicalHeight,
+      "surfaceHeight": usableSurfaceHeight,
+      "stackable": true | false,
+      "color": "#RRGGBB",
+      "room": "category"
+    }
+  ]
+}
+
+==============================================
+CONVERSION FORMULAS
+==============================================
+
+FEET TO INCHES:
+  feet × 12 = inches
+  Example: 10' = 120"
+
+FEET AND INCHES TO INCHES:
+  (feet × 12) + inches = total inches
+  Example: 10' 6" = (10 × 12) + 6 = 126"
+
+COORDINATES:
+  If user says "10 feet wide", use w: 120
+  If user says "north wall", use y: 0
+  If user says "south wall", use y: (room height)
+  If user says "west wall", use x: 0
+  If user says "east wall", use x: (room width)
+
+==============================================
+ROOM VERTICES - CRITICAL RULES
+==============================================
+
+1. VERTICES MUST BE CLOCKWISE starting from top-left
+2. ALL EDGES MUST BE AXIS-ALIGNED (horizontal or vertical only, NO diagonals)
+3. CLOSE THE POLYGON (but don't repeat first vertex)
+4. USE INTEGERS (whole numbers)
+
+RECTANGLE (simple):
+  Top-left → Top-right → Bottom-right → Bottom-left
+  [[0, 0], [120, 0], [120, 100], [0, 100]]
+
+L-SHAPE (complex):
+  Start top-left, go clockwise around the perimeter
+  [[0, 0], [100, 0], [100, 80], [150, 80], [150, 200], [0, 200]]
+
+VERIFICATION:
+  - Each vertex connects to next vertex with either:
+    * Horizontal line (same Y, different X)
+    * Vertical line (same X, different Y)
+  - Last vertex connects to first vertex
+
+==============================================
+WALL MATCHING
+==============================================
+
+Walls MUST align exactly with room vertices.
+
+For room: [[0, 0], [120, 0], [120, 100], [0, 100]]
+Walls should be:
+  - Top: {"from": [0, 0], "to": [120, 0]}
+  - Right: {"from": [120, 0], "to": [120, 100]}
+  - Bottom: {"from": [120, 100], "to": [0, 100]}
+  - Left: {"from": [0, 100], "to": [0, 0]}
+
+==============================================
+DOOR SWING ANGLES
+==============================================
+
+Door arcs use degrees in standard orientation:
+
+          90°
+           │
+           │
+   180° ───┼─── 0°/360°
+           │
+           │
+          270°
+
+NORTH WALL (y=0):
+  - Hinge on left, swings inward (down): start: 90, end: 175
+  - Hinge on right, swings inward (down): start: 5, end: 90
+
+SOUTH WALL (y=max):
+  - Hinge on left, swings inward (up): start: 270, end: 355
+  - Hinge on right, swings inward (up): start: 185, end: 270
+
+EAST WALL (x=max):
+  - Hinge on top, swings inward (left): start: 95, end: 180
+  - Hinge on bottom, swings inward (left): start: 0, end: 85
+
+WEST WALL (x=0):
+  - Hinge on top, swings inward (right): start: 0, end: 85
+  - Hinge on bottom, swings inward (right): start: 270, end: 355
+
+HINGE POINT (cx, cy):
+  Should be at one end of the door opening, typically where door meets wall.
+
+==============================================
+COLORS
+==============================================
+
+Use hex colors with alpha: #RRGGBBAA
+
+ROOMS (semi-transparent):
+  Living: "#18182288"
+  Kitchen: "#1a1a2088"
+  Bedroom: "#16161e88"
+  Bathroom: "#15151d88"
+  Dining: "#1a1a2488"
+
+FIXTURES:
+  Counters/Cabinets: "#4a4a3a"
+  Closets: "#3a3a2a"
+  Appliances (dark): "#2a2a2a"
+  Bathroom (white): "#f0f0f0"
+  Stainless steel: "#c0c0c0"
+
+FURNITURE:
+  Wood (medium brown): "#8b7355"
+  Wood (light): "#a0826d"
+  Wood (dark): "#6b5d52"
+  Upholstery (gray): "#4a5568"
+  Metal: "#c0c0c0"
+
+==============================================
+STANDARD DIMENSIONS
+==============================================
+
+ROOMS:
+  Living room: 150-250" wide
+  Bedroom: 120-180" wide
+  Kitchen: 80-120" wide
+  Bathroom: 60-100" wide
+
+DOORS:
+  Interior: 30-36" wide
+  Exterior: 36-42" wide
+  Swing radius: Same as door width
+
+WINDOWS:
+  Standard sill height: 36"
+  Standard height: 48"
+  Bathroom (high): sillHeight: 72, height: 24
+
+FURNITURE:
+  Sofa: 72-96"w × 36-40"h, height: 32, surfaceHeight: 18
+  Bed (Queen): 60"w × 80"h, height: 25, surfaceHeight: 25
+  Bed (King): 76"w × 80"h
+  Dining table (6-person): 72"w × 36"h, height: 30, surfaceHeight: 30
+  Coffee table: 48"w × 24"h, height: 18, surfaceHeight: 18
+  Desk: 60"w × 30"h, height: 30, surfaceHeight: 30
+  Nightstand: 24"w × 18"h, height: 24, surfaceHeight: 24
+  Dresser: 48"w × 20"h, height: 36, surfaceHeight: 36
+
+FIXTURES:
+  Kitchen counter: 24" deep (standard)
+  Kitchen island: 36-60"w × 24-36"h
+  Refrigerator: 36"w × 30"h
+  Oven/Range: 30-36"w × 24"h
+  Dishwasher: 24"w × 24"h
+  Sink: 30-36"w × 20-22"h
+  Bathtub: 60"w × 30"h
+  Shower: 36-48"w × 36"h
+  Toilet: 18"w × 28"h
+  Vanity: 24-60"w × 21"h
+  Closet: 24-72"w × 24"h (depth)
+
+==============================================
+FURNITURE PROPERTIES
+==============================================
+
+height: Full physical height
+surfaceHeight: Where items can be placed on top
+  - If same as height → items can be placed on top
+  - If less than height → surface is lower (like sofa seat)
+  - If 0 → items cannot be placed on top
+
+stackable:
+  true → Other furniture can be placed on this item
+  false → Nothing can be stacked
+
+Examples:
+  Table: stackable: true, surfaceHeight: 30 (same as height)
+  Sofa: stackable: false, surfaceHeight: 18 (seat height < 32" total)
+  Bookshelf: stackable: false, surfaceHeight: 0 (can't place items)
+
+==============================================
+PLACEABLE ROOMS
+==============================================
+
+placeable: true  → Furniture can be placed here
+  - Living rooms
+  - Bedrooms
+  - Dining rooms
+  - Bathrooms
+
+placeable: false → No furniture placement
+  - Kitchens (has fixtures instead)
+  - Utility closets
+  - Hallways
+
+==============================================
+EXAMPLE WORKFLOW
+==============================================
+
+USER INPUT:
+"Create a 12' × 10' bedroom with a door on the south wall (left side) and
+a window on the north wall. Include a queen bed, two nightstands, and a dresser."
+
+YOUR PROCESS:
+
+1. Convert dimensions:
+   - 12' = 144"
+   - 10' = 120"
+
+2. Create room:
+   - Top-left: [0, 0]
+   - Top-right: [144, 0]
+   - Bottom-right: [144, 120]
+   - Bottom-left: [0, 120]
+
+3. Add walls:
+   - North (top): from [0, 0] to [144, 0], add window
+   - South (bottom): from [0, 120] to [144, 120], add door on left
+   - East (right): from [144, 0] to [144, 120]
+   - West (left): from [0, 0] to [0, 120]
+
+4. Add door on south wall, left side:
+   - Door opening: [10, 120] to [40, 120] (30" door)
+   - Hinge at left: cx: 10, cy: 120
+   - Swings inward (upward): start: 270, end: 355
+
+5. Add window on north wall:
+   - Window: from [40, 0] to [100, 0]
+   - sillHeight: 36, height: 48
+
+6. Add furniture:
+   - Queen bed: 60"w × 80"h
+   - Nightstand (×2): 24"w × 18"h
+   - Dresser: 48"w × 20"h
+
+7. Position furniture (approximate):
+   - Bed centered on east wall: x: 144-80-10 = 54, y: 20
+   - Nightstands beside bed
+   - Dresser on west wall
+
+GENERATED JSON:
+{
+  "name": "Bedroom",
+  "version": "3.0",
+  "units": "inches",
+  "scale": 2,
+
+  "rooms": [
+    {
+      "id": "bedroom",
+      "name": "Bedroom",
+      "vertices": [[0, 0], [144, 0], [144, 120], [0, 120]],
+      "color": "#16161e88",
+      "placeable": true
+    }
+  ],
+
+  "walls": [
+    {
+      "from": [0, 0],
+      "to": [144, 0],
+      "type": "exterior",
+      "window": {
+        "from": [40, 0],
+        "to": [100, 0],
+        "sillHeight": 36,
+        "height": 48
+      }
+    },
+    {
+      "from": [144, 0],
+      "to": [144, 120],
+      "type": "exterior"
+    },
+    {
+      "from": [144, 120],
+      "to": [40, 120],
+      "type": "exterior"
+    },
+    {
+      "from": [40, 120],
+      "to": [10, 120],
+      "type": "door",
+      "door": {
+        "from": [40, 120],
+        "to": [10, 120],
+        "type": "swing",
+        "arc": {
+          "cx": 10,
+          "cy": 120,
+          "r": 30,
+          "start": 270,
+          "end": 355
+        }
+      }
+    },
+    {
+      "from": [10, 120],
+      "to": [0, 120],
+      "type": "exterior"
+    },
+    {
+      "from": [0, 120],
+      "to": [0, 0],
+      "type": "exterior"
+    }
+  ],
+
+  "fixtures": [],
+
+  "furniture": [
+    {
+      "id": "bed-queen-1",
+      "name": "Queen Bed",
+      "w": 60,
+      "h": 80,
+      "height": 25,
+      "surfaceHeight": 25,
+      "stackable": false,
+      "color": "#6b5d52",
+      "room": "bedroom"
+    },
+    {
+      "id": "nightstand-1",
+      "name": "Nightstand",
+      "w": 24,
+      "h": 18,
+      "height": 24,
+      "surfaceHeight": 24,
+      "stackable": true,
+      "color": "#6b5d52",
+      "room": "bedroom"
+    },
+    {
+      "id": "nightstand-2",
+      "name": "Nightstand",
+      "w": 24,
+      "h": 18,
+      "height": 24,
+      "surfaceHeight": 24,
+      "stackable": true,
+      "color": "#6b5d52",
+      "room": "bedroom"
+    },
+    {
+      "id": "dresser-1",
+      "name": "Dresser",
+      "w": 48,
+      "h": 20,
+      "height": 36,
+      "surfaceHeight": 36,
+      "stackable": true,
+      "color": "#6b5d52",
+      "room": "bedroom"
+    }
+  ]
+}
+
+==============================================
+VALIDATION CHECKLIST
+==============================================
+
+Before providing JSON, verify:
+
+□ All room vertices are clockwise
+□ All room edges are axis-aligned (no diagonals)
+□ All coordinates are integers (whole numbers)
+□ Wall endpoints match room vertices exactly
+□ Door hinge point (cx, cy) is at door endpoint
+□ Door swing angles use degrees (0-360)
+□ Window bounds are within wall bounds
+□ All IDs are unique and lowercase (no spaces)
+□ Colors use hex format with alpha: #RRGGBBAA
+□ Furniture has all required fields
+□ Fixture positions are within room bounds
+□ Surface heights are ≤ total heights
+□ All measurements in inches
+
+==============================================
+COMMON MISTAKES TO AVOID
+==============================================
+
+❌ Diagonal edges: [[0,0], [100,100]]
+✅ Axis-aligned: [[0,0], [100,0], [100,100]]
+
+❌ Counter-clockwise vertices
+✅ Clockwise from top-left
+
+❌ Floating point: "w": 123.456
+✅ Integers: "w": 123
+
+❌ Door hinge not at endpoint: cx: 50 (middle of door)
+✅ Hinge at endpoint: cx: 40 (where door meets wall)
+
+❌ Surface > height: surfaceHeight: 40, height: 30
+✅ Surface ≤ height: surfaceHeight: 30, height: 30
+
+❌ ID with spaces: "sofa modern 1"
+✅ ID lowercase no spaces: "sofa-modern-1"
+
+==============================================
+RESPONSE FORMAT
+==============================================
+
+Provide the complete JSON in a code block:
+
+```json
+{
+  "name": "...",
+  ...
+}
+```
+
+Then provide brief notes on:
+- Any assumptions you made
+- Suggested furniture placement
+- Additional recommendations
+
+==============================================
+END OF INSTRUCTIONS
+==============================================
+
+Now, generate the floor plan JSON based on the user's description.

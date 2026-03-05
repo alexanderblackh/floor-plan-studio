@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Floor Plan Studio</title>
 <script src="https://unpkg.com/lucide@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 <!--
   FLOOR PLAN STUDIO — Interactive Room Layout Tool (FOSS)
 
@@ -97,6 +98,36 @@
     overflow: hidden;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+  kbd {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent-gold);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+  }
+
+  /* Drag-and-drop visual feedback */
+  body.drag-over::before {
+    content: '📁 Drop JSON or CSV file to import';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(197, 151, 91, 0.15);
+    border: 3px dashed var(--accent-gold);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 500;
+    color: var(--accent-gold);
+    pointer-events: none;
+    backdrop-filter: blur(2px);
+  }
+
   .app-header {
     background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%);
     border-bottom: 1px solid var(--border-primary);
@@ -111,6 +142,295 @@
     font-size: 20px; font-weight: 600; color: var(--accent-gold);
     letter-spacing: 1px;
     transition: color 0.3s ease;
+  }
+  .github-link {
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    transition: opacity 0.2s, color 0.2s;
+  }
+  .github-link:hover {
+    color: var(--accent-gold);
+    opacity: 1;
+  }
+  .docs-dropdown-container {
+    position: relative;
+  }
+  .docs-trigger {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--border-secondary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .docs-trigger:hover {
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+  }
+  .docs-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 200px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    z-index: 1000;
+  }
+  .docs-menu::-webkit-scrollbar {
+    width: 6px;
+  }
+  .docs-menu::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+  .docs-menu::-webkit-scrollbar-thumb {
+    background: var(--border-secondary);
+    border-radius: 3px;
+  }
+  body.light-mode .docs-menu {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  }
+  .docs-menu.show {
+    display: block;
+  }
+  .docs-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    color: var(--text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .docs-menu-item:hover {
+    background: var(--btn-hover);
+    color: var(--accent-gold);
+  }
+  .docs-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .docs-modal.show {
+    display: flex;
+  }
+  .docs-modal-content {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-primary);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 900px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .docs-modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-primary);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .docs-modal-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent-gold);
+  }
+  .docs-modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .docs-modal-close:hover {
+    background: var(--btn-hover);
+    color: var(--accent-gold);
+  }
+  .docs-modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+    line-height: 1.7;
+  }
+  .docs-modal-body::-webkit-scrollbar {
+    width: 8px;
+  }
+  .docs-modal-body::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+  .docs-modal-body::-webkit-scrollbar-thumb {
+    background: var(--border-secondary);
+    border-radius: 4px;
+  }
+  .docs-modal-body h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--accent-gold);
+    margin-top: 0;
+    margin-bottom: 16px;
+  }
+  .docs-modal-body h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 32px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-primary);
+  }
+  .docs-modal-body h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-top: 24px;
+    margin-bottom: 8px;
+  }
+  .docs-modal-body p {
+    margin-bottom: 16px;
+    color: var(--text-secondary);
+  }
+  .docs-modal-body ul, .docs-modal-body ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+    color: var(--text-secondary);
+  }
+  .docs-modal-body li {
+    margin-bottom: 8px;
+  }
+  .docs-modal-body code {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent-gold);
+  }
+  .docs-modal-body pre {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .docs-modal-body pre code {
+    background: transparent;
+    border: none;
+    padding: 0;
+    color: var(--text-primary);
+    font-size: 13px;
+  }
+  .code-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--btn-bg);
+    border: 1px solid var(--border-secondary);
+    color: var(--text-secondary);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    opacity: 0;
+  }
+  .docs-modal-body pre:hover .code-copy-btn {
+    opacity: 1;
+  }
+  .code-copy-btn:hover {
+    background: var(--btn-hover);
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+  }
+  .code-copy-btn.copied {
+    background: var(--accent-gold-bg);
+    color: var(--accent-gold);
+    border-color: var(--accent-gold);
+  }
+  .docs-modal-body table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+  .docs-modal-body th, .docs-modal-body td {
+    border: 1px solid var(--border-secondary);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .docs-modal-body th {
+    background: var(--bg-tertiary);
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .docs-modal-body td {
+    color: var(--text-secondary);
+  }
+  .docs-modal-body a {
+    color: var(--accent-gold);
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .docs-modal-body a:hover {
+    border-bottom-color: var(--accent-gold);
+  }
+  .docs-modal-body hr {
+    border: none;
+    border-top: 1px solid var(--border-primary);
+    margin: 32px 0;
+  }
+  .docs-modal-body blockquote {
+    border-left: 3px solid var(--accent-gold);
+    padding-left: 16px;
+    margin-left: 0;
+    margin-bottom: 16px;
+    color: var(--text-muted);
+    font-style: italic;
   }
   .plan-name-input {
     background: transparent;
@@ -147,8 +467,8 @@
   }
   .staging-header {
     padding: 12px 14px; border-bottom: 1px solid var(--border-primary);
-    font-size: 10px; text-transform: uppercase; letter-spacing: 2px;
-    color: var(--text-muted); font-weight: 500;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 2px;
+    color: var(--text-secondary); font-weight: 600;
     transition: border-color 0.3s ease, color 0.3s ease;
   }
   .staging-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
@@ -245,7 +565,7 @@
     display: flex;
     align-items: center;
     gap: 24px;
-    font-size: 9px;
+    font-size: 10px;
     white-space: nowrap;
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
     transition: background 0.3s ease, border-color 0.3s ease;
@@ -260,11 +580,12 @@
   }
   .metadata-label {
     color: var(--text-muted);
-    font-weight: 500;
+    font-weight: 600;
   }
   .metadata-value {
     color: var(--text-primary);
     font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
   }
   .toolbar-section {
     display: flex; align-items: center; gap: 4px;
@@ -281,7 +602,8 @@
     color: var(--text-secondary);
     padding: 6px 10px;
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px;
+    font-size: 11px;
+    font-weight: 500;
     cursor: pointer;
     border-radius: 6px;
     display: flex;
@@ -595,6 +917,57 @@
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <input type="text" class="plan-name-input" id="planNameInput" value="Wizard Study Apartment" placeholder="Untitled Plan" onchange="savePlanName(this.value)">
+
+    <!-- Docs Dropdown -->
+    <div class="docs-dropdown-container">
+      <button class="docs-trigger" id="docsDropdownBtn" onclick="toggleDocsMenu()">
+        <i data-lucide="book-open" style="width:16px;height:16px;"></i>
+        Docs
+        <i data-lucide="chevron-down" style="width:14px;height:14px;"></i>
+      </button>
+      <div class="docs-menu" id="docsMenu">
+        <button class="docs-menu-item" onclick="openDocs('readme')">
+          <i data-lucide="home" style="width:16px;height:16px;"></i>
+          README
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('roadmap')">
+          <i data-lucide="map" style="width:16px;height:16px;"></i>
+          Roadmap
+        </button>
+        <div style="height:1px;background:var(--border-secondary);margin:4px 0;"></div>
+        <button class="docs-menu-item" onclick="openDocs('getting-started')">
+          <i data-lucide="play-circle" style="width:16px;height:16px;"></i>
+          Getting Started
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('floor-plans')">
+          <i data-lucide="layout" style="width:16px;height:16px;"></i>
+          Floor Plans
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('furniture')">
+          <i data-lucide="armchair" style="width:16px;height:16px;"></i>
+          Furniture
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('fixtures')">
+          <i data-lucide="package" style="width:16px;height:16px;"></i>
+          Fixtures
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('import-export')">
+          <i data-lucide="arrow-left-right" style="width:16px;height:16px;"></i>
+          Import/Export
+        </button>
+        <div style="height:1px;background:var(--border-secondary);margin:4px 0;"></div>
+        <button class="docs-menu-item" onclick="openDocs('llm-instructions')">
+          <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
+          LLM Instructions
+        </button>
+      </div>
+    </div>
+
+    <a href="https://github.com/alexanderblackh/floor-plan-studio" target="_blank" rel="noopener noreferrer" class="github-link" title="View on GitHub">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+      </svg>
+    </a>
   </div>
 </div>
 
@@ -603,7 +976,7 @@
   <div class="staging-panel">
     <div class="staging-header">
       Furniture Staging
-      <div style="font-size:8px;color:#444;margin-top:4px;text-transform:none;letter-spacing:0;">Drag furniture onto floor plan &bull; Right-click to return here</div>
+      <div style="font-size:9px;color:var(--text-muted);margin-top:4px;text-transform:none;letter-spacing:0;font-weight:400;">Drag furniture onto floor plan &bull; Right-click to return here</div>
     </div>
     <div class="staging-scroll" id="stagingScroll">
       <div class="staging-canvas">
@@ -613,11 +986,11 @@
 
     <!-- Collapsible shortcuts section at bottom -->
     <div style="border-top:1px solid var(--border-primary);">
-      <button onclick="toggleShortcutsPanel()" style="width:100%;padding:8px 10px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:9px;font-weight:600;font-family:'JetBrains Mono',monospace;">
+      <button onclick="toggleShortcutsPanel()" style="width:100%;padding:8px 10px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:10px;font-weight:600;font-family:'JetBrains Mono',monospace;">
         <span>KEYBOARD SHORTCUTS</span>
-        <span id="shortcutsToggleIcon" style="font-size:10px;">▶</span>
+        <span id="shortcutsToggleIcon" style="font-size:11px;">▶</span>
       </button>
-      <div id="shortcutsPanel" style="display:none;padding:10px;font-size:9px;color:var(--text-muted);">
+      <div id="shortcutsPanel" style="display:none;padding:10px;font-size:11px;color:var(--text-secondary);line-height:1.6;">
         <div style="margin-bottom:4px;"><kbd>M</kbd> Measure mode (edge snap)</div>
         <div style="margin-bottom:4px;"><kbd>Shift+M</kbd> Show all measurements</div>
         <div style="margin-bottom:4px;"><kbd>L</kbd> Lock measurement (make permanent)</div>
@@ -998,6 +1371,181 @@
     <span id="themeCheckSystem"></span>
   </button>
 </div>
+
+<!-- Docs Modal -->
+<div class="docs-modal" id="docsModal" onclick="closeDocsModal(event)">
+  <div class="docs-modal-content" onclick="event.stopPropagation()">
+    <div class="docs-modal-header">
+      <div class="docs-modal-title" id="docsModalTitle">Documentation</div>
+      <button class="docs-modal-close" onclick="closeDocsModal()">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+    </div>
+    <div class="docs-modal-body" id="docsModalBody">
+      Loading...
+    </div>
+  </div>
+</div>
+
+<script>
+// Docs dropdown and modal functionality
+function toggleDocsMenu() {
+  const menu = document.getElementById('docsMenu');
+  menu.classList.toggle('show');
+
+  // Close menu when clicking outside
+  if (menu.classList.contains('show')) {
+    setTimeout(() => {
+      document.addEventListener('click', function closeMenu(e) {
+        if (!e.target.closest('.docs-dropdown-container')) {
+          menu.classList.remove('show');
+          document.removeEventListener('click', closeMenu);
+        }
+      });
+    }, 0);
+  }
+}
+
+async function openDocs(docType) {
+  // Close dropdown
+  document.getElementById('docsMenu').classList.remove('show');
+
+  const modal = document.getElementById('docsModal');
+  const title = document.getElementById('docsModalTitle');
+  const body = document.getElementById('docsModalBody');
+
+  // Show modal with loading state
+  modal.classList.add('show');
+  body.innerHTML = '<p style="text-align:center;padding:40px;color:var(--text-muted);">Loading...</p>';
+
+  // Set title
+  const titles = {
+    'readme': 'README',
+    'roadmap': 'Roadmap',
+    'getting-started': 'Getting Started',
+    'floor-plans': 'Floor Plans Guide',
+    'furniture': 'Furniture Guide',
+    'fixtures': 'Fixtures Guide',
+    'import-export': 'Import/Export Guide',
+    'llm-instructions': 'LLM Instructions'
+  };
+  title.textContent = titles[docType] || 'Documentation';
+
+  // Fetch and render markdown
+  try {
+    const files = {
+      'readme': 'README.md',
+      'roadmap': 'ROADMAP.md',
+      'getting-started': 'docs/GETTING-STARTED.md',
+      'floor-plans': 'docs/FLOOR-PLANS.md',
+      'furniture': 'docs/FURNITURE.md',
+      'fixtures': 'docs/FIXTURES.md',
+      'import-export': 'docs/IMPORT-EXPORT.md',
+      'llm-instructions': 'LLM-INSTRUCTIONS.txt'
+    };
+
+    const response = await fetch(files[docType]);
+    if (!response.ok) throw new Error('Failed to load documentation');
+
+    const content = await response.text();
+
+    // Check if it's a plain text file (LLM instructions)
+    if (files[docType].endsWith('.txt')) {
+      body.innerHTML = `<pre style="white-space:pre-wrap;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:var(--text-secondary);">${content}</pre>`;
+    } else {
+      // Render markdown
+      const html = marked.marked ? marked.marked(content) : marked(content);
+      body.innerHTML = html;
+    }
+
+    // Add copy buttons to code blocks
+    addCopyButtonsToCodeBlocks();
+
+    // Re-initialize Lucide icons in modal
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+  } catch (err) {
+    body.innerHTML = `<p style="text-align:center;padding:40px;color:var(--text-muted);">Failed to load documentation: ${err.message}</p>`;
+  }
+}
+
+function closeDocsModal(event) {
+  // Only close if clicking backdrop or close button, not content
+  if (!event || event.target.id === 'docsModal' || event.target.closest('.docs-modal-close')) {
+    document.getElementById('docsModal').classList.remove('show');
+  }
+}
+
+function addCopyButtonsToCodeBlocks() {
+  const codeBlocks = document.querySelectorAll('.docs-modal-body pre code');
+
+  codeBlocks.forEach((codeBlock) => {
+    const pre = codeBlock.parentElement;
+
+    // Skip if button already exists
+    if (pre.querySelector('.code-copy-btn')) return;
+
+    // Only add to JSON, JavaScript, or long code blocks
+    const codeText = codeBlock.textContent;
+    if (codeText.trim().length < 20) return;
+
+    // Create copy button
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'code-copy-btn';
+    copyBtn.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px;"></i>Copy';
+    copyBtn.setAttribute('aria-label', 'Copy code');
+
+    copyBtn.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(codeText);
+        copyBtn.innerHTML = '<i data-lucide="check" style="width:12px;height:12px;"></i>Copied!';
+        copyBtn.classList.add('copied');
+
+        // Re-initialize icons
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+
+        setTimeout(() => {
+          copyBtn.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px;"></i>Copy';
+          copyBtn.classList.remove('copied');
+          if (window.lucide) {
+            lucide.createIcons();
+          }
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy:', err);
+        copyBtn.textContent = 'Failed';
+        setTimeout(() => {
+          copyBtn.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px;"></i>Copy';
+          if (window.lucide) {
+            lucide.createIcons();
+          }
+        }, 2000);
+      }
+    });
+
+    pre.appendChild(copyBtn);
+  });
+
+  // Re-initialize Lucide icons for the new buttons
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('docsModal');
+    if (modal.classList.contains('show')) {
+      closeDocsModal();
+      e.preventDefault();
+    }
+  }
+});
+</script>
 
 <script type="module" src="js/app.js"></script>
 

@@ -1,7 +1,7 @@
 /**
  * history.js — Undo/redo functionality
  *
- * Tracks changes to placedFurniture, fixtures, and walls (doors)
+ * Tracks changes to placedFurniture, fixtures, walls (doors), measurements, and dividers
  * Allows undo/redo with Cmd+Z / Cmd+Shift+Z or dedicated buttons
  */
 
@@ -17,13 +17,15 @@ const history = {
 };
 
 /**
- * Create a snapshot of current state (furniture, fixtures, and walls)
+ * Create a snapshot of current state (furniture, fixtures, walls, measurements, and dividers)
  */
 function createSnapshot() {
   return {
     placedFurniture: JSON.parse(JSON.stringify(state.placedFurniture)),
     fixtures: JSON.parse(JSON.stringify(state.floorPlan.fixtures)),
-    walls: JSON.parse(JSON.stringify(state.floorPlan.walls))
+    walls: JSON.parse(JSON.stringify(state.floorPlan.walls)),
+    lockedMeasurements: JSON.parse(JSON.stringify(state.lockedMeasurements || [])),
+    softDividers: JSON.parse(JSON.stringify(state.softDividers || []))
   };
 }
 
@@ -62,6 +64,8 @@ export function undo() {
   state.placedFurniture = JSON.parse(JSON.stringify(snapshot.placedFurniture));
   state.floorPlan.fixtures = JSON.parse(JSON.stringify(snapshot.fixtures));
   state.floorPlan.walls = JSON.parse(JSON.stringify(snapshot.walls));
+  state.lockedMeasurements = JSON.parse(JSON.stringify(snapshot.lockedMeasurements || []));
+  state.softDividers = JSON.parse(JSON.stringify(snapshot.softDividers || []));
 
   // Re-render everything
   buildSVG();
@@ -70,6 +74,7 @@ export function undo() {
   if (state.fixtureEditMode) renderFixtureHandles();
   if (window._renderAnchors) window._renderAnchors();
   if (window._renderMeasurement) window._renderMeasurement();
+  if (window._renderDividers) window._renderDividers();
 
   console.log(`Undo: now at history ${history.index}/${history.stack.length - 1}`);
   return true;
@@ -92,6 +97,8 @@ export function redo() {
   state.placedFurniture = JSON.parse(JSON.stringify(snapshot.placedFurniture));
   state.floorPlan.fixtures = JSON.parse(JSON.stringify(snapshot.fixtures));
   state.floorPlan.walls = JSON.parse(JSON.stringify(snapshot.walls));
+  state.lockedMeasurements = JSON.parse(JSON.stringify(snapshot.lockedMeasurements || []));
+  state.softDividers = JSON.parse(JSON.stringify(snapshot.softDividers || []));
 
   // Re-render everything
   buildSVG();
@@ -100,6 +107,7 @@ export function redo() {
   if (state.fixtureEditMode) renderFixtureHandles();
   if (window._renderAnchors) window._renderAnchors();
   if (window._renderMeasurement) window._renderMeasurement();
+  if (window._renderDividers) window._renderDividers();
 
   console.log(`Redo: now at history ${history.index}/${history.stack.length - 1}`);
   return true;
