@@ -709,6 +709,74 @@ function determineWallSide(sourceIdx, clickX, clickY) {
 function attachCanvasEvents() {
   const ctr = document.getElementById('canvasContainer');
 
+  // Touch helpers
+  function getTouchDist(touches) {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  let touchStartX = 0, touchStartY = 0;
+  let touchInitialPanX = 0, touchInitialPanY = 0;
+  let touchStartDist = 0, touchInitialZoom = 1;
+  let touchMidX = 0, touchMidY = 0;
+
+  ctr.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const r = ctr.getBoundingClientRect();
+    if (e.touches.length === 1) {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchInitialPanX = state.panX;
+      touchInitialPanY = state.panY;
+      state.isPanning = true;
+      ctr.classList.add('panning');
+    } else if (e.touches.length === 2) {
+      touchStartDist = getTouchDist(e.touches);
+      touchInitialZoom = state.zoom;
+      touchInitialPanX = state.panX;
+      touchInitialPanY = state.panY;
+      touchMidX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - r.left;
+      touchMidY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - r.top;
+      state.isPanning = false;
+      ctr.classList.remove('panning');
+    }
+  }, { passive: false });
+
+  ctr.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (e.touches.length === 1 && state.isPanning) {
+      state.panX = touchInitialPanX + (e.touches[0].clientX - touchStartX);
+      state.panY = touchInitialPanY + (e.touches[0].clientY - touchStartY);
+      applyTransform();
+    } else if (e.touches.length === 2 && touchStartDist > 0) {
+      const dist = getTouchDist(e.touches);
+      const newZoom = Math.max(0.15, Math.min(15, touchInitialZoom * (dist / touchStartDist)));
+      state.panX = touchMidX - (touchMidX - touchInitialPanX) * (newZoom / touchInitialZoom);
+      state.panY = touchMidY - (touchMidY - touchInitialPanY) * (newZoom / touchInitialZoom);
+      state.zoom = newZoom;
+      applyTransform();
+    }
+  }, { passive: false });
+
+  ctr.addEventListener('touchend', e => {
+    e.preventDefault();
+    if (e.touches.length === 0) {
+      state.isPanning = false;
+      ctr.classList.remove('panning');
+      touchStartDist = 0;
+    } else if (e.touches.length === 1) {
+      // Lifted one finger from pinch — resume single-finger pan without a jump
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      touchInitialPanX = state.panX;
+      touchInitialPanY = state.panY;
+      state.isPanning = true;
+      ctr.classList.add('panning');
+      touchStartDist = 0;
+    }
+  }, { passive: false });
+
   // Wheel zoom
   ctr.addEventListener('wheel', e => {
     e.preventDefault();
@@ -1226,6 +1294,10 @@ window.savePlanName = savePlanName;
 window._updateViewMenuChecks = updateViewMenuChecks;
 window._updateAlignmentBarVisibility = updateAlignmentBarVisibility;
 window._updateSaveControlsVisibility = updateSaveControlsVisibility;
+window.dismissMobileHint = function() {
+  document.getElementById('mobileHint')?.remove();
+  try { localStorage.setItem('mobileHintDismissed', '1'); } catch (_) {}
+};
 
 // ===== INITIALIZATION =====
 function init() {
@@ -1259,6 +1331,15 @@ function init() {
 
   // Attach events
   attachCanvasEvents();
+
+  // Reapply transform on resize/orientation change
+  window.addEventListener('resize', () => applyTransform());
+
+  // Mobile hint: show on first visit, hide if dismissed or on desktop
+  if (!window.matchMedia('(max-width: 768px)').matches ||
+      localStorage.getItem('mobileHintDismissed')) {
+    document.getElementById('mobileHint')?.remove();
+  }
 
   // Load plan name
   const nameInput = document.getElementById('planNameInput');

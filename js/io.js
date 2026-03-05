@@ -204,10 +204,14 @@ export function importJSON() {
           // Placement import
           importPlacement(data);
         } else {
-          alert('Unrecognized JSON format. Expected a floor plan or placement file.');
+          if (window.showToast) {
+            window.showToast('Unrecognized JSON format. Expected a floor plan or placement file.', 'error');
+          }
         }
       } catch (err) {
-        alert('Error reading file: ' + err.message);
+        if (window.showToast) {
+          window.showToast('Error reading file: ' + err.message, 'error');
+        }
       }
     };
     reader.readAsText(file);
@@ -220,7 +224,9 @@ export function importJSON() {
 export function importFullPlan(data) {
   const errors = validateFloorPlan(data);
   if (errors.length > 0) {
-    alert('Floor plan validation errors:\n' + errors.join('\n'));
+    if (window.showToast) {
+      window.showToast('Floor plan validation failed: ' + errors.join(', '), 'error', 5000);
+    }
     return;
   }
 
@@ -263,8 +269,8 @@ export function importFullPlan(data) {
   }
 
   // Update plan name display
-  const nameEl = document.getElementById('planName');
-  if (nameEl) nameEl.textContent = state.floorPlan.name || 'Untitled';
+  const nameInput = document.getElementById('planNameInput');
+  if (nameInput) nameInput.value = state.floorPlan.name || 'Untitled';
 
   // Rebuild everything
   buildSVG();
@@ -277,7 +283,10 @@ export function importFullPlan(data) {
   if (window._renderDividers) window._renderDividers();
   saveToCache();
 
-  alert('Floor plan imported successfully!');
+  // Show success toast
+  if (window.showToast) {
+    window.showToast(`Imported "${state.floorPlan.name || 'floor plan'}" with ${state.floorPlan.furniture?.length || 0} furniture pieces`, 'success');
+  }
 }
 
 export function importPlacement(data) {
@@ -314,7 +323,11 @@ export function importPlacement(data) {
   if (window._renderDividers) window._renderDividers();
   saveToCache();
 
-  alert('Layout imported successfully!');
+  // Show success toast
+  if (window.showToast) {
+    const count = data.furniture.length;
+    window.showToast(`Updated placement for ${count} furniture piece${count !== 1 ? 's' : ''}`, 'success');
+  }
 }
 
 // ===== IMPORT CSV =====
@@ -332,7 +345,9 @@ export function importCSV() {
       try {
         const lines = event.target.result.split('\n').filter(l => l.trim());
         if (lines.length < 2) {
-          alert('CSV file is empty or has no data rows.');
+          if (window.showToast) {
+            window.showToast('CSV file is empty or has no data rows', 'error');
+          }
           return;
         }
 
@@ -344,7 +359,9 @@ export function importCSV() {
         const elevCol = headers.indexOf('elevation');
 
         if (idCol === -1) {
-          alert('CSV must have an "id" column.');
+          if (window.showToast) {
+            window.showToast('CSV must have an "id" column', 'error');
+          }
           return;
         }
 
@@ -367,9 +384,15 @@ export function importCSV() {
         renderFurniture();
         renderStagingFurniture();
         saveToCache();
-        alert('CSV imported successfully!');
+
+        // Show success toast
+        if (window.showToast) {
+          window.showToast('CSV imported successfully', 'success');
+        }
       } catch (err) {
-        alert('Error reading CSV: ' + err.message);
+        if (window.showToast) {
+          window.showToast('Error reading CSV: ' + err.message, 'error');
+        }
       }
     };
     reader.readAsText(file);

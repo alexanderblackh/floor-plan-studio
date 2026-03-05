@@ -521,7 +521,7 @@
   .btn:hover { background: var(--btn-hover); color: var(--accent-gold); border-color: var(--accent-gold-dim); }
   .btn:focus-visible { outline: 3px solid var(--accent-gold); outline-offset: 2px; }
   .btn.active { background: var(--accent-gold-bg); color: var(--accent-gold); border-color: var(--accent-gold); }
-  .main-layout { display: flex; height: calc(100vh - 52px); margin-top: 52px; }
+  .main-layout { display: flex; height: calc(100dvh - 52px); margin-top: 52px; }
   .staging-panel {
     width: 280px; background: var(--bg-panel); border-right: 1px solid var(--border-primary);
     display: flex; flex-direction: column; flex-shrink: 0;
@@ -543,6 +543,8 @@
     flex: 1; overflow: hidden; position: relative;
     background: var(--bg-primary); cursor: grab;
     transition: background 0.3s ease;
+    touch-action: none;
+    -webkit-touch-callout: none;
   }
   .canvas-container.panning { cursor: grabbing; }
   .floor-plan {
@@ -976,7 +978,70 @@
       padding: 4px 12px;
       font-size: 8px;
     }
+    /* Hide staging panel — no furniture placement in preview */
+    .staging-panel {
+      display: none;
+    }
+    /* Larger touch targets */
+    .toolbar-btn {
+      min-height: 44px;
+      min-width: 44px;
+    }
+    /* Canvas area needs position:relative for elevation overlay */
+    .canvas-area {
+      position: relative;
+    }
+    /* Elevation panel as full-width overlay on mobile */
+    .elevation-panel {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      max-height: 50vh;
+      border-top: 2px solid var(--border-primary);
+    }
   }
+
+  /* Mobile hint overlay — only visible on touch devices */
+  .mobile-hint {
+    position: absolute;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-size: 15px;
+    text-align: center;
+    gap: 16px;
+    padding: 24px;
+  }
+  .mobile-hint-icon {
+    font-size: 36px;
+    line-height: 1;
+  }
+  .mobile-hint-sub {
+    font-size: 13px;
+    opacity: 0.7;
+  }
+  .mobile-hint-btn {
+    padding: 10px 28px;
+    border-radius: 8px;
+    background: var(--accent-gold);
+    color: #000;
+    font-weight: 600;
+    border: none;
+    font-size: 15px;
+    cursor: pointer;
+    min-height: 44px;
+  }
+  @media (max-width: 768px) {
+    .mobile-hint { display: flex; }
+  }
+  button { -webkit-tap-highlight-color: transparent; }
 
   /* Respect user's motion preferences */
   @media (prefers-reduced-motion: reduce) {
@@ -989,6 +1054,65 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* Toast notification */
+  .toast-container {
+    position: fixed;
+    top: 70px;
+    right: 20px;
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-primary);
+    border-left: 3px solid var(--accent-gold);
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 280px;
+    max-width: 400px;
+    pointer-events: auto;
+    animation: toastSlideIn 0.3s ease-out;
+    font-size: 13px;
+    color: var(--text-primary);
+  }
+  .toast.success {
+    border-left-color: #4ade80;
+  }
+  .toast.error {
+    border-left-color: #ef4444;
+  }
+  .toast-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+  }
+  .toast-message {
+    flex: 1;
+    line-height: 1.4;
+  }
+  @keyframes toastSlideIn {
+    from {
+      transform: translateX(400px);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toast {
+      animation: none;
+    }
+  }
 </style>
 </head>
 <body>
@@ -998,6 +1122,9 @@
 
 <!-- Aria-live region for screen reader announcements -->
 <div id="ariaLiveRegion" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+<!-- Toast notification container -->
+<div class="toast-container" id="toastContainer"></div>
 
 <header class="app-header" role="banner">
   <div style="display:flex;align-items:baseline;">
@@ -1110,6 +1237,12 @@
         <title>Floor Plan Canvas</title>
         <desc>Interactive floor plan where furniture can be placed and arranged using drag and drop</desc>
       </svg>
+      <div class="mobile-hint" id="mobileHint" role="dialog" aria-label="Mobile gesture guide">
+        <div class="mobile-hint-icon">👆</div>
+        <div><strong>One finger</strong> to pan &nbsp;·&nbsp; <strong>Pinch</strong> to zoom</div>
+        <div class="mobile-hint-sub">Preview mode — open on desktop to edit</div>
+        <button class="mobile-hint-btn" onclick="dismissMobileHint()">Got it</button>
+      </div>
     </div>
 
     <div class="elevation-panel" id="elevationPanel">
@@ -1485,6 +1618,47 @@
 </div>
 
 <script>
+// Toast notification system
+function showToast(message, type = 'success', duration = 3000) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+
+  const icon = document.createElement('div');
+  icon.className = 'toast-icon';
+  if (type === 'success') {
+    icon.innerHTML = '<i data-lucide="check-circle" style="width:20px;height:20px;color:#4ade80;"></i>';
+  } else if (type === 'error') {
+    icon.innerHTML = '<i data-lucide="alert-circle" style="width:20px;height:20px;color:#ef4444;"></i>';
+  }
+
+  const msg = document.createElement('div');
+  msg.className = 'toast-message';
+  msg.textContent = message;
+
+  toast.appendChild(icon);
+  toast.appendChild(msg);
+  container.appendChild(toast);
+
+  // Re-initialize Lucide icons for the toast
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+
+  // Auto-dismiss after duration
+  setTimeout(() => {
+    toast.style.animation = 'toastSlideIn 0.3s ease-out reverse';
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, duration);
+}
+
+// Expose globally for import functions
+window.showToast = showToast;
+
 // Docs dropdown and modal functionality
 function toggleDocsMenu() {
   const menu = document.getElementById('docsMenu');
