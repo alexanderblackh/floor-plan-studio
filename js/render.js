@@ -24,6 +24,9 @@ export function escapeXml(str) {
 
 /** Get CSS variable color value */
 function getCSSVar(varName) {
+  // Check body first (for .light-mode overrides), then fall back to root
+  const bodyValue = getComputedStyle(document.body).getPropertyValue(varName).trim();
+  if (bodyValue) return bodyValue;
   return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
 }
 

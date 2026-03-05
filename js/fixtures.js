@@ -5,16 +5,21 @@
  * - Oven, fridge, counters (kitchen)
  * - Closets (bedroom)
  * - Heater (wall-mounted)
+ * - Doors (swing direction editing)
  *
- * When fixture edit mode is active:
+ * When fixture edit mode is active (press F):
  * - Fixtures get yellow handles visible on the SVG
  * - Click a fixture to select it, then drag to reposition
+ * - Blue circles appear at door hinge points:
+ *   - Single click: rotate door swing 90°
+ *   - Double click: move hinge to opposite end
  * - Changes are saved to the floor plan data (and exported with full JSON)
  */
 
-import { S, PAD, PPI, state, getFixtures, saveToCache } from './data.js';
-import { buildSVG } from './render.js';
+import { S, PAD, PPI, state, getFixtures, getWalls, saveToCache } from './data.js';
+import { buildSVG, wx, wy } from './render.js';
 import { renderFurniture } from './furniture.js';
+import { pushHistory } from './history.js';
 
 /** Track whether a full SVG rebuild is needed after drag ends */
 let needsRebuild = false;
@@ -91,27 +96,51 @@ export function renderFixtureHandles() {
     }
   });
 
+  // Add door handles for wall doors
+  const walls = getWalls();
+  walls.forEach((wall, wallIdx) => {
+    if (wall.door && wall.door.arc) {
+      const arc = wall.door.arc;
+      const cx = wx(arc.cx);
+      const cy = wy(arc.cy);
+
+      // Draw clickable circle at hinge point (click to flip door direction)
+      c += `<circle cx="${cx}" cy="${cy}" r="8" fill="#4a9eff44" stroke="#4a9eff" stroke-width="2" class="door-handle" data-wall-idx="${wallIdx}" style="cursor:pointer"/>`;
+      c += `<text x="${cx}" y="${cy}" font-family="JetBrains Mono" font-size="8" fill="#4a9eff" text-anchor="middle" dominant-baseline="central" style="cursor:pointer;" class="door-handle" data-wall-idx="${wallIdx}">⟲</text>`;
+    }
+  });
+
+  // Add door handles for closet doors (fixtures)
+  fixtures.forEach((fixture, fixtureIdx) => {
+    if (fixture.doors && fixture.doors.arcs) {
+      fixture.doors.arcs.forEach((arc, arcIdx) => {
+        const cx = wx(arc.cx);
+        const cy = wy(arc.cy);
+
+        // Draw clickable circle at hinge point
+        c += `<circle cx="${cx}" cy="${cy}" r="8" fill="#4a9eff44" stroke="#4a9eff" stroke-width="2" class="closet-door-handle" data-fixture-idx="${fixtureIdx}" data-arc-idx="${arcIdx}" style="cursor:pointer"/>`;
+        c += `<text x="${cx}" y="${cy}" font-family="JetBrains Mono" font-size="8" fill="#4a9eff" text-anchor="middle" dominant-baseline="central" style="cursor:pointer;" class="closet-door-handle" data-fixture-idx="${fixtureIdx}" data-arc-idx="${arcIdx}">⟲</text>`;
+      });
+    }
+  });
+
   g.innerHTML = c;
 
-  // Attach events to handles
-  g.querySelectorAll('.fixture-handle').forEach(el => {
-    const idx = parseInt(el.dataset.fixtureIdx);
+  // Use event delegation for fixture handles
+  if (g._fixtureHandlerAttached) {
+    g.removeEventListener('mousedown', g._fixtureMouseDownHandler);
+    g.removeEventListener('mouseenter', g._fixtureMouseEnterHandler, true);
+    g.removeEventListener('mouseleave', g._fixtureMouseLeaveHandler, true);
+  }
 
-    // Hover effect
-    el.addEventListener('mouseenter', () => {
-      el.setAttribute('data-original-opacity', el.getAttribute('opacity') || '1');
-      el.setAttribute('opacity', '0.7');
-    });
-
-    el.addEventListener('mouseleave', () => {
-      if (state.fixtureEditIdx !== idx) {
-        const origOpacity = el.getAttribute('data-original-opacity') || '1';
-        el.setAttribute('opacity', origOpacity);
-      }
-    });
-
-    el.addEventListener('mousedown', e => {
+  g._fixtureMouseDownHandler = (e) => {
+    const target = e.target;
+    if (target.classList.contains('fixture-handle')) {
       e.stopPropagation();
+      const idx = parseInt(target.dataset.fixtureIdx);
+
+      pushHistory();
+
       state.fixtureEditIdx = idx;
       state.draggingFixture = idx;
 
@@ -123,8 +152,136 @@ export function renderFixtureHandles() {
       state.dragOffset = { x: mx - fix.x, y: my - fix.y };
 
       renderFixtureHandles();
-    });
-  });
+    }
+  };
+
+  g._fixtureMouseEnterHandler = (e) => {
+    const target = e.target;
+    if (target.classList.contains('fixture-handle')) {
+      target.setAttribute('data-original-opacity', target.getAttribute('opacity') || '1');
+      target.setAttribute('opacity', '0.7');
+    }
+  };
+
+  g._fixtureMouseLeaveHandler = (e) => {
+    const target = e.target;
+    if (target.classList.contains('fixture-handle')) {
+      const idx = parseInt(target.dataset.fixtureIdx);
+      if (state.fixtureEditIdx !== idx) {
+        const origOpacity = target.getAttribute('data-original-opacity') || '1';
+        target.setAttribute('opacity', origOpacity);
+      }
+    }
+  };
+
+  g.addEventListener('mousedown', g._fixtureMouseDownHandler);
+  g.addEventListener('mouseenter', g._fixtureMouseEnterHandler, true);
+  g.addEventListener('mouseleave', g._fixtureMouseLeaveHandler, true);
+  g._fixtureHandlerAttached = true;
+
+  // Door handle hover effects (click handling is in app.js)
+  if (g._doorHandlerAttached) {
+    g.removeEventListener('mouseenter', g._doorMouseEnterHandler, true);
+    g.removeEventListener('mouseleave', g._doorMouseLeaveHandler, true);
+  }
+
+  g._doorMouseEnterHandler = (e) => {
+    const target = e.target;
+    if (target.classList.contains('door-handle') || target.classList.contains('closet-door-handle')) {
+      target.setAttribute('r', '10');
+      e.stopPropagation();
+    }
+  };
+
+  g._doorMouseLeaveHandler = (e) => {
+    const target = e.target;
+    if (target.classList.contains('door-handle') || target.classList.contains('closet-door-handle')) {
+      target.setAttribute('r', '8');
+    }
+  };
+
+  // Attach hover handlers only (clicks handled in app.js)
+  g.addEventListener('mouseenter', g._doorMouseEnterHandler, true);
+  g.addEventListener('mouseleave', g._doorMouseLeaveHandler, true);
+  g._doorHandlerAttached = true;
+}
+
+/**
+ * Rotate door swing by 90 degrees (single click)
+ * Keeps hinge in same position, just rotates the arc
+ */
+export function rotateDoorSwing(wallIdx) {
+  const walls = getWalls();
+  const wall = walls[wallIdx];
+
+  if (!wall || !wall.door || !wall.door.arc) {
+    return;
+  }
+
+  pushHistory();
+
+  const arc = wall.door.arc;
+
+  // Rotate both angles by 90 degrees
+  arc.start += 90;
+  arc.end += 90;
+
+  // Rebuild and re-render
+  buildSVG();
+  renderFurniture();
+  renderFixtureHandles();
+  saveToCache();
+}
+
+/**
+ * Move door hinge to the opposite end (double click)
+ * Flips which end of the door frame has the hinge
+ */
+export function moveDoorHinge(wallIdx) {
+  const walls = getWalls();
+  const wall = walls[wallIdx];
+
+  if (!wall || !wall.door || !wall.door.arc) {
+    return;
+  }
+
+  pushHistory();
+
+  const arc = wall.door.arc;
+  const door = wall.door;
+
+  // Get door endpoints
+  const [dx1, dy1] = door.from;
+  const [dx2, dy2] = door.to;
+
+  // Determine if hinge is at start or end of door
+  // and move it to the opposite end
+  const distToStart = Math.sqrt((arc.cx - dx1)**2 + (arc.cy - dy1)**2);
+  const distToEnd = Math.sqrt((arc.cx - dx2)**2 + (arc.cy - dy2)**2);
+
+  if (distToStart < distToEnd) {
+    // Hinge is at start, move to end
+    arc.cx = dx2;
+    arc.cy = dy2;
+  } else {
+    // Hinge is at end, move to start
+    arc.cx = dx1;
+    arc.cy = dy1;
+  }
+
+  // Flip the arc angles (reverse the swing)
+  const oldStart = arc.start;
+  const oldEnd = arc.end;
+
+  // Simple angle flip - negate and swap
+  arc.start = -oldEnd;
+  arc.end = -oldStart;
+
+  // Rebuild and re-render
+  buildSVG();
+  renderFurniture();
+  renderFixtureHandles();
+  saveToCache();
 }
 
 /**
@@ -139,6 +296,9 @@ export function handleFixtureClick(clickX, clickY, e) {
     if (clickX >= fix.x && clickX <= fix.x + fix.w &&
         clickY >= fix.y && clickY <= fix.y + fix.h) {
       e.stopPropagation();
+
+      pushHistory();
+
       state.fixtureEditIdx = i;
       state.draggingFixture = i;
 
@@ -158,6 +318,7 @@ export function handleFixtureClick(clickX, clickY, e) {
  * Handle fixture drag movement
  */
 export function handleFixtureDragMove(e) {
+  // Handle fixture dragging
   if (state.draggingFixture === null) return false;
 
   const ctr = document.getElementById('canvasContainer');
@@ -185,6 +346,7 @@ export function handleFixtureDragMove(e) {
  * Handle fixture drag end
  */
 export function handleFixtureDragEnd() {
+  // Handle fixture drag end
   if (state.draggingFixture !== null) {
     state.draggingFixture = null;
 
@@ -198,4 +360,94 @@ export function handleFixtureDragEnd() {
 
     saveToCache();
   }
+}
+
+/**
+ * Rotate closet door swing by 90 degrees (single click)
+ * Keeps hinge in same position, just rotates the arc
+ */
+export function rotateClosetDoorSwing(fixtureIdx, arcIdx) {
+  const fixtures = getFixtures();
+  const fixture = fixtures[fixtureIdx];
+
+  if (!fixture || !fixture.doors || !fixture.doors.arcs || !fixture.doors.arcs[arcIdx]) {
+    return;
+  }
+
+  pushHistory();
+
+  const arc = fixture.doors.arcs[arcIdx];
+
+  // Rotate both angles by 90 degrees
+  arc.start += 90;
+  arc.end += 90;
+
+  // Rebuild and re-render
+  buildSVG();
+  renderFurniture();
+  renderFixtureHandles();
+  saveToCache();
+}
+
+/**
+ * Move closet door hinge (double click)
+ * For double doors, moves hinges from center to edges or vice versa
+ */
+export function moveClosetDoorHinge(fixtureIdx, arcIdx) {
+  const fixtures = getFixtures();
+  const fixture = fixtures[fixtureIdx];
+
+  if (!fixture || !fixture.doors || !fixture.doors.arcs) {
+    return;
+  }
+
+  pushHistory();
+
+  const doors = fixture.doors;
+  const arcs = doors.arcs;
+
+  // For double doors (2 arcs), toggle between center and edge hinges
+  if (arcs.length === 2) {
+    const leftEdge = doors.x;
+    const rightEdge = doors.x + doors.w;
+    const center = doors.x + doors.w / 2;
+
+    // Check if hinges are currently at center (overlapping)
+    const arc0 = arcs[0];
+    const arc1 = arcs[1];
+    const areAtCenter = Math.abs(arc0.cx - center) < 1 && Math.abs(arc1.cx - center) < 1;
+
+    if (areAtCenter) {
+      // Move to edges - left door hinge to left edge, right door hinge to right edge
+      arc0.cx = leftEdge;
+      arc1.cx = rightEdge;
+      // Flip angles to swing outward
+      arc0.start = 95;
+      arc0.end = 180;
+      arc1.start = 0;
+      arc1.end = 85;
+    } else {
+      // Move back to center (overlapping)
+      arc0.cx = center;
+      arc1.cx = center;
+      // Reset to original inward swing
+      arc0.start = 185;
+      arc0.end = 270;
+      arc1.start = 270;
+      arc1.end = 355;
+    }
+  } else {
+    // Single door - just flip the arc angles
+    const arc = arcs[arcIdx];
+    const oldStart = arc.start;
+    const oldEnd = arc.end;
+    arc.start = -oldEnd;
+    arc.end = -oldStart;
+  }
+
+  // Rebuild and re-render
+  buildSVG();
+  renderFurniture();
+  renderFixtureHandles();
+  saveToCache();
 }

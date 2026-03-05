@@ -335,7 +335,9 @@ export const state = {
   displayUnit: 'in',  // 'in' | 'ft' | 'cm' | 'm'
   fixtureEditMode: false,
   draggingFixture: null,
-  fixtureEditIdx: null
+  fixtureEditIdx: null,
+  draggingDoor: null, // wallIdx if dragging a door hinge
+  doorEditIdx: null
 };
 
 // ===== HELPERS =====
@@ -404,11 +406,92 @@ export function saveToCache() {
     localStorage.setItem('fps-layout', JSON.stringify(state.placedFurniture));
     // Also persist fixture positions (they can be edited in fixture mode)
     localStorage.setItem('fps-fixtures', JSON.stringify(state.floorPlan.fixtures));
+    // Persist walls (door positions can be edited in fixture mode)
+    localStorage.setItem('fps-walls', JSON.stringify(state.floorPlan.walls));
     // Persist locked measurements
     localStorage.setItem('fps-locked-measurements', JSON.stringify(state.lockedMeasurements));
     // Persist soft dividers
     localStorage.setItem('fps-dividers', JSON.stringify(state.softDividers));
   } catch(e) { /* quota exceeded or private browsing */ }
+}
+
+/**
+ * Save user preferences to localStorage
+ */
+export function savePreferences() {
+  try {
+    const prefs = {
+      showGrid: state.showGrid,
+      showDims: state.showDims,
+      snapToGrid: state.snapToGrid,
+      gridDensity: state.gridDensity,
+      renderQuality: state.renderQuality,
+      showAll: state.showAll,
+      showAllMeasurements: state.showAllMeasurements,
+      showAllLinks: state.showAllLinks,
+      showAllDividers: state.showAllDividers,
+      alwaysShowAlignment: state.alwaysShowAlignment,
+      alwaysShowSaveControls: state.alwaysShowSaveControls,
+      alwaysShowShortcuts: state.alwaysShowShortcuts,
+      displayUnit: state.displayUnit
+    };
+    localStorage.setItem('fps-preferences', JSON.stringify(prefs));
+  } catch(e) { /* quota exceeded or private browsing */ }
+}
+
+/**
+ * Load user preferences from localStorage
+ */
+export function loadPreferences() {
+  try {
+    const data = localStorage.getItem('fps-preferences');
+    if (data) {
+      const prefs = JSON.parse(data);
+      // Apply preferences to state
+      if (prefs.showGrid !== undefined) state.showGrid = prefs.showGrid;
+      if (prefs.showDims !== undefined) state.showDims = prefs.showDims;
+      if (prefs.snapToGrid !== undefined) state.snapToGrid = prefs.snapToGrid;
+      if (prefs.gridDensity !== undefined) state.gridDensity = prefs.gridDensity;
+      if (prefs.renderQuality !== undefined) state.renderQuality = prefs.renderQuality;
+      if (prefs.showAll !== undefined) state.showAll = prefs.showAll;
+      if (prefs.showAllMeasurements !== undefined) state.showAllMeasurements = prefs.showAllMeasurements;
+      if (prefs.showAllLinks !== undefined) state.showAllLinks = prefs.showAllLinks;
+      if (prefs.showAllDividers !== undefined) state.showAllDividers = prefs.showAllDividers;
+      if (prefs.alwaysShowAlignment !== undefined) state.alwaysShowAlignment = prefs.alwaysShowAlignment;
+      if (prefs.alwaysShowSaveControls !== undefined) state.alwaysShowSaveControls = prefs.alwaysShowSaveControls;
+      if (prefs.alwaysShowShortcuts !== undefined) state.alwaysShowShortcuts = prefs.alwaysShowShortcuts;
+      if (prefs.displayUnit !== undefined) {
+        state.displayUnit = prefs.displayUnit;
+      } else {
+        // If no saved unit, detect from locale
+        state.displayUnit = detectDefaultUnit();
+      }
+      return true;
+    } else {
+      // No saved preferences, use locale for unit
+      state.displayUnit = detectDefaultUnit();
+    }
+  } catch(e) { /* corrupted data */ }
+  return false;
+}
+
+/**
+ * Detect default unit based on user's locale
+ * Returns 'in' for US/UK, 'cm' for rest of world
+ */
+function detectDefaultUnit() {
+  try {
+    const locale = navigator.language || 'en-US';
+    // US, UK, and a few others use imperial
+    const imperialLocales = ['en-US', 'en-GB', 'en-CA', 'my-MM']; // US, UK, Canada, Myanmar
+    if (imperialLocales.some(l => locale.startsWith(l.split('-')[0]))) {
+      // For US use inches, for others use feet
+      return locale.startsWith('en-US') ? 'in' : 'in';
+    }
+    return 'cm'; // Default to metric for rest of world
+  } catch(e) {
+    return 'in'; // Fallback to inches
+  }
 }
 
 /**
@@ -426,15 +509,29 @@ export function loadFromCache() {
         elevation: p.elevation ?? 0,
         stackedOn: p.stackedOn ?? null
       }));
-      // Restore fixture positions if saved
+      // Restore fixture positions and door modifications if saved
       const fixtureData = localStorage.getItem('fps-fixtures');
       if (fixtureData) {
         const savedFixtures = JSON.parse(fixtureData);
-        // Update fixture positions from cache (match by id)
+        // Update fixture positions and doors from cache (match by id)
         for (const saved of savedFixtures) {
           const fix = state.floorPlan.fixtures.find(f => f.id === saved.id);
-          if (fix) { fix.x = saved.x; fix.y = saved.y; }
+          if (fix) {
+            fix.x = saved.x;
+            fix.y = saved.y;
+            // Restore door modifications (hinge positions, arc angles)
+            if (saved.doors) {
+              fix.doors = saved.doors;
+            }
+          }
         }
+      }
+      // Restore walls (door positions) if saved
+      const wallData = localStorage.getItem('fps-walls');
+      if (wallData) {
+        const savedWalls = JSON.parse(wallData);
+        // Replace entire walls array to preserve door arc modifications
+        state.floorPlan.walls = savedWalls;
       }
       // Restore locked measurements
       const measureData = localStorage.getItem('fps-locked-measurements');

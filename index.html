@@ -82,7 +82,7 @@
     --door-color: #d97706;
     --door-arc: #d9770633;
     --label-color: #00000022;
-    --grid-line: #00000012;
+    --grid-line: #00000020;
     --room-fill-default: #f0f0f055;
     --fixture-fill: #e8e8e0;
     --fixture-stroke: #c0c0b0;
@@ -410,9 +410,9 @@
     background: var(--bg-secondary);
     border: 1px solid var(--border-primary);
     border-bottom: none;
-    padding: 6px 12px;
+    padding: 8px 12px 6px 12px;
     display: inline-flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 6px;
     transition: background 0.3s ease, border-color 0.3s ease;
     align-self: center;
@@ -481,6 +481,30 @@
   }
   .align-btn:hover:not(:disabled)::after {
     opacity: 1;
+  }
+
+  .align-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .align-group-label {
+    font-size: 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    opacity: 0.6;
+    font-weight: 500;
+    font-family: 'JetBrains Mono', monospace;
+    transition: color 0.3s ease, opacity 0.3s ease;
+  }
+
+  .align-group-buttons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
   }
 
   kbd {
@@ -585,8 +609,15 @@
       <div class="staging-canvas">
         <svg id="svgStaging" xmlns="http://www.w3.org/2000/svg"></svg>
       </div>
-      <div style="padding:10px;border-top:1px solid var(--border-primary);font-size:9px;color:var(--text-muted);">
-        <div style="margin-bottom:6px;font-weight:600;color:var(--text-secondary);">KEYBOARD SHORTCUTS</div>
+    </div>
+
+    <!-- Collapsible shortcuts section at bottom -->
+    <div style="border-top:1px solid var(--border-primary);">
+      <button onclick="toggleShortcutsPanel()" style="width:100%;padding:8px 10px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-size:9px;font-weight:600;font-family:'JetBrains Mono',monospace;">
+        <span>KEYBOARD SHORTCUTS</span>
+        <span id="shortcutsToggleIcon" style="font-size:10px;">▶</span>
+      </button>
+      <div id="shortcutsPanel" style="display:none;padding:10px;font-size:9px;color:var(--text-muted);">
         <div style="margin-bottom:4px;"><kbd>M</kbd> Measure mode (edge snap)</div>
         <div style="margin-bottom:4px;"><kbd>Shift+M</kbd> Show all measurements</div>
         <div style="margin-bottom:4px;"><kbd>L</kbd> Lock measurement (make permanent)</div>
@@ -595,12 +626,13 @@
         <div style="margin-bottom:4px;"><kbd>Dbl-click</kbd> Rotate 90&deg;</div>
         <div style="margin-bottom:4px;"><kbd>Shift+Click</kbd> Multi-select</div>
         <div style="margin-bottom:4px;"><kbd>Arrow Keys</kbd> Move selected (Shift for 10")</div>
-        <div style="margin-bottom:4px;"><kbd>Cmd/Ctrl+Z</kbd> Undo</div>
-        <div style="margin-bottom:4px;"><kbd>Cmd/Ctrl+Shift+Z</kbd> Redo</div>
+        <div style="margin-bottom:4px;"><kbd>Cmd/Ctrl+Z</kbd> or toolbar button: Undo</div>
+        <div style="margin-bottom:4px;"><kbd>Cmd/Ctrl+Shift+Z</kbd> or toolbar button: Redo</div>
         <div style="margin-bottom:4px;">Link mode: click two items for permanent measurement</div>
         <div style="margin-bottom:4px;"><kbd>Shift+Measure</kbd> Snap to 45&deg; angles</div>
         <div style="margin-bottom:4px;"><kbd>U</kbd> Cycle units (in/ft/cm/m)</div>
         <div style="margin-bottom:4px;"><kbd>F</kbd> Toggle fixture edit mode</div>
+        <div style="margin-bottom:4px;">Fixture mode: click door to rotate, dbl-click to flip hinge</div>
         <div style="margin-bottom:4px;"><kbd>Right-click</kbd> locked item to delete</div>
         <div style="margin-bottom:4px;"><kbd>+</kbd> / <kbd>-</kbd> / <kbd>0</kbd> Zoom</div>
       </div>
@@ -648,41 +680,56 @@
 
   <!-- Alignment Toolbar -->
   <div class="toolbar-top-bar" id="alignmentBar" style="display:none;">
-    <button class="align-btn" onclick="alignSelection('left')" title="Align Left">
-      <i data-lucide="align-horizontal-distribute-start"></i>
-    </button>
-    <button class="align-btn" onclick="alignSelection('centerH')" title="Center Horizontal">
-      <i data-lucide="align-horizontal-distribute-center"></i>
-    </button>
-    <button class="align-btn" onclick="alignSelection('right')" title="Align Right">
-      <i data-lucide="align-horizontal-distribute-end"></i>
-    </button>
+    <div class="align-group">
+      <div class="align-group-label">Horizontal</div>
+      <div class="align-group-buttons">
+        <button class="align-btn" onclick="alignSelection('left')" title="Align Left">
+          <i data-lucide="align-horizontal-distribute-start"></i>
+        </button>
+        <button class="align-btn" onclick="alignSelection('centerH')" title="Center Horizontal">
+          <i data-lucide="align-horizontal-distribute-center"></i>
+        </button>
+        <button class="align-btn" onclick="alignSelection('right')" title="Align Right">
+          <i data-lucide="align-horizontal-distribute-end"></i>
+        </button>
+      </div>
+    </div>
     <div class="toolbar-bar-sep"></div>
-    <button class="align-btn" onclick="alignSelection('top')" title="Align Top">
-      <i data-lucide="align-vertical-distribute-start"></i>
-    </button>
-    <button class="align-btn" onclick="alignSelection('centerV')" title="Center Vertical">
-      <i data-lucide="align-vertical-distribute-center"></i>
-    </button>
-    <button class="align-btn" onclick="alignSelection('bottom')" title="Align Bottom">
-      <i data-lucide="align-vertical-distribute-end"></i>
-    </button>
+    <div class="align-group">
+      <div class="align-group-label">Vertical</div>
+      <div class="align-group-buttons">
+        <button class="align-btn" onclick="alignSelection('top')" title="Align Top">
+          <i data-lucide="align-vertical-distribute-start"></i>
+        </button>
+        <button class="align-btn" onclick="alignSelection('centerV')" title="Center Vertical">
+          <i data-lucide="align-vertical-distribute-center"></i>
+        </button>
+        <button class="align-btn" onclick="alignSelection('bottom')" title="Align Bottom">
+          <i data-lucide="align-vertical-distribute-end"></i>
+        </button>
+      </div>
+    </div>
     <div class="toolbar-bar-sep"></div>
-    <button class="align-btn" onclick="alignToWall('left')" title="Snap to Left Wall">
-      <i data-lucide="arrow-left-to-line"></i>
-    </button>
-    <button class="align-btn" onclick="alignToWall('right')" title="Snap to Right Wall">
-      <i data-lucide="arrow-right-to-line"></i>
-    </button>
-    <button class="align-btn" onclick="alignToWall('top')" title="Snap to Top Wall">
-      <i data-lucide="arrow-up-to-line"></i>
-    </button>
-    <button class="align-btn" onclick="alignToWall('bottom')" title="Snap to Bottom Wall">
-      <i data-lucide="arrow-down-to-line"></i>
-    </button>
-    <button class="align-btn" onclick="alignToWall('center')" title="Center in Room">
-      <i data-lucide="maximize-2"></i>
-    </button>
+    <div class="align-group">
+      <div class="align-group-label">Room</div>
+      <div class="align-group-buttons">
+        <button class="align-btn" onclick="alignToWall('left')" title="Snap to Left Wall">
+          <i data-lucide="arrow-left-to-line"></i>
+        </button>
+        <button class="align-btn" onclick="alignToWall('right')" title="Snap to Right Wall">
+          <i data-lucide="arrow-right-to-line"></i>
+        </button>
+        <button class="align-btn" onclick="alignToWall('top')" title="Snap to Top Wall">
+          <i data-lucide="arrow-up-to-line"></i>
+        </button>
+        <button class="align-btn" onclick="alignToWall('bottom')" title="Snap to Bottom Wall">
+          <i data-lucide="arrow-down-to-line"></i>
+        </button>
+        <button class="align-btn" onclick="alignToWall('center')" title="Center in Room">
+          <i data-lucide="maximize-2"></i>
+        </button>
+      </div>
+    </div>
   </div>
 
   <div class="floating-toolbar">
@@ -716,6 +763,17 @@
       <button class="toolbar-btn" id="btnFixtures" onclick="toggleFixtureEditMode()" title="Fixture Edit Mode">
         <i data-lucide="wrench"></i>
         <span>Fixtures</span>
+      </button>
+    </div>
+
+    <div class="toolbar-divider"></div>
+
+    <div class="toolbar-section">
+      <button class="toolbar-btn" id="btnUndo" onclick="undoAction()" title="Undo (Cmd+Z)">
+        <i data-lucide="undo"></i>
+      </button>
+      <button class="toolbar-btn" id="btnRedo" onclick="redoAction()" title="Redo (Cmd+Shift+Z)">
+        <i data-lucide="redo"></i>
       </button>
     </div>
 
@@ -836,7 +894,7 @@
     <span>▸</span>
   </button>
   <button class="submenu-trigger" onclick="showSubmenu('unitSubmenu', event)" style="display:flex;align-items:center;justify-content:space-between;">
-    <span>Units</span>
+    <span>Units <span id="currentUnitDisplay" style="opacity:0.6;">(in)</span></span>
     <div style="display:flex;gap:8px;align-items:center;">
       <span class="menu-shortcut">U</span>
       <span>▸</span>

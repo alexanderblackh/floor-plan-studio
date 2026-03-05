@@ -182,12 +182,12 @@ function attachFurnitureEvents() {
     el.addEventListener('mousedown', e => {
       console.log('Mousedown on furniture', el.dataset.idx);
       if (e.button === 2) return;
-      e.stopPropagation();
 
       const idx = parseInt(el.dataset.idx);
 
-      // Measure mode: snap to edge
+      // Measure mode: snap to edge - don't stop propagation to allow dblclick
       if (state.measureMode) {
+        e.stopPropagation();
         const p = state.placedFurniture[idx];
         const d = getFurnitureDef(p.id);
         const r = document.getElementById('canvasContainer').getBoundingClientRect();
@@ -213,8 +213,9 @@ function attachFurnitureEvents() {
         return;
       }
 
-      // Anchor mode: Click to select source and target, then use save button
+      // Anchor mode: Click to select source and target - don't stop propagation to allow dblclick
       if (state.anchorMode) {
+        e.stopPropagation();
         if (!state.anchorSource) {
           // Select source
           state.anchorSource = idx;
@@ -235,6 +236,8 @@ function attachFurnitureEvents() {
         if (window._renderAnchors) window._renderAnchors();
         return;
       }
+
+      e.stopPropagation();
 
       // Multi-select with Shift
       if (e.shiftKey) {
@@ -285,12 +288,6 @@ function attachFurnitureEvents() {
       e.stopPropagation();
       e.preventDefault();
       const i = parseInt(el.dataset.idx);
-      console.log('Double-click detected on furniture:', i, 'measureMode:', state.measureMode);
-      if (state.measureMode) {
-        console.log('Rotation blocked by measure mode');
-        return;
-      }
-      console.log('Rotating furniture:', i, 'from', state.placedFurniture[i].rotated, 'to', !state.placedFurniture[i].rotated);
       pushHistory();
       state.placedFurniture[i].rotated = !state.placedFurniture[i].rotated;
       renderFurniture();
@@ -298,7 +295,6 @@ function attachFurnitureEvents() {
       saveToCache();
       // Update elevation view
       if (window._renderElevation && state.showElevation) window._renderElevation();
-      console.log('Rotation complete, new state:', state.placedFurniture[i].rotated);
     });
 
     el.addEventListener('contextmenu', e => {

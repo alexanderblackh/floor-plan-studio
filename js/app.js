@@ -4,14 +4,14 @@
  * This is the entry point that wires everything together.
  */
 
-import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache, getFurnitureDef } from './data.js';
+import { state, PPI, PAD, loadFromCache, initDefaults, saveToCache, savePreferences, loadPreferences, getFurnitureDef } from './data.js';
 import { buildSVG, buildStagingSVG } from './render.js';
 import { renderFurniture, renderStagingFurniture, handleDragMove, handleDragEnd } from './furniture.js';
 import { clearSelection, updateAlignToolbar } from './selection.js';
 import { renderMeasurement, renderAnchors, toggleMeasure, toggleAnchorMode, lockCurrentMeasurement } from './measurement.js';
 import { renderElevation, toggleElevation, buildElevationSelector } from './elevation.js';
 import { cycleUnit, getUnit, formatDist, setUnit } from './units.js';
-import { toggleFixtureEditMode, handleFixtureClick, handleFixtureDragMove, handleFixtureDragEnd, renderFixtureHandles } from './fixtures.js';
+import { toggleFixtureEditMode, handleFixtureClick, handleFixtureDragMove, handleFixtureDragEnd, renderFixtureHandles, rotateDoorSwing, moveDoorHinge, rotateClosetDoorSwing, moveClosetDoorHinge } from './fixtures.js';
 import { undo, redo, initHistory, pushHistory } from './history.js';
 import { renderDividers, toggleDividerMode, handleDividerClick } from './dividers.js';
 import { updateColorPicker } from './colors.js';
@@ -65,6 +65,7 @@ function toggleGrid() {
   const g = document.getElementById('svgPlan')?.querySelector('#gridGroup');
   if (g) g.style.display = state.showGrid ? '' : 'none';
   updateViewMenuChecks();
+  savePreferences();
 }
 
 function toggleDims() {
@@ -73,16 +74,19 @@ function toggleDims() {
   const g = document.getElementById('svgPlan')?.querySelector('#dimGroup');
   if (g) g.style.display = state.showDims ? '' : 'none';
   updateViewMenuChecks();
+  savePreferences();
 }
 
 function toggleSnapToGrid() {
   state.snapToGrid = !state.snapToGrid;
   updateViewMenuChecks();
+  savePreferences();
 }
 
 function selectGridDensity(density) {
   state.gridDensity = density;
   updateViewMenuChecks();
+  savePreferences();
   // Rebuild grid with new density
   buildSVG();
   renderFurniture();
@@ -96,6 +100,7 @@ function selectGridDensity(density) {
 function selectRenderQuality(quality) {
   state.renderQuality = quality;
   updateViewMenuChecks();
+  savePreferences();
   applyRenderQuality(quality);
   // Close menus
   const viewMenu = document.getElementById('viewMenu');
@@ -197,6 +202,7 @@ function updateViewMenuChecks() {
 function toggleShowAll() {
   state.showAll = !state.showAll;
   updateViewMenuChecks();
+  savePreferences();
 
   // Re-render everything that uses show all state
   if (window._renderMeasurement) window._renderMeasurement();
@@ -208,6 +214,7 @@ function toggleShowAllMeasurements() {
   if (state.showAll) return; // Disabled when Show All is active
   state.showAllMeasurements = !state.showAllMeasurements;
   updateViewMenuChecks();
+  savePreferences();
   if (window._renderMeasurement) window._renderMeasurement();
 }
 
@@ -215,6 +222,7 @@ function toggleShowAllLinks() {
   if (state.showAll) return; // Disabled when Show All is active
   state.showAllLinks = !state.showAllLinks;
   updateViewMenuChecks();
+  savePreferences();
   if (window._renderAnchors) window._renderAnchors();
 }
 
@@ -222,25 +230,39 @@ function toggleShowAllDividers() {
   if (state.showAll) return; // Disabled when Show All is active
   state.showAllDividers = !state.showAllDividers;
   updateViewMenuChecks();
+  savePreferences();
   if (window._renderDividers) window._renderDividers();
 }
 
 function toggleAlwaysShowAlignment() {
   state.alwaysShowAlignment = !state.alwaysShowAlignment;
   updateViewMenuChecks();
+  savePreferences();
   updateAlignmentBarVisibility();
 }
 
 function toggleAlwaysShowSaveControls() {
   state.alwaysShowSaveControls = !state.alwaysShowSaveControls;
   updateViewMenuChecks();
+  savePreferences();
   updateSaveControlsVisibility();
 }
 
 function toggleAlwaysShowShortcuts() {
   state.alwaysShowShortcuts = !state.alwaysShowShortcuts;
   updateViewMenuChecks();
+  savePreferences();
   updateToolbarShortcuts();
+}
+
+function toggleShortcutsPanel() {
+  const panel = document.getElementById('shortcutsPanel');
+  const icon = document.getElementById('shortcutsToggleIcon');
+  if (panel && icon) {
+    const isExpanded = panel.style.display !== 'none';
+    panel.style.display = isExpanded ? 'none' : 'block';
+    icon.textContent = isExpanded ? '▶' : '▼';
+  }
 }
 
 function updateToolbarShortcuts() {
@@ -477,6 +499,7 @@ function toggleUnitMenu() {
 function selectUnit(unit) {
   setUnit(unit);
   updateUnitDisplay();
+  savePreferences();
   // Re-render everything that shows distances
   renderMeasurement();
   renderAnchors();
@@ -495,6 +518,7 @@ function selectUnit(unit) {
 function cycleUnits() {
   cycleUnit();
   updateUnitDisplay();
+  savePreferences();
   // Re-render everything that shows distances
   renderMeasurement();
   renderAnchors();
@@ -511,8 +535,14 @@ function updateUnitDisplay() {
   // PPI is always pixels-per-inch regardless of display unit
   if (scaleSpan) scaleSpan.textContent = `1" = ${PPI}px`;
 
-  // Update unit checkmarks
+  // Update current unit display in menu
   const currentUnit = getUnit();
+  const currentUnitDisplay = document.getElementById('currentUnitDisplay');
+  if (currentUnitDisplay) {
+    currentUnitDisplay.textContent = `(${currentUnit})`;
+  }
+
+  // Update unit checkmarks
   const unitCheckIn = document.getElementById('unitCheckIn');
   const unitCheckFt = document.getElementById('unitCheckFt');
   const unitCheckCm = document.getElementById('unitCheckCm');
@@ -690,6 +720,12 @@ function attachCanvasEvents() {
     applyTransform();
   }, { passive: false });
 
+  // Track click timing for door handles
+  let doorClickTimeout = null;
+  let lastDoorClick = null;
+  let closetDoorClickTimeout = null;
+  let lastClosetDoorClick = null;
+
   // Mousedown: pan, measure, anchor, or fixture edit
   ctr.addEventListener('mousedown', e => {
     if (e.target.closest('.furniture-piece')) return;
@@ -698,8 +734,70 @@ function attachCanvasEvents() {
     const clickX = Math.round(((e.clientX - r.left - state.panX) / state.zoom - PAD) / PPI);
     const clickY = Math.round(((e.clientY - r.top - state.panY) / state.zoom - PAD) / PPI);
 
-    // Fixture edit mode: check if clicking a fixture
+    // Fixture edit mode: check if clicking a door handle or fixture
     if (state.fixtureEditMode && e.button === 0) {
+      // Check if clicking a door handle (blue circles)
+      if (e.target.classList && e.target.classList.contains('door-handle')) {
+        const wallIdx = parseInt(e.target.dataset.wallIdx);
+        if (!isNaN(wallIdx)) {
+          e.stopPropagation();
+          e.preventDefault();
+
+          // Check if this is a double-click (within 300ms of last click on same element)
+          const now = Date.now();
+          if (lastDoorClick && lastDoorClick.wallIdx === wallIdx && (now - lastDoorClick.time) < 300) {
+            // Double click - move hinge
+            if (doorClickTimeout) {
+              clearTimeout(doorClickTimeout);
+              doorClickTimeout = null;
+            }
+            moveDoorHinge(wallIdx);
+            lastDoorClick = null;
+          } else {
+            // Potential single click - wait to see if double-click comes
+            lastDoorClick = { wallIdx, time: now };
+            doorClickTimeout = setTimeout(() => {
+              // Single click confirmed - rotate swing
+              rotateDoorSwing(wallIdx);
+              doorClickTimeout = null;
+            }, 300);
+          }
+          return;
+        }
+      }
+
+      // Check if clicking a closet door handle (blue circles on closet doors)
+      if (e.target.classList && e.target.classList.contains('closet-door-handle')) {
+        const fixtureIdx = parseInt(e.target.dataset.fixtureIdx);
+        const arcIdx = parseInt(e.target.dataset.arcIdx);
+        if (!isNaN(fixtureIdx) && !isNaN(arcIdx)) {
+          e.stopPropagation();
+          e.preventDefault();
+
+          // Check if this is a double-click (within 300ms of last click on same element)
+          const now = Date.now();
+          const clickKey = `${fixtureIdx}-${arcIdx}`;
+          if (lastClosetDoorClick && lastClosetDoorClick.key === clickKey && (now - lastClosetDoorClick.time) < 300) {
+            // Double click - flip swing direction
+            if (closetDoorClickTimeout) {
+              clearTimeout(closetDoorClickTimeout);
+              closetDoorClickTimeout = null;
+            }
+            moveClosetDoorHinge(fixtureIdx, arcIdx);
+            lastClosetDoorClick = null;
+          } else {
+            // Potential single click - wait to see if double-click comes
+            lastClosetDoorClick = { key: clickKey, time: now };
+            closetDoorClickTimeout = setTimeout(() => {
+              // Single click confirmed - rotate swing
+              rotateClosetDoorSwing(fixtureIdx, arcIdx);
+              closetDoorClickTimeout = null;
+            }, 300);
+          }
+          return;
+        }
+      }
+
       if (handleFixtureClick(clickX, clickY, e)) return;
     }
 
@@ -1010,15 +1108,18 @@ function applyTheme(theme) {
   }
 
   // Rebuild SVGs with new theme colors
-  buildSVG();
-  buildStagingSVG();
-  renderFurniture();
-  renderStagingFurniture();
-  renderMeasurement();
-  renderAnchors();
-  if (state.showElevation) renderElevation();
-  if (state.fixtureEditMode) renderFixtureHandles();
-  renderDividers();
+  // Use requestAnimationFrame to ensure CSS variables have updated
+  requestAnimationFrame(() => {
+    buildSVG();
+    buildStagingSVG();
+    renderFurniture();
+    renderStagingFurniture();
+    renderMeasurement();
+    renderAnchors();
+    if (state.showElevation) renderElevation();
+    if (state.fixtureEditMode) renderFixtureHandles();
+    renderDividers();
+  });
 
   // Re-initialize Lucide icons
   if (window.lucide) {
@@ -1098,8 +1199,11 @@ window.toggleShowAllDividers = toggleShowAllDividers;
 window.toggleAlwaysShowAlignment = toggleAlwaysShowAlignment;
 window.toggleAlwaysShowSaveControls = toggleAlwaysShowSaveControls;
 window.toggleAlwaysShowShortcuts = toggleAlwaysShowShortcuts;
+window.toggleShortcutsPanel = toggleShortcutsPanel;
 window.toggleAnchorMode = toggleAnchorMode;
 window.toggleFixtureEditMode = toggleFixtureEditMode;
+window.undoAction = undo;
+window.redoAction = redo;
 window.toggleDividerMode = toggleDividerMode;
 window.toggleViewMenu = toggleViewMenu;
 window.toggleExportMenu = toggleExportMenu;
@@ -1126,6 +1230,9 @@ window._updateSaveControlsVisibility = updateSaveControlsVisibility;
 function init() {
   // Load theme first
   loadTheme();
+
+  // Load user preferences
+  loadPreferences();
 
   // Load state
   if (!loadFromCache()) {

@@ -1,11 +1,14 @@
 /**
  * history.js — Undo/redo functionality
  *
- * Tracks changes to placedFurniture and allows undo/redo with Cmd+Z / Cmd+Shift+Z
+ * Tracks changes to placedFurniture, fixtures, and walls (doors)
+ * Allows undo/redo with Cmd+Z / Cmd+Shift+Z or dedicated buttons
  */
 
 import { state } from './data.js';
 import { renderFurniture, renderStagingFurniture } from './furniture.js';
+import { buildSVG } from './render.js';
+import { renderFixtureHandles } from './fixtures.js';
 
 const MAX_HISTORY = 50;
 const history = {
@@ -14,10 +17,14 @@ const history = {
 };
 
 /**
- * Create a snapshot of current furniture state
+ * Create a snapshot of current state (furniture, fixtures, and walls)
  */
 function createSnapshot() {
-  return JSON.parse(JSON.stringify(state.placedFurniture));
+  return {
+    placedFurniture: JSON.parse(JSON.stringify(state.placedFurniture)),
+    fixtures: JSON.parse(JSON.stringify(state.floorPlan.fixtures)),
+    walls: JSON.parse(JSON.stringify(state.floorPlan.walls))
+  };
 }
 
 /**
@@ -51,11 +58,16 @@ export function undo() {
   history.index--;
 
   // Restore state
-  state.placedFurniture = JSON.parse(JSON.stringify(history.stack[history.index]));
+  const snapshot = history.stack[history.index];
+  state.placedFurniture = JSON.parse(JSON.stringify(snapshot.placedFurniture));
+  state.floorPlan.fixtures = JSON.parse(JSON.stringify(snapshot.fixtures));
+  state.floorPlan.walls = JSON.parse(JSON.stringify(snapshot.walls));
 
-  // Re-render
+  // Re-render everything
+  buildSVG();
   renderFurniture();
   renderStagingFurniture();
+  if (state.fixtureEditMode) renderFixtureHandles();
   if (window._renderAnchors) window._renderAnchors();
   if (window._renderMeasurement) window._renderMeasurement();
 
@@ -76,11 +88,16 @@ export function redo() {
   history.index++;
 
   // Restore state
-  state.placedFurniture = JSON.parse(JSON.stringify(history.stack[history.index]));
+  const snapshot = history.stack[history.index];
+  state.placedFurniture = JSON.parse(JSON.stringify(snapshot.placedFurniture));
+  state.floorPlan.fixtures = JSON.parse(JSON.stringify(snapshot.fixtures));
+  state.floorPlan.walls = JSON.parse(JSON.stringify(snapshot.walls));
 
-  // Re-render
+  // Re-render everything
+  buildSVG();
   renderFurniture();
   renderStagingFurniture();
+  if (state.fixtureEditMode) renderFixtureHandles();
   if (window._renderAnchors) window._renderAnchors();
   if (window._renderMeasurement) window._renderMeasurement();
 
