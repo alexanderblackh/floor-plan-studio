@@ -203,71 +203,123 @@ Everything in Phase 3A, plus:
 
 ---
 
-## 🔨 Phase 5: Code Refactoring & Quality
+## 🔨 Phase 5: Code Refactoring & Re-implementation
 
-**Goal**: Improve code maintainability, eliminate duplication, and establish best practices.
+**Goal**: Improve code maintainability, eliminate duplication, fix performance bottlenecks, and establish best practices through both incremental refactoring (60%) and ground-up re-implementations (40%).
 
-**Status**: Documented in `docs/REFACTORING.md`
+**Status**: Documented in `docs/REFACTORING-UNIFIED.md` (supersedes REFACTORING.md)
 
-### Phase 5.1: Quick Wins (2-3 hours)
+**Strategy**: Balanced approach distinguishing between:
+- **REFACTOR** - Improve existing code structure (angle snapping, fixtures merge, file organization)
+- **RE-IMPLEMENT** - Rewrite fundamentally flawed systems (collision detection, color caching, event handling)
+- **REFACTOR NOW, RE-IMPL LATER** - Organize complex systems now, plan complete rewrite as future phase (SVG rendering)
+
+### Phase 5.1: Quick Wins - Refactoring Only (2-3 hours)
+**Type:** 100% Refactoring | **Risk:** Very Low
+
 - [ ] **Extract 45-degree angle snapping** to `utils.js` (3 locations, ~100 lines duplication)
 - [ ] **Consolidate anchor point functions** to `geometry.js` (2 identical functions)
 - [ ] **Extract menu closing pattern** to `domHelpers.js` (6 locations)
 - [ ] **Extract re-render orchestration** to `renderComplete()` function
 - [ ] **Create constants file** to replace magic numbers across codebase
 
-**Impact**: 5-8% code reduction, improved maintainability
+**Impact**: ~100 lines eliminated, improved maintainability
 
-### Phase 5.2: Architectural Improvements (16-20 hours)
-- [ ] **Split `attachCanvasEvents()`** from 472 lines into 6-8 focused modules
-  - `interactions/touch.js` - Touch event handling
-  - `interactions/zoom.js` - Mouse wheel zoom
-  - `interactions/doors.js` - Door click handling
-  - `interactions/keyboard.js` - Keyboard shortcuts
-  - `interactions/drag.js` - Drag handlers
-  - `interactions/modes.js` - Mode handlers (divider, anchor, measurement)
-- [ ] **Create EventEmitter** to replace 40+ `window._` global callbacks
-- [ ] **Create RenderManager** for centralized render orchestration
-- [ ] **Add proper error handling** to localStorage operations
+---
 
-**Impact**: 10-15% code reduction, clearer architecture
+### Phase 5.2: Critical Re-implementations (9-14 hours)
+**Type:** 100% Re-implementation | **Risk:** Medium
 
-### Phase 5.3: Code Organization (14-20 hours)
-- [ ] **Merge `fixtures.js` into `furniture.js`** (HIGH PRIORITY - eliminates 453 duplicate lines)
-  - Fixtures are just locked furniture - add `locked` property instead of separate module
-  - Consolidate interaction handlers (click, drag, drop)
-  - Single edit mode toggle handles both locked and unlocked items
-- [ ] **Split `measurement.js`** into sub-modules (core, render, events)
-- [ ] **Split `io.js`** into import/export/validation modules
-- [ ] **Create coordinate conversion module** for consistent transformations
-- [ ] **Standardize event handler attachment** across all modules
+- [ ] **Collision Detection: O(n²) → Spatial Hash Grid** (4-6 hours)
+  - Current: 20 items = 400 checks, 100 items = 10,000 checks
+  - New: O(log n) with spatial hash → 50-500x faster
+  - Implement quadtree or grid-based spatial index
+- [ ] **Color Caching System** (1-2 hours)
+  - Eliminate 17 `getComputedStyle()` calls per render
+  - Cache colors on startup, invalidate on theme change
+  - 100-1000x faster color access
+- [ ] **ID Lookups: Array.find() → Map** (1-2 hours)
+  - Replace O(n) linear search with O(1) hash lookups
+  - Affects getFurnitureDef, getRoom, getWall, getFixture
+  - 50x faster lookups with 50+ items
+- [ ] **Event Bus (replace window._)** (3-4 hours)
+  - Fix 40+ memory leak sources from global callbacks
+  - Proper cleanup and unsubscribe mechanisms
+  - Clear dependency graph
 
-**Impact**: Better file organization, 453 lines eliminated, simpler architecture
+**Impact**: 50-500x performance improvements on critical paths, zero memory leaks
 
-### Phase 5.4: State Management (9-12 hours)
-- [ ] **Create state accessor functions** in `data.js`
-- [ ] **Migrate direct state access** to use accessors
+---
+
+### Phase 5.3: Code Organization (15-22 hours)
+**Type:** 100% Refactoring | **Risk:** Low-Medium
+
+- [ ] **Merge `fixtures.js` into `furniture.js`** (4-6 hours)
+  - Eliminates 453 duplicate lines
+  - Add `locked` property instead of separate module
+- [ ] **Split `attachCanvasEvents()`** into focused modules (4-6 hours)
+  - `interactions/touch.js`, `zoom.js`, `doors.js`, `keyboard.js`, `drag.js`, `modes.js`
+- [ ] **Split `measurement.js`** into sub-modules (3-4 hours)
+- [ ] **Split `io.js`** into import/export/validation (2-3 hours)
+- [ ] **Create coordinate conversion module** (2-3 hours)
+
+**Impact**: ~550 lines eliminated, better organization
+
+---
+
+### Phase 5.4: Event Delegation Re-implementation (5-8 hours)
+**Type:** 80% Re-implementation, 20% Refactoring | **Risk:** Medium
+
+- [ ] **Implement delegated mouse handlers** (2-3 hours)
+  - Single listener per container instead of N listeners
+  - Eliminates 120+ listener attachments per render
+- [ ] **Implement delegated drag handlers** (2-3 hours)
+  - Fix 14,400 listener create/destroy cycles per 2-second drag
+- [ ] **Remove old attachment functions** (1-2 hours)
+
+**Impact**: Eliminates 14k+ listener churn during interactions
+
+---
+
+### Phase 5.5: State Management (9-12 hours)
+**Type:** 100% Refactoring | **Risk:** Low
+
+- [ ] **Create state accessor functions** in `data.js` (6-8 hours)
+- [ ] **Migrate direct state access** to use accessors (3-4 hours)
 - [ ] **Add validation** for state mutations
 - [ ] **Implement side-effect handling** in state setters
 
-**Impact**: Predictable state changes, better debugging
+**Impact**: Controlled state changes, validation layer
 
-### Phase 5.5: Polish & Testing (10-14 hours)
-- [ ] **Refactor deeply nested conditionals** to use early returns
-- [ ] **Add unit testing framework** (Vitest)
-- [ ] **Write tests** for critical functions (geometry, collision, measurements)
-- [ ] **Document preferred patterns** (null checking, error handling, etc.)
-- [ ] **Audit and remove unused code**
+---
 
-**Impact**: Tested, documented, production-ready codebase
+### Phase 5.6: Testing & Documentation (10-14 hours)
+**Type:** 100% Refactoring | **Risk:** Very Low
 
-**Total Timeline**: 51-69 hours of Claude Code effort (6-9 full working days)
-**Total Impact**: ~20-25% code reduction, professional-grade architecture
+- [ ] **Setup Vitest** testing framework (1-2 hours)
+- [ ] **Write tests** for re-implemented systems (4-6 hours)
+  - Collision detection (spatial hash correctness)
+  - Color caching (theme switching)
+  - Event bus (pub/sub behavior)
+- [ ] **Document patterns** (2-3 hours)
+- [ ] **Refactor nested conditionals** (1 hour)
+- [ ] **Audit and remove unused code** (2-3 hours)
 
-**Major Code Reductions:**
-- Phase 1: ~100 lines (angle snapping consolidation)
-- Phase 3: ~453 lines (fixtures.js merger into furniture.js)
-- Overall: ~550+ lines eliminated through consolidation
+**Impact**: 60%+ test coverage, documented patterns
+
+---
+
+**Total Timeline**: 50-73 hours of Claude Code effort (6-9 full working days)
+**Type Mix**: 60% Refactoring, 40% Re-implementation
+**Total Impact**:
+- Code: ~650 lines eliminated (-10%)
+- Performance: 50-500x improvements on critical paths
+- Quality: Zero memory leaks, professional architecture, 60%+ test coverage
+
+**Future Re-implementation Candidates** (refactor now, re-implement later):
+- SVG Rendering Pipeline (innerHTML → DOM API) - 20-30 hours
+- RenderManager with proper diffing - 15-20 hours
+- Measurement system redesign - 25-35 hours
 
 *Note: Time estimates reflect Claude Code implementation speed, not human developer timelines.*
 
