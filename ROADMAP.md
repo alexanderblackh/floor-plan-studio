@@ -95,24 +95,24 @@ Anything that modifies the floor plan: furniture drag, fixture editing, measurem
 #### Technical Work
 
 **Touch & Input**
-- [ ] Add `touchstart` / `touchmove` / `touchend` handlers alongside existing mouse events in `app.js`
-- [ ] Unify coordinate extraction into a helper (`getEventPoint(e)`) that handles both `e.clientX` and `e.touches[0].clientX`
-- [ ] Implement one-finger pan on the canvas (map to existing `panX`/`panY` state)
-- [ ] Implement pinch-to-zoom using two-touch distance delta (map to existing `zoom` state)
-- [ ] Add `touch-action: none` to canvas container so browser doesn't scroll the page during pan/zoom
-- [ ] Add `-webkit-touch-callout: none` to prevent iOS long-press context menus
+- [x] Add `touchstart` / `touchmove` / `touchend` handlers alongside existing mouse events in `app.js`
+- [x] Unify coordinate extraction into a helper (`getEventPoint(e)`) that handles both `e.clientX` and `e.touches[0].clientX`
+- [x] Implement one-finger pan on the canvas (map to existing `panX`/`panY` state)
+- [x] Implement pinch-to-zoom using two-touch distance delta (map to existing `zoom` state)
+- [x] Add `touch-action: none` to canvas container so browser doesn't scroll the page during pan/zoom
+- [x] Add `-webkit-touch-callout: none` to prevent iOS long-press context menus
 
 **Layout & Responsive**
-- [ ] Make canvas SVG size responsive to container width/height instead of fixed pixel values (`render.js`)
-- [ ] Add a mobile breakpoint (≤ 768px) that hides the staging/furniture panel entirely
-- [ ] Collapse the floating toolbar to a minimal icon strip on mobile; move secondary controls into a slide-up sheet or overflow menu
-- [ ] Ensure the elevation panel can be opened as a full-width overlay on small screens
-- [ ] Handle orientation change (`orientationchange` / `resize`) by recalculating SVG dimensions and re-rendering
+- [x] Make canvas SVG size responsive to container width/height instead of fixed pixel values (`render.js`)
+- [x] Add a mobile breakpoint (≤ 768px) that hides the staging/furniture panel entirely
+- [x] Collapse the floating toolbar to a minimal icon strip on mobile; move secondary controls into a slide-up sheet or overflow menu
+- [x] Ensure the elevation panel can be opened as a full-width overlay on small screens
+- [x] Handle orientation change (`orientationchange` / `resize`) by recalculating SVG dimensions and re-rendering
 
 **Touch UX**
-- [ ] Increase minimum tap target size to 44px for all toolbar buttons on mobile
-- [ ] Show a brief pan/pinch hint overlay on first mobile load (dismissable)
-- [ ] Disable furniture drag initiation on touch (show a "preview only" tooltip if user tries to drag)
+- [x] Increase minimum tap target size to 44px for all toolbar buttons on mobile
+- [x] Show a brief pan/pinch hint overlay on first mobile load (dismissable)
+- [x] Disable furniture drag initiation on touch (show a "preview only" tooltip if user tries to drag)
 
 ---
 
@@ -203,7 +203,129 @@ Everything in Phase 3A, plus:
 
 ---
 
-## 🔧 Phase 5: Advanced Tools
+## 🔨 Phase 5: Code Refactoring & Re-implementation
+
+**Goal**: Improve code maintainability, eliminate duplication, fix performance bottlenecks, and establish best practices through both incremental refactoring (60%) and ground-up re-implementations (40%).
+
+**Status**: Documented in `docs/REFACTORING-UNIFIED.md` (supersedes REFACTORING.md)
+
+**Strategy**: Balanced approach distinguishing between:
+- **REFACTOR** - Improve existing code structure (angle snapping, fixtures merge, file organization)
+- **RE-IMPLEMENT** - Rewrite fundamentally flawed systems (collision detection, color caching, event handling)
+- **REFACTOR NOW, RE-IMPL LATER** - Organize complex systems now, plan complete rewrite as future phase (SVG rendering)
+
+### Phase 5.1: Quick Wins - Refactoring Only (2-3 hours)
+**Type:** 100% Refactoring | **Risk:** Very Low
+
+- [ ] **Extract 45-degree angle snapping** to `utils.js` (3 locations, ~100 lines duplication)
+- [ ] **Consolidate anchor point functions** to `geometry.js` (2 identical functions)
+- [ ] **Extract menu closing pattern** to `domHelpers.js` (6 locations)
+- [ ] **Extract re-render orchestration** to `renderComplete()` function
+- [ ] **Create constants file** to replace magic numbers across codebase
+
+**Impact**: ~100 lines eliminated, improved maintainability
+
+---
+
+### Phase 5.2: Critical Re-implementations (9-14 hours)
+**Type:** 100% Re-implementation | **Risk:** Medium
+
+- [ ] **Collision Detection: O(n²) → Spatial Hash Grid** (4-6 hours)
+  - Current: 20 items = 400 checks, 100 items = 10,000 checks
+  - New: O(log n) with spatial hash → 50-500x faster
+  - Implement quadtree or grid-based spatial index
+- [ ] **Color Caching System** (1-2 hours)
+  - Eliminate 17 `getComputedStyle()` calls per render
+  - Cache colors on startup, invalidate on theme change
+  - 100-1000x faster color access
+- [ ] **ID Lookups: Array.find() → Map** (1-2 hours)
+  - Replace O(n) linear search with O(1) hash lookups
+  - Affects getFurnitureDef, getRoom, getWall, getFixture
+  - 50x faster lookups with 50+ items
+- [ ] **Event Bus (replace window._)** (3-4 hours)
+  - Fix 40+ memory leak sources from global callbacks
+  - Proper cleanup and unsubscribe mechanisms
+  - Clear dependency graph
+
+**Impact**: 50-500x performance improvements on critical paths, zero memory leaks
+
+---
+
+### Phase 5.3: Code Organization (15-22 hours)
+**Type:** 100% Refactoring | **Risk:** Low-Medium
+
+- [ ] **Merge `fixtures.js` into `furniture.js`** (4-6 hours)
+  - Eliminates 453 duplicate lines
+  - Add `locked` property instead of separate module
+- [ ] **Split `attachCanvasEvents()`** into focused modules (4-6 hours)
+  - `interactions/touch.js`, `zoom.js`, `doors.js`, `keyboard.js`, `drag.js`, `modes.js`
+- [ ] **Split `measurement.js`** into sub-modules (3-4 hours)
+- [ ] **Split `io.js`** into import/export/validation (2-3 hours)
+- [ ] **Create coordinate conversion module** (2-3 hours)
+
+**Impact**: ~550 lines eliminated, better organization
+
+---
+
+### Phase 5.4: Event Delegation Re-implementation (5-8 hours)
+**Type:** 80% Re-implementation, 20% Refactoring | **Risk:** Medium
+
+- [ ] **Implement delegated mouse handlers** (2-3 hours)
+  - Single listener per container instead of N listeners
+  - Eliminates 120+ listener attachments per render
+- [ ] **Implement delegated drag handlers** (2-3 hours)
+  - Fix 14,400 listener create/destroy cycles per 2-second drag
+- [ ] **Remove old attachment functions** (1-2 hours)
+
+**Impact**: Eliminates 14k+ listener churn during interactions
+
+---
+
+### Phase 5.5: State Management (9-12 hours)
+**Type:** 100% Refactoring | **Risk:** Low
+
+- [ ] **Create state accessor functions** in `data.js` (6-8 hours)
+- [ ] **Migrate direct state access** to use accessors (3-4 hours)
+- [ ] **Add validation** for state mutations
+- [ ] **Implement side-effect handling** in state setters
+
+**Impact**: Controlled state changes, validation layer
+
+---
+
+### Phase 5.6: Testing & Documentation (10-14 hours)
+**Type:** 100% Refactoring | **Risk:** Very Low
+
+- [ ] **Setup Vitest** testing framework (1-2 hours)
+- [ ] **Write tests** for re-implemented systems (4-6 hours)
+  - Collision detection (spatial hash correctness)
+  - Color caching (theme switching)
+  - Event bus (pub/sub behavior)
+- [ ] **Document patterns** (2-3 hours)
+- [ ] **Refactor nested conditionals** (1 hour)
+- [ ] **Audit and remove unused code** (2-3 hours)
+
+**Impact**: 60%+ test coverage, documented patterns
+
+---
+
+**Total Timeline**: 50-73 hours of Claude Code effort (6-9 full working days)
+**Type Mix**: 60% Refactoring, 40% Re-implementation
+**Total Impact**:
+- Code: ~650 lines eliminated (-10%)
+- Performance: 50-500x improvements on critical paths
+- Quality: Zero memory leaks, professional architecture, 60%+ test coverage
+
+**Future Re-implementation Candidates** (refactor now, re-implement later):
+- SVG Rendering Pipeline (innerHTML → DOM API) - 20-30 hours
+- RenderManager with proper diffing - 15-20 hours
+- Measurement system redesign - 25-35 hours
+
+*Note: Time estimates reflect Claude Code implementation speed, not human developer timelines.*
+
+---
+
+## 🔧 Phase 6: Advanced Tools
 
 ### Smart Layout
 - [ ] **Auto-Arrange**: AI-powered furniture arrangement suggestions
@@ -224,7 +346,7 @@ Everything in Phase 3A, plus:
 
 ---
 
-## 🎓 Phase 6: Learning & Templates
+## 🎓 Phase 7: Learning & Templates
 
 ### Templates & Presets
 - [ ] **Floor Plan Templates**: Studio, 1BR, 2BR, etc.
@@ -240,7 +362,7 @@ Everything in Phase 3A, plus:
 
 ---
 
-## 🔌 Phase 7: Integrations
+## 🔌 Phase 8: Integrations
 
 ### Import From
 - [ ] **Image to Floor Plan**: Upload image, trace walls
@@ -328,13 +450,14 @@ Everything in Phase 3A, plus:
 
 ## 📊 Priority Order (Tentative)
 
-1. **WYSIWYG Floor Plan Editor** - Most requested feature
-2. **Mobile Support** - Expand user base significantly
-3. **3D Visualization** - High impact on user experience
-4. **Templates & Presets** - Lower barrier to entry
-5. **Collaboration** - Enable professional use cases
-6. **Advanced Tools** - Serve power users
-7. **Integrations** - Fit into existing workflows
+1. **WYSIWYG Floor Plan Editor** (Phase 1) - Most requested feature
+2. **Mobile Support** (Phase 3) - Expand user base significantly
+3. **3D Visualization** (Phase 2) - High impact on user experience
+4. **Code Refactoring** (Phase 5) - Technical debt reduction, maintainability
+5. **Templates & Presets** (Phase 7) - Lower barrier to entry
+6. **Collaboration** (Phase 4) - Enable professional use cases
+7. **Advanced Tools** (Phase 6) - Serve power users
+8. **Integrations** (Phase 8) - Fit into existing workflows
 
 ---
 

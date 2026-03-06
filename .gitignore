@@ -28,3 +28,6 @@ Temporary Items
 *.swp
 *.swo
 *~
+
+# Test files
+test-plan-*.json
