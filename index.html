@@ -1610,24 +1610,24 @@
 </div>
 
 <div class="toolbar-menu" id="exportMenu" style="display:none;" role="menu" aria-labelledby="btnExport">
-  <button onclick="closeAllMenus();exportSVG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
+  <button onclick="closeAllMenus();setTimeout(exportSVG,0)" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
     <span>Export SVG</span>
     <span class="menu-shortcut">⌘S</span>
   </button>
-  <button onclick="closeAllMenus();exportPNG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
+  <button onclick="closeAllMenus();setTimeout(exportPNG,0)" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
     <span>Export PNG</span>
     <span class="menu-shortcut">⌘P</span>
   </button>
-  <button onclick="closeAllMenus();exportFigma()" role="menuitem">Export for Figma</button>
+  <button onclick="closeAllMenus();setTimeout(exportFigma,0)" role="menuitem">Export for Figma</button>
   <div class="menu-divider" role="separator"></div>
-  <button onclick="closeAllMenus();exportJSON()" role="menuitem">Export Placement JSON</button>
-  <button onclick="closeAllMenus();exportFullJSON()" role="menuitem">Export Full Floor Plan</button>
-  <button onclick="closeAllMenus();exportCSV()" role="menuitem">Export Furniture CSV</button>
+  <button onclick="closeAllMenus();setTimeout(exportJSON,0)" role="menuitem">Export Placement JSON</button>
+  <button onclick="closeAllMenus();setTimeout(exportFullJSON,0)" role="menuitem">Export Full Floor Plan</button>
+  <button onclick="closeAllMenus();setTimeout(exportCSV,0)" role="menuitem">Export Furniture CSV</button>
 </div>
 
 <div class="toolbar-menu" id="importMenu" style="display:none;" role="menu" aria-labelledby="btnImport">
-  <button onclick="closeAllMenus();importJSON()" role="menuitem">Import JSON</button>
-  <button onclick="closeAllMenus();importCSV()" role="menuitem">Import Furniture CSV</button>
+  <button onclick="closeAllMenus();setTimeout(importJSON,0)" role="menuitem">Import JSON</button>
+  <button onclick="closeAllMenus();setTimeout(importCSV,0)" role="menuitem">Import Furniture CSV</button>
 </div>
 
 <div class="toolbar-submenu" id="gridDensitySubmenu" style="display:none;">
