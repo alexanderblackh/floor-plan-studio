@@ -281,7 +281,7 @@ These features are **exploratory and may or may not be pursued** based on user d
 **Effort:** 60-100 hours + ongoing infrastructure costs ($100-500/month)  
 **Key question:** Is Floor Plan Studio a local-first tool or cloud platform?  
 
-**📄 Full Analysis:** [docs/POTENTIAL-COLLABORATION.md](docs/POTENTIAL-COLLABORATION.md)
+**📄 Full Analysis:** [docs/PROPOSAL-COLLABORATION.md](docs/PROPOSAL-COLLABORATION.md)
 
 **Key Features:**
 - Real-time multiplayer editing
@@ -299,7 +299,7 @@ These features are **exploratory and may or may not be pursued** based on user d
 **Effort:** 80-120 hours (full coverage), ongoing maintenance  
 **Key question:** Are professional integrations worth 350+ hours of development?  
 
-**📄 Full Analysis:** [docs/POTENTIAL-INTEGRATIONS.md](docs/POTENTIAL-INTEGRATIONS.md)
+**📄 Full Analysis:** [docs/PROPOSAL-INTEGRATIONS.md](docs/PROPOSAL-INTEGRATIONS.md)
 
 **Key Features:**
 - PDF import/export
@@ -318,7 +318,7 @@ These features are **exploratory and may or may not be pursued** based on user d
 **Effort:** 40-80 hours + 10-20 hours/week moderation  
 **Key question:** Is there sufficient user engagement to justify community features?  
 
-**📄 Full Analysis:** [docs/POTENTIAL-COMMUNITY.md](docs/POTENTIAL-COMMUNITY.md)
+**📄 Full Analysis:** [docs/PROPOSAL-COMMUNITY.md](docs/PROPOSAL-COMMUNITY.md)
 
 **Key Features:**
 - Public design gallery
@@ -337,7 +337,7 @@ These features are **exploratory and may or may not be pursued** based on user d
 **Effort:** 80-150 hours + 30-60 hours/week sales & support  
 **Key question:** Is B2B SaaS the desired business model?  
 
-**📄 Full Analysis:** [docs/POTENTIAL-BUSINESS.md](docs/POTENTIAL-BUSINESS.md)
+**📄 Full Analysis:** [docs/PROPOSAL-BUSINESS.md](docs/PROPOSAL-BUSINESS.md)
 
 **Key Features:**
 - Client portal and approval workflow
