@@ -1238,11 +1238,6 @@
           <i data-lucide="home" style="width:16px;height:16px;"></i>
           README
         </button>
-        <button class="docs-menu-item" onclick="openDocs('roadmap')" role="menuitem">
-          <i data-lucide="map" style="width:16px;height:16px;"></i>
-          Roadmap
-        </button>
-        <div style="height:1px;background:var(--border-secondary);margin:4px 0;" role="separator"></div>
         <button class="docs-menu-item" onclick="openDocs('getting-started')" role="menuitem">
           <i data-lucide="play-circle" style="width:16px;height:16px;"></i>
           Getting Started
@@ -1267,28 +1262,6 @@
         <button class="docs-menu-item" onclick="openDocs('llm-instructions')" role="menuitem">
           <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
           AI Instructions
-        </button>
-        <div style="height:1px;background:var(--border-secondary);margin:4px 0;" role="separator"></div>
-        <div role="presentation" aria-hidden="true" style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Proposals</div>
-        <button class="docs-menu-item" onclick="openDocs('potential-collaboration')" role="menuitem">
-          <i data-lucide="users" style="width:16px;height:16px;"></i>
-          Collaboration & Sharing
-        </button>
-        <button class="docs-menu-item" onclick="openDocs('potential-integrations')" role="menuitem">
-          <i data-lucide="puzzle" style="width:16px;height:16px;"></i>
-          Integrations
-        </button>
-        <button class="docs-menu-item" onclick="openDocs('potential-community')" role="menuitem">
-          <i data-lucide="heart" style="width:16px;height:16px;"></i>
-          Community Features
-        </button>
-        <button class="docs-menu-item" onclick="openDocs('potential-business')" role="menuitem">
-          <i data-lucide="briefcase" style="width:16px;height:16px;"></i>
-          Business Features
-        </button>
-        <button class="docs-menu-item" onclick="openDocs('potential-three-js')" role="menuitem">
-          <i data-lucide="box" style="width:16px;height:16px;"></i>
-          Three.js 3D
         </button>
       </div>
     </div>
@@ -1897,17 +1870,11 @@ async function openDocs(docType) {
   // Set title
   const titles = {
     'readme': 'README',
-    'roadmap': 'Roadmap',
     'getting-started': 'Getting Started',
     'floor-plans': 'Floor Plans Guide',
     'furniture': 'Furniture Guide',
     'fixtures': 'Fixtures Guide',
     'import-export': 'Import/Export Guide',
-    'potential-collaboration': 'Collaboration & Sharing',
-    'potential-integrations': 'Integrations',
-    'potential-community': 'Community Features',
-    'potential-business': 'Business Features',
-    'potential-three-js': 'Three.js 3D Visualization',
     'llm-instructions': 'AI Instructions'
   };
   title.textContent = titles[docType] || 'Documentation';
@@ -1916,17 +1883,11 @@ async function openDocs(docType) {
   try {
     const files = {
       'readme': 'README.md',
-      'roadmap': 'ROADMAP.md',
       'getting-started': 'docs/GETTING-STARTED.md',
       'floor-plans': 'docs/FLOOR-PLANS.md',
       'furniture': 'docs/FURNITURE.md',
       'fixtures': 'docs/FIXTURES.md',
       'import-export': 'docs/IMPORT-EXPORT.md',
-      'potential-collaboration': 'docs/PROPOSAL-COLLABORATION.md',
-      'potential-integrations': 'docs/PROPOSAL-INTEGRATIONS.md',
-      'potential-community': 'docs/PROPOSAL-COMMUNITY.md',
-      'potential-business': 'docs/PROPOSAL-BUSINESS.md',
-      'potential-three-js': 'docs/PROPOSAL-THREE-JS.md',
       'llm-instructions': 'LLM-INSTRUCTIONS.txt'
     };
 
