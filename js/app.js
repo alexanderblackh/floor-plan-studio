@@ -1345,7 +1345,8 @@ window.clearAllFurniture = clearAllFurniture;
 window.resetFurniture = resetFurniture;
 window.confirmReset = confirmReset;
 window.toggleElevation = function() {
-  if (state.floorPlan.walls.length === 0) {
+  // Allow closing the panel even if walls were cleared after it was opened
+  if (state.floorPlan.walls.length === 0 && !state.showElevation) {
     if (window.showToast) {
       window.showToast('Import a floor plan to use elevation view', 'error', 4000);
     }
@@ -1353,6 +1354,7 @@ window.toggleElevation = function() {
   }
   toggleElevation();
 };
+window.closeAllMenus = closeAllMenus;
 window.fitToView = fitToView;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;

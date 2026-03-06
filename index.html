@@ -1049,10 +1049,7 @@
     #resetSection {
       display: none;
     }
-    /* Hide zoom level text — save horizontal space */
-    #zoomLevel {
-      display: none;
-    }
+
     /* Canvas area needs position:relative for elevation overlay */
     .canvas-area {
       position: relative;
@@ -1506,7 +1503,7 @@
       <button class="toolbar-btn" onclick="zoomOut()" aria-label="Zoom out">
         <i data-lucide="zoom-out"></i>
       </button>
-      <button class="zoom-display toolbar-btn" id="zoomLevel" onclick="toggleZoomMenu()" aria-label="Zoom level — click for presets" aria-haspopup="menu" aria-expanded="false">100%</button>
+      <button class="zoom-display toolbar-btn" id="zoomLevel" onclick="toggleZoomMenu()" aria-label="Zoom level — click for presets" aria-haspopup="menu" aria-expanded="false" aria-live="polite" aria-atomic="true">100%</button>
       <button class="toolbar-btn" onclick="zoomIn()" aria-label="Zoom in">
         <i data-lucide="zoom-in"></i>
       </button>
@@ -1712,7 +1709,7 @@
   <button onclick="setZoomPreset(2)" role="menuitem">200%</button>
   <button onclick="setZoomPreset(3)" role="menuitem">300%</button>
   <div class="menu-divider" role="separator"></div>
-  <button onclick="fitToView();closeAllMenus();" role="menuitem">Fit to View</button>
+  <button onclick="fitToView();if(window.closeAllMenus)window.closeAllMenus();" role="menuitem">Fit to View</button>
 </div>
 
 <!-- Import Confirmation Modal -->
