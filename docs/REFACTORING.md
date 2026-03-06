@@ -1570,33 +1570,149 @@ export function alignSelection(mode) {
 
 ---
 
-## 6. Large/Complex Files
+## 6. Large/Complex Files & Questionable Module Separation
 
-**File Size Analysis:**
+### 6.1 File Size Analysis
 
-| File | Lines | Primary Issues |
-|------|-------|----------------|
-| `app.js` | 1,635 | `attachCanvasEvents()` 472 lines; multiple concerns mixed |
-| `measurement.js` | 1,213 | Multiple complex rendering functions; could be split |
-| `elevation.js` | 597 | Complex wall projection logic |
-| `io.js` | 521 | Import/export logic could be modularized |
-| `furniture.js` | 476 | Rendering + drag logic mixed |
-| `collision.js` | 420 | Generally well-organized |
-| `render.js` | 393 | Room/wall rendering; reasonable size |
-| `dividers.js` | 356 | Reasonable size |
-| `selection.js` | 291 | Reasonable size |
+**Complete File Inventory:**
 
-**Recommended Actions:**
+| File | Lines | Status | Primary Issues |
+|------|-------|--------|----------------|
+| `app.js` | 1,619 | ⚠️ **Needs Refactoring** | `attachCanvasEvents()` 472 lines; multiple concerns mixed |
+| `measurement.js` | 1,213 | ⚠️ **Needs Refactoring** | Multiple complex rendering functions; could be split |
+| `elevation.js` | 597 | ⚠️ **Review** | Complex wall projection logic |
+| `io.js` | 521 | ⚠️ **Needs Refactoring** | Import/export logic could be modularized |
+| `furniture.js` | 476 | ✅ **Reasonable** | Rendering + drag logic mixed but cohesive |
+| `fixtures.js` | 453 | 🔴 **Questionable Separation** | See Section 6.2 below |
+| `data.js` | 373 | ✅ **Reasonable** | Central state management |
+| `dividers.js` | 320 | ✅ **Reasonable** | Well-scoped module |
+| `render.js` | 305 | ✅ **Reasonable** | Room/wall rendering |
+| `collision.js` | 247 | ✅ **Well-organized** | Clear single responsibility |
+| `selection.js` | 154 | ✅ **Good** | Focused module |
+| `history.js` | 135 | ✅ **Good** | Clean undo/redo implementation |
+| `units.js` | 97 | ✅ **Good** | Unit conversion utilities |
+| `colors.js` | 62 | ✅ **Good** | Color utilities |
 
-1. **Priority 1:** Refactor `app.js` - split `attachCanvasEvents()` (see Section 2.6)
-2. **Priority 2:** Split `measurement.js` into:
-   - `measurement/core.js` - measurement state and logic
-   - `measurement/render.js` - rendering functions
-   - `measurement/events.js` - event handlers
-3. **Priority 3:** Split `io.js` into:
-   - `io/import.js` - import functions
-   - `io/export.js` - export functions
-   - `io/validation.js` - validation logic
+**Total JavaScript:** ~6,572 lines across 14 modules
+
+---
+
+### 6.2 Questionable Module Separation: `fixtures.js` ⚠️ ARCHITECTURAL ISSUE
+
+**Severity:** Medium-High
+**Impact:** 453 lines of potentially unnecessary abstraction
+
+**Issue:**
+
+`fixtures.js` (453 lines) exists as a separate module, but **fixtures are conceptually just furniture with:**
+- Locked position (unless in fixture edit mode)
+- Specific labels
+- Edit mode toggle behavior
+
+**Current Implementation:**
+
+`fixtures.js` duplicates furniture interaction patterns:
+- `toggleFixtureEditMode()` - Toggle edit mode
+- `renderFixtureHandles()` - Render selection handles (similar to furniture)
+- `handleFixtureClick()` - Click handling (similar to furniture)
+- `handleFixtureDragMove()` - Drag behavior (similar to furniture)
+- `handleFixtureDragEnd()` - Drop handling (similar to furniture)
+
+**Comparison to Furniture:**
+
+| Feature | `furniture.js` | `fixtures.js` |
+|---------|----------------|---------------|
+| Click handling | ✅ `handleFurnitureClick()` | ✅ `handleFixtureClick()` |
+| Drag move | ✅ `handleDragMove()` | ✅ `handleFixtureDragMove()` |
+| Drag end | ✅ `handleDragEnd()` | ✅ `handleFixtureDragEnd()` |
+| Render handles | ✅ Selection indicators | ✅ Edit mode handles |
+| Lock/unlock | ❌ | ✅ Edit mode toggle |
+
+**The only real difference:** Fixtures have a lock/unlock mechanism via edit mode toggle.
+
+**Recommended Solution:**
+
+**Option 1: Merge into `furniture.js`** (Recommended)
+
+Add `locked` property to furniture items:
+
+```javascript
+// In data.js - add locked flag to fixtures
+{
+  id: "oven-1",
+  name: "Oven",
+  w: 30,
+  h: 30,
+  color: "#333",
+  label: "OVEN",
+  locked: true,  // New property
+  room: "kitchen",
+  x: 100,
+  y: 50
+}
+
+// In furniture.js - check locked status
+export function handleFurnitureClick(clickX, clickY, e) {
+  const piece = state.placedFurniture[idx];
+
+  // Skip locked items unless in fixture edit mode
+  if (piece.locked && !state.fixtureEditMode) {
+    return;
+  }
+
+  // Normal furniture interaction
+  // ...
+}
+```
+
+**Benefits:**
+- Eliminates 453 lines of duplicate code
+- Single interaction model for all items
+- Simpler mental model: "locked furniture" not "fixtures"
+- Easier to make ANY furniture lockable
+
+**Option 2: Keep separate but share utilities**
+
+Extract shared drag/click logic to `interactions/dragging.js` and have both modules use it.
+
+**Effort (Option 1):** 4-6 hours
+**Effort (Option 2):** 2-3 hours
+
+**Benefit:** Significant code reduction, simplified architecture
+
+---
+
+### 6.3 Recommended File Splitting
+
+**Priority 1: `app.js` (1,619 lines)**
+
+Split `attachCanvasEvents()` (472 lines) into focused modules (see Section 2.6):
+- `interactions/touch.js`
+- `interactions/zoom.js`
+- `interactions/doors.js`
+- `interactions/keyboard.js`
+- `interactions/drag.js`
+- `interactions/modes.js`
+
+**Priority 2: `measurement.js` (1,213 lines)**
+
+Split into sub-modules:
+- `measurement/core.js` - Measurement state and logic
+- `measurement/render.js` - SVG rendering functions
+- `measurement/events.js` - Event handlers
+- `measurement/locked.js` - Locked measurement handling
+- `measurement/anchors.js` - Anchor link management
+
+**Priority 3: `io.js` (521 lines)**
+
+Split into focused modules:
+- `io/import.js` - Import functions (JSON, CSV, image)
+- `io/export.js` - Export functions (JSON, CSV, PNG, SVG)
+- `io/validation.js` - Floor plan validation logic
+
+**Priority 4: Consider merging `fixtures.js` into `furniture.js`**
+
+See Section 6.2 above.
 
 ---
 
@@ -1726,31 +1842,37 @@ describe('getAnchorPoints', () => {
 
 ---
 
-### Phase 3: Code Organization (10-14 hours)
+### Phase 3: Code Organization (14-19 hours)
 
-**Goal:** Organize code into logical modules
+**Goal:** Organize code into logical modules, eliminate questionable separation
 
 **Tasks:**
-1. ✅ Split `measurement.js` into sub-modules
+1. ✅ **Merge `fixtures.js` into `furniture.js`** (NEW - HIGH PRIORITY)
+   - **Rationale:** Fixtures are just locked furniture, no need for separate module
+   - **Approach:** Add `locked` property to furniture, check in interaction handlers
+   - **Effort:** 4-6 hours
+   - **Impact:** Eliminates 453 lines of duplicate code, simpler architecture
+
+2. ✅ Split `measurement.js` into sub-modules
    - **Effort:** 3-4 hours
    - **Impact:** Better organization
 
-2. ✅ Split `io.js` into import/export/validation modules
+3. ✅ Split `io.js` into import/export/validation modules
    - **Effort:** 2-3 hours
    - **Impact:** Focused responsibilities
 
-3. ✅ Create centralized coordinate conversion module
+4. ✅ Create centralized coordinate conversion module
    - **Files:** `data.js`, `render.js`, `measurement.js`, `furniture.js`
    - **Effort:** 2-3 hours
    - **Impact:** Consistent conversions
 
-4. ✅ Standardize event handler attachment
+5. ✅ Standardize event handler attachment
    - **Files:** `furniture.js`, `dividers.js`, `measurement.js`
    - **Effort:** 3-4 hours
    - **Impact:** Consistent patterns
 
-**Total Effort:** ~10-14 hours
-**Expected Outcome:** Better file organization, easier navigation
+**Total Effort:** ~14-20 hours
+**Expected Outcome:** Better file organization, significant code reduction, simpler mental model
 
 ---
 
@@ -1812,12 +1934,17 @@ describe('getAnchorPoints', () => {
 |-------|----------|--------|--------|
 | Phase 1: Quick Wins | 2-3 hours | 2.5 hours | 5-8% reduction |
 | Phase 2: Architecture | 16-20 hours | 16-23 hours | 10-15% reduction |
-| Phase 3: Organization | 10-14 hours | 10-14 hours | Better structure |
+| Phase 3: Organization | 14-20 hours | 14-20 hours | Better structure + 453 lines eliminated |
 | Phase 4: State Management | 9-12 hours | 9-12 hours | Controlled state |
 | Phase 5: Polish & Testing | 10-14 hours | 10-14 hours | Production ready |
-| **Total** | **47-63 hours** | **~48-66 hours** | **Professional codebase** |
+| **Total** | **51-69 hours** | **~52-72 hours** | **Professional codebase** |
 
-**Note:** These estimates reflect Claude Code implementation time, not human developer time. Each phase can be completed in focused working sessions, with the entire refactoring achievable in 6-8 full working days of Claude Code effort.
+**Note:** These estimates reflect Claude Code implementation time, not human developer time. Each phase can be completed in focused working sessions, with the entire refactoring achievable in 6-9 full working days of Claude Code effort.
+
+**Major Wins:**
+- **Phase 1:** Eliminates ~100 lines of angle snapping duplication
+- **Phase 3:** Eliminates 453 lines by merging fixtures into furniture
+- **Overall:** ~20-25% code reduction through consolidation and refactoring
 
 ---
 

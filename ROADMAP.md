@@ -232,13 +232,17 @@ Everything in Phase 3A, plus:
 
 **Impact**: 10-15% code reduction, clearer architecture
 
-### Phase 5.3: Code Organization (10-14 hours)
+### Phase 5.3: Code Organization (14-20 hours)
+- [ ] **Merge `fixtures.js` into `furniture.js`** (HIGH PRIORITY - eliminates 453 duplicate lines)
+  - Fixtures are just locked furniture - add `locked` property instead of separate module
+  - Consolidate interaction handlers (click, drag, drop)
+  - Single edit mode toggle handles both locked and unlocked items
 - [ ] **Split `measurement.js`** into sub-modules (core, render, events)
 - [ ] **Split `io.js`** into import/export/validation modules
 - [ ] **Create coordinate conversion module** for consistent transformations
 - [ ] **Standardize event handler attachment** across all modules
 
-**Impact**: Better file organization, easier navigation
+**Impact**: Better file organization, 453 lines eliminated, simpler architecture
 
 ### Phase 5.4: State Management (9-12 hours)
 - [ ] **Create state accessor functions** in `data.js`
@@ -257,8 +261,13 @@ Everything in Phase 3A, plus:
 
 **Impact**: Tested, documented, production-ready codebase
 
-**Total Timeline**: 47-63 hours of Claude Code effort (6-8 full working days)
-**Total Impact**: ~20% code reduction, professional-grade architecture
+**Total Timeline**: 51-69 hours of Claude Code effort (6-9 full working days)
+**Total Impact**: ~20-25% code reduction, professional-grade architecture
+
+**Major Code Reductions:**
+- Phase 1: ~100 lines (angle snapping consolidation)
+- Phase 3: ~453 lines (fixtures.js merger into furniture.js)
+- Overall: ~550+ lines eliminated through consolidation
 
 *Note: Time estimates reflect Claude Code implementation speed, not human developer timelines.*
 
