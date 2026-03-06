@@ -1,474 +1,385 @@
 # Floor Plan Studio Roadmap
 
-This document outlines planned features and future directions for Floor Plan Studio.
+This document outlines the core development phases for Floor Plan Studio.
+
+**See also:**
+- [ROADMAP-STATUS.md](ROADMAP-STATUS.md) - Detailed status of all phases
+- [docs/REFACTORING-UNIFIED.md](docs/REFACTORING-UNIFIED.md) - Complete refactoring & re-implementation plan
 
 ---
 
-## 🎯 Phase 1: WYSIWYG Floor Plan Editor
+## ✅ Phase 1: Basic Mobile Support (COMPLETE)
 
-**Goal**: Allow users to create and edit floor plans entirely within the UI, without manually editing JSON.
+**Goal**: Read-only mobile experience for iOS, Android, and web.
 
-### Room Creation Tools
-- [ ] **Draw Room Mode**: Click to place vertices, auto-close polygon
-- [ ] **Rectangle Tool**: Click-drag to create simple rectangular rooms
-- [ ] **Edit Vertices**: Click and drag room corners to reshape
-- [ ] **Add/Remove Vertices**: Insert new corners or remove existing ones
-- [ ] **Room Properties Panel**: Edit name, color, label settings in sidebar
+**Status**: ✅ **100% Complete** - All tasks done, deployed to production
 
-### Wall Editing
-- [ ] **Add Wall**: Click two points to create a wall segment
-- [ ] **Delete Wall**: Click wall to remove it
-- [ ] **Split Wall**: Add door/window splits an existing wall into segments
-- [ ] **Wall Properties**: Edit thickness, type (interior/exterior)
+### What Was Delivered
 
-### Door & Window Tools
-- [ ] **Add Door**: Click wall segment, specify width and swing direction
-- [ ] **Add Window**: Click wall segment, specify width and sill height
-- [ ] **Interactive Swing Editor**: Drag arc handle to adjust door swing angle
-- [ ] **Door Type Switcher**: Toggle between swing, sliding, pocket, bifold
-- [ ] **Window Properties**: Height, sill height, type (single, double, bay)
+**Touch & Input:**
+- ✅ Touch event handlers (pan, pinch-to-zoom)
+- ✅ Unified coordinate extraction for mouse + touch
+- ✅ Prevent page scroll during gestures
 
-### Fixture Creation
-- [ ] **Fixture Library**: Pre-built fixtures (counters, islands, tubs, closets)
-- [ ] **Custom Fixture Tool**: Draw rectangular fixture, add to floor plan
-- [ ] **Fixture Doors**: Add swing doors to closets with visual editor
-- [ ] **Appliance Integration**: Pre-configured kitchen appliances (oven, fridge, dishwasher)
+**Layout & Responsive:**
+- ✅ Responsive SVG canvas
+- ✅ Mobile breakpoint (hide furniture panel on ≤768px)
+- ✅ Collapsed toolbar on mobile
+- ✅ Full-width elevation panel overlay
+- ✅ Orientation change handling
 
-### Furniture Creator
-- [ ] **Custom Furniture Tool**: Define dimensions, height, stackability
-- [ ] **Furniture Templates**: Common furniture types as starting points
-- [ ] **Color Picker**: Visual color selector with presets
-- [ ] **Category Assignment**: Organize furniture by room type
-- [ ] **2.5D Properties**: Set height, surface height, stackable flag
+**Touch UX:**
+- ✅ 44px minimum tap targets
+- ✅ Pan/pinch hint overlay
+- ✅ Furniture drag disabled (read-only)
+
+**Full details:** [ROADMAP-STATUS.md - Phase 3A](ROADMAP-STATUS.md#-completed-phase-3a---mobile-preview)
 
 ---
 
-## 🌐 Phase 2: Three.js 3D Visualization
+## 🔨 Phase 2: Code Refactoring
 
-**Goal**: Provide realistic 3D walkthrough and visualization of floor plans.
+**Goal**: Improve code maintainability, eliminate duplication, complete accessibility, establish best practices.
 
-### 3D Rendering
-- [ ] **3D View Toggle**: Switch between 2D floor plan and 3D perspective
-- [ ] **Camera Controls**: Orbit, pan, zoom around the 3D scene
-- [ ] **Furniture Models**: Extruded 3D representations of furniture
-- [ ] **Wall Heights**: Configurable ceiling heights per room
-- [ ] **Realistic Materials**: Wood, fabric, metal textures
+**Status**: 🔴 Not Started (100% documented, ready to execute)
+**Documentation**: [docs/REFACTORING-UNIFIED.md](docs/REFACTORING-UNIFIED.md)
+**Timeline**: 25-35 hours (3-4 working days)
+**Type**: 100% Refactoring
 
-### Navigation
-- [ ] **First-Person Mode**: Walk through the space
-- [ ] **Preset Camera Angles**: Quick views from doorways, corners
-- [ ] **Minimap**: 2D overview showing camera position
-- [ ] **VR Support**: WebXR integration for VR headsets
+### Sub-Phases
 
-### Advanced 3D Features
-- [ ] **Lighting System**: Windows as light sources, adjustable time of day
-- [ ] **Shadows**: Real-time shadow casting
-- [ ] **Reflections**: Mirror and glass reflections
-- [ ] **Custom 3D Models**: Import GLB/GLTF furniture models
-- [ ] **Export 3D**: Export scene as GLB for use in Blender, Unity, etc.
+**2.1: Quick Wins** (2-3 hours)
+- Extract 45-degree angle snapping to utils.js (~100 lines eliminated)
+- Consolidate anchor point functions to geometry.js
+- Extract menu closing pattern to domHelpers.js (6 locations)
+- Extract re-render orchestration to renderComplete()
+- Create constants.js for magic numbers
 
----
+**2.2: Complete Accessibility** (8-12 hours)
+- Keyboard navigation for menus and dropdowns
+- Keyboard-based drag and drop
+- SVG canvas keyboard accessibility
+- Screen reader testing with NVDA/VoiceOver
+- 200% zoom support, skip links, heading hierarchy
 
-## 📱 Phase 3: Mobile Support
+**2.3: Code Organization** (15-22 hours)
+- **Merge fixtures.js into furniture.js** (-453 lines!)
+- Split attachCanvasEvents() into focused modules
+- Split measurement.js into sub-modules
+- Split io.js into import/export/validation
+- Create coordinate conversion module
 
-**Goal**: Full-featured mobile experience for iOS and Android, delivered in two sub-phases.
-
----
-
-### Phase 3A: Mobile Preview *(implement first)*
-
-**Goal**: Read-only mobile experience. Users can import a floor plan, explore it, and change view settings — no editing. This is the minimum useful mobile experience and the foundation all Phase 3B work builds on.
-
-#### Scope
-- Import a floor plan via JSON file picker or drag-and-drop
-- Pan around the canvas with one finger
-- Pinch-to-zoom in and out
-- Switch between view settings (units, grid, labels, room colors)
-- Open and navigate the Elevation panel
-- Switch elevation wall selection
-- Light/dark mode toggle
-- Export (PNG/SVG) — read-only output
-
-#### Out of Scope for 3A
-Anything that modifies the floor plan: furniture drag, fixture editing, measurements, dividers, anchors.
-
-#### Technical Work
-
-**Touch & Input**
-- [x] Add `touchstart` / `touchmove` / `touchend` handlers alongside existing mouse events in `app.js`
-- [x] Unify coordinate extraction into a helper (`getEventPoint(e)`) that handles both `e.clientX` and `e.touches[0].clientX`
-- [x] Implement one-finger pan on the canvas (map to existing `panX`/`panY` state)
-- [x] Implement pinch-to-zoom using two-touch distance delta (map to existing `zoom` state)
-- [x] Add `touch-action: none` to canvas container so browser doesn't scroll the page during pan/zoom
-- [x] Add `-webkit-touch-callout: none` to prevent iOS long-press context menus
-
-**Layout & Responsive**
-- [x] Make canvas SVG size responsive to container width/height instead of fixed pixel values (`render.js`)
-- [x] Add a mobile breakpoint (≤ 768px) that hides the staging/furniture panel entirely
-- [x] Collapse the floating toolbar to a minimal icon strip on mobile; move secondary controls into a slide-up sheet or overflow menu
-- [x] Ensure the elevation panel can be opened as a full-width overlay on small screens
-- [x] Handle orientation change (`orientationchange` / `resize`) by recalculating SVG dimensions and re-rendering
-
-**Touch UX**
-- [x] Increase minimum tap target size to 44px for all toolbar buttons on mobile
-- [x] Show a brief pan/pinch hint overlay on first mobile load (dismissable)
-- [x] Disable furniture drag initiation on touch (show a "preview only" tooltip if user tries to drag)
+**Expected Impact:**
+- ~650 lines eliminated (-10%)
+- 100% WCAG 2.1 AA compliance
+- Professional code organization
 
 ---
 
-### Phase 3B: Full Mobile Feature Parity *(after 3A is stable)*
+## ⚡ Phase 3: Performance Re-implementations
 
-**Goal**: Everything available on desktop works on mobile. Editing, drag-and-drop, measurements, dividers, anchors, and fixture editing all work with touch.
+**Goal**: Fix fundamental performance bottlenecks with ground-up rewrites.
 
-#### Scope
-Everything in Phase 3A, plus:
-- Place and drag furniture with touch
-- Rotate furniture with double-tap or two-finger rotate gesture
-- Move fixtures in the floor plan view
-- Add, edit, and delete measurements
-- Draw and adjust soft dividers
-- Anchor mode (link furniture pieces)
-- Fixture editing panel (touch-friendly)
-- Full elevation interaction (drag furniture vertically)
-- Undo/redo via on-screen buttons (keyboard shortcut unavailable on mobile)
-- JSON/CSV export from mobile
+**Status**: 🔴 Not Started (100% documented with code examples)
+**Documentation**: [docs/REFACTORING-UNIFIED.md - Phase 5.2](docs/REFACTORING-UNIFIED.md#phase-52-critical-re-implementations-9-14-hours)
+**Timeline**: 9-14 hours (1-2 working days)
+**Type**: 100% Re-implementation
 
-#### Technical Work
+### Critical Rewrites
 
-**Touch Drag & Drop**
-- [ ] Implement touch drag for furniture pieces in `furniture.js` (touchstart → drag state, touchmove → reposition, touchend → drop)
-- [ ] Handle multi-touch correctly: two fingers on canvas = pan/zoom, one finger on furniture = drag
-- [ ] Implement touch drag for staging panel furniture onto canvas
-- [ ] Show drag ghost / position preview during touch drag
-- [ ] Touch drag for fixtures in fixture-edit mode
+**3.1: Collision Detection - O(n²) → Spatial Hash** (4-6 hours)
+- Current: 100 items = 10,000 checks
+- New: 100 items = ~20 checks
+- **50-500x performance improvement**
 
-**Gestures**
-- [ ] Double-tap on furniture to rotate 90°
-- [ ] Long-press on furniture to open context menu (delete, duplicate, properties)
-- [ ] Long-press on canvas (empty area) to open canvas context menu
-- [ ] Two-finger rotate gesture on selected furniture for free rotation
+**3.2: Color Caching System** (1-2 hours)
+- Eliminate 17 getComputedStyle() calls per render
+- Cache on startup, invalidate on theme change
+- **100-1000x faster color access**
 
-**Elevation Touch**
-- [ ] Touch drag on elevation furniture pieces to adjust height (`elevation.js`)
-- [ ] Pinch on elevation panel to zoom the elevation view
+**3.3: ID Lookups - Array.find() → Map** (1-2 hours)
+- Replace O(n) linear search with O(1) hash lookups
+- Affects getFurnitureDef, getRoom, getWall, getFixture
+- **50x faster lookups**
 
-**Measurement & Dividers**
-- [ ] Touch-based measurement creation (tap first point, tap second point)
-- [ ] Touch drag to reposition locked measurements
-- [ ] Touch to draw/adjust soft dividers
+**3.4: Event Bus** (3-4 hours)
+- Replace 40+ window._ memory leaks
+- Proper pub/sub with cleanup
+- Clear dependency graph
 
-**Mobile UI Additions**
-- [ ] Undo/redo buttons visible in toolbar on mobile (replaces Cmd+Z)
-- [ ] Mode indicators clearly visible (measure mode, anchor mode, fixture mode)
-- [ ] Touch-optimized properties panel (bottom sheet) for selected furniture
-- [ ] Staging panel as a swipe-up drawer rather than a sidebar
-
-**Performance**
-- [ ] Lazy-load furniture catalog on mobile to reduce initial parse time
-- [ ] Throttle SVG re-renders during touch drag to 30fps on low-end devices
-- [ ] Battery optimization: pause render loop when app is backgrounded
+**Expected Impact:**
+- 50-500x performance on critical paths
+- Zero memory leaks
+- Scalable to 100+ furniture items
 
 ---
 
-### Shared Mobile Infrastructure (both phases)
+## 📱 Phase 4: Full Mobile Support
 
-- [ ] **Progressive Web App**: Add `manifest.json` and service worker for installability and offline support
-- [ ] **Share Sheet**: Native share API (`navigator.share`) for exporting plans on mobile
-- [ ] **Portrait/Landscape**: Adaptive layout that reconfigures panels on orientation change
-- [ ] **Photo Import**: Use `<input type="file" accept="image/*" capture="environment">` for camera access (Phase 3B scope)
+**Goal**: Everything that works on desktop works on mobile - full editing capabilities.
 
----
+**Status**: 🔴 Not Started (0 of 18 tasks)
+**Timeline**: 40-60 hours (5-7 working days)
 
-## 🎨 Phase 4: Collaboration & Sharing
+### Touch Drag & Drop (0/5 tasks)
+- [ ] Touch drag for furniture pieces
+- [ ] Multi-touch handling (2 fingers = pan, 1 finger = drag)
+- [ ] Touch drag from staging panel
+- [ ] Drag ghost/position preview
+- [ ] Touch drag for fixtures in edit mode
 
-**Goal**: Enable real-time collaboration and easy sharing.
+### Gestures (0/4 tasks)
+- [ ] Double-tap to rotate furniture 90°
+- [ ] Long-press for context menu (delete, duplicate)
+- [ ] Long-press on canvas for menu
+- [ ] Two-finger rotate gesture
 
-### Multiplayer Editing
-- [ ] **Live Cursors**: See where other users are working
-- [ ] **Conflict Resolution**: Handle simultaneous edits gracefully
-- [ ] **Chat/Comments**: In-app communication
-- [ ] **Version History**: Track changes, revert to previous versions
+### Elevation Touch (0/2 tasks)
+- [ ] Touch drag elevation furniture (adjust height)
+- [ ] Pinch to zoom elevation view
 
-### Sharing & Publishing
-- [ ] **Public Gallery**: Share floor plans with community
-- [ ] **Embed Code**: Embed interactive floor plan in websites
-- [ ] **QR Code**: Generate QR code to view plan on mobile
-- [ ] **PDF Export**: High-quality PDF with measurements
-- [ ] **Print Layouts**: Optimized layouts for printing
+### Measurement & Dividers (0/3 tasks)
+- [ ] Touch-based measurement creation
+- [ ] Touch drag locked measurements
+- [ ] Touch draw/adjust soft dividers
 
-### Cloud Sync
-- [ ] **Account System**: Optional accounts for cloud save
-- [ ] **Cross-Device Sync**: Access plans from any device
-- [ ] **Cloud Backup**: Automatic backups to prevent data loss
-
----
-
-## 🔨 Phase 5: Code Refactoring & Re-implementation
-
-**Goal**: Improve code maintainability, eliminate duplication, fix performance bottlenecks, and establish best practices through both incremental refactoring (60%) and ground-up re-implementations (40%).
-
-**Status**: Documented in `docs/REFACTORING-UNIFIED.md` (supersedes REFACTORING.md)
-
-**Strategy**: Balanced approach distinguishing between:
-- **REFACTOR** - Improve existing code structure (angle snapping, fixtures merge, file organization)
-- **RE-IMPLEMENT** - Rewrite fundamentally flawed systems (collision detection, color caching, event handling)
-- **REFACTOR NOW, RE-IMPL LATER** - Organize complex systems now, plan complete rewrite as future phase (SVG rendering)
-
-### Phase 5.1: Quick Wins - Refactoring Only (2-3 hours)
-**Type:** 100% Refactoring | **Risk:** Very Low
-
-- [ ] **Extract 45-degree angle snapping** to `utils.js` (3 locations, ~100 lines duplication)
-- [ ] **Consolidate anchor point functions** to `geometry.js` (2 identical functions)
-- [ ] **Extract menu closing pattern** to `domHelpers.js` (6 locations)
-- [ ] **Extract re-render orchestration** to `renderComplete()` function
-- [ ] **Create constants file** to replace magic numbers across codebase
-
-**Impact**: ~100 lines eliminated, improved maintainability
+### Mobile UI (0/4 tasks)
+- [ ] Undo/redo buttons (replace Cmd+Z)
+- [ ] Mode indicators (measure, anchor, fixture)
+- [ ] Touch-optimized properties panel (bottom sheet)
+- [ ] Staging panel as swipe-up drawer
 
 ---
 
-### Phase 5.2: Critical Re-implementations (9-14 hours)
-**Type:** 100% Re-implementation | **Risk:** Medium
+## 🎯 Phase 5: WYSIWYG Floor Plan Editor
 
-- [ ] **Collision Detection: O(n²) → Spatial Hash Grid** (4-6 hours)
-  - Current: 20 items = 400 checks, 100 items = 10,000 checks
-  - New: O(log n) with spatial hash → 50-500x faster
-  - Implement quadtree or grid-based spatial index
-- [ ] **Color Caching System** (1-2 hours)
-  - Eliminate 17 `getComputedStyle()` calls per render
-  - Cache colors on startup, invalidate on theme change
-  - 100-1000x faster color access
-- [ ] **ID Lookups: Array.find() → Map** (1-2 hours)
-  - Replace O(n) linear search with O(1) hash lookups
-  - Affects getFurnitureDef, getRoom, getWall, getFixture
-  - 50x faster lookups with 50+ items
-- [ ] **Event Bus (replace window._)** (3-4 hours)
-  - Fix 40+ memory leak sources from global callbacks
-  - Proper cleanup and unsubscribe mechanisms
-  - Clear dependency graph
+**Goal**: Create and edit floor plans entirely within the UI, without manually editing JSON.
 
-**Impact**: 50-500x performance improvements on critical paths, zero memory leaks
+**Status**: 🔴 Not Started (0 of 23 tasks)
+**Timeline**: 100-150 hours (12-18 working days)
+**Priority**: High (most requested feature)
 
----
+### Room Creation Tools (0/5 tasks)
+- [ ] Draw room mode (click vertices, auto-close)
+- [ ] Rectangle tool (click-drag rectangles)
+- [ ] Edit vertices (drag corners to reshape)
+- [ ] Add/remove vertices
+- [ ] Room properties panel (name, color, labels)
 
-### Phase 5.3: Code Organization (15-22 hours)
-**Type:** 100% Refactoring | **Risk:** Low-Medium
+### Wall Editing (0/4 tasks)
+- [ ] Add wall (click two points)
+- [ ] Delete wall (click to remove)
+- [ ] Split wall (door/window splits wall)
+- [ ] Wall properties (thickness, type)
 
-- [ ] **Merge `fixtures.js` into `furniture.js`** (4-6 hours)
-  - Eliminates 453 duplicate lines
-  - Add `locked` property instead of separate module
-- [ ] **Split `attachCanvasEvents()`** into focused modules (4-6 hours)
-  - `interactions/touch.js`, `zoom.js`, `doors.js`, `keyboard.js`, `drag.js`, `modes.js`
-- [ ] **Split `measurement.js`** into sub-modules (3-4 hours)
-- [ ] **Split `io.js`** into import/export/validation (2-3 hours)
-- [ ] **Create coordinate conversion module** (2-3 hours)
+### Door & Window Tools (0/5 tasks)
+- [ ] Add door (click wall, set width/swing)
+- [ ] Add window (click wall, set width/height)
+- [ ] Interactive swing editor (drag arc handle)
+- [ ] Door type switcher (swing/sliding/pocket/bifold)
+- [ ] Window properties editor
 
-**Impact**: ~550 lines eliminated, better organization
+### Fixture Creation (0/4 tasks)
+- [ ] Fixture library (counters, tubs, closets)
+- [ ] Custom fixture tool
+- [ ] Fixture doors (closet swing doors)
+- [ ] Appliance integration
 
----
-
-### Phase 5.4: Event Delegation Re-implementation (5-8 hours)
-**Type:** 80% Re-implementation, 20% Refactoring | **Risk:** Medium
-
-- [ ] **Implement delegated mouse handlers** (2-3 hours)
-  - Single listener per container instead of N listeners
-  - Eliminates 120+ listener attachments per render
-- [ ] **Implement delegated drag handlers** (2-3 hours)
-  - Fix 14,400 listener create/destroy cycles per 2-second drag
-- [ ] **Remove old attachment functions** (1-2 hours)
-
-**Impact**: Eliminates 14k+ listener churn during interactions
-
----
-
-### Phase 5.5: State Management (9-12 hours)
-**Type:** 100% Refactoring | **Risk:** Low
-
-- [ ] **Create state accessor functions** in `data.js` (6-8 hours)
-- [ ] **Migrate direct state access** to use accessors (3-4 hours)
-- [ ] **Add validation** for state mutations
-- [ ] **Implement side-effect handling** in state setters
-
-**Impact**: Controlled state changes, validation layer
-
----
-
-### Phase 5.6: Testing & Documentation (10-14 hours)
-**Type:** 100% Refactoring | **Risk:** Very Low
-
-- [ ] **Setup Vitest** testing framework (1-2 hours)
-- [ ] **Write tests** for re-implemented systems (4-6 hours)
-  - Collision detection (spatial hash correctness)
-  - Color caching (theme switching)
-  - Event bus (pub/sub behavior)
-- [ ] **Document patterns** (2-3 hours)
-- [ ] **Refactor nested conditionals** (1 hour)
-- [ ] **Audit and remove unused code** (2-3 hours)
-
-**Impact**: 60%+ test coverage, documented patterns
-
----
-
-**Total Timeline**: 50-73 hours of Claude Code effort (6-9 full working days)
-**Type Mix**: 60% Refactoring, 40% Re-implementation
-**Total Impact**:
-- Code: ~650 lines eliminated (-10%)
-- Performance: 50-500x improvements on critical paths
-- Quality: Zero memory leaks, professional architecture, 60%+ test coverage
-
-**Future Re-implementation Candidates** (refactor now, re-implement later):
-- SVG Rendering Pipeline (innerHTML → DOM API) - 20-30 hours
-- RenderManager with proper diffing - 15-20 hours
-- Measurement system redesign - 25-35 hours
-
-*Note: Time estimates reflect Claude Code implementation speed, not human developer timelines.*
+### Furniture Creator (0/5 tasks)
+- [ ] Custom furniture tool (define dimensions)
+- [ ] Furniture templates
+- [ ] Color picker
+- [ ] Category assignment
+- [ ] 2.5D properties (height, surface height, stackable)
 
 ---
 
 ## 🔧 Phase 6: Advanced Tools
 
-### Smart Layout
-- [ ] **Auto-Arrange**: AI-powered furniture arrangement suggestions
-- [ ] **Traffic Flow**: Analyze and visualize walking paths
-- [ ] **Clearance Checker**: Highlight tight spaces, doorway conflicts
-- [ ] **Accessibility Audit**: Check ADA compliance for wheelchair access
+**Goal**: Power user features for professionals.
 
-### Cost Estimation
-- [ ] **Material Calculator**: Calculate flooring, paint needed
-- [ ] **Furniture Budget**: Track furniture costs
-- [ ] **Shopping List**: Export furniture list with dimensions
+**Status**: 🔴 Not Started (0 of 11 tasks)
+**Timeline**: 40-60 hours
 
-### Extended Measurements
-- [ ] **Area Calculator**: Room square footage with exclusions
-- [ ] **Perimeter Tool**: Calculate wall length for baseboards
-- [ ] **Volume Calculator**: Calculate room volume for HVAC sizing
-- [ ] **Custom Formulas**: User-defined calculation formulas
+### Smart Layout (0/4 tasks)
+- [ ] Auto-arrange (AI furniture suggestions)
+- [ ] Traffic flow (visualize walking paths)
+- [ ] Clearance checker (tight spaces, conflicts)
+- [ ] Accessibility audit (ADA compliance)
+
+### Cost Estimation (0/3 tasks)
+- [ ] Material calculator (flooring, paint)
+- [ ] Furniture budget tracker
+- [ ] Shopping list export
+
+### Extended Measurements (0/4 tasks)
+- [ ] Area calculator (room square footage)
+- [ ] Perimeter tool (wall length for baseboards)
+- [ ] Volume calculator (HVAC sizing)
+- [ ] Custom formulas
 
 ---
 
 ## 🎓 Phase 7: Learning & Templates
 
-### Templates & Presets
-- [ ] **Floor Plan Templates**: Studio, 1BR, 2BR, etc.
-- [ ] **Room Presets**: Pre-configured room layouts
-- [ ] **Style Packs**: Modern, traditional, minimalist furniture sets
-- [ ] **Template Gallery**: Community-contributed templates
+**Goal**: Lower barrier to entry with templates and education.
 
-### Educational Features
-- [ ] **Interactive Tutorial**: Step-by-step walkthrough
-- [ ] **Tooltips**: Contextual help throughout the app
-- [ ] **Video Guides**: Embedded tutorial videos
-- [ ] **Design Tips**: Best practices and layout suggestions
+**Status**: 🔴 Not Started (0 of 8 tasks)
+**Timeline**: 30-50 hours
 
----
+### Templates & Presets (0/4 tasks)
+- [ ] Floor plan templates (studio, 1BR, 2BR, etc.)
+- [ ] Room presets (pre-configured layouts)
+- [ ] Style packs (modern, traditional, minimalist)
+- [ ] Template gallery (community-contributed)
 
-## 🔌 Phase 8: Integrations
-
-### Import From
-- [ ] **Image to Floor Plan**: Upload image, trace walls
-- [ ] **PDF Import**: Import architectural drawings
-- [ ] **DXF/DWG**: Import CAD files
-- [ ] **SketchUp**: Import SketchUp models
-- [ ] **IFC**: Import BIM models
-
-### Export To
-- [ ] **Figma Plugin**: Export as Figma components
-- [ ] **Blender**: Export with materials and textures
-- [ ] **Unity/Unreal**: Game engine packages
-- [ ] **Revit**: BIM-compatible export
-
-### API
-- [ ] **REST API**: Programmatic access to floor plans
-- [ ] **Webhooks**: Real-time notifications
-- [ ] **JavaScript SDK**: Embed Floor Plan Studio in other apps
-- [ ] **CLI Tool**: Command-line batch processing
+### Educational Features (0/4 tasks)
+- [ ] Interactive tutorial (step-by-step)
+- [ ] Tooltips (contextual help)
+- [ ] Video guides
+- [ ] Design tips
 
 ---
 
-## 🚀 Additional Ideas
+## 🌐 Phase 8: Three.js 3D Visualization (If Desired)
 
-### Rendering & Export
-- [ ] **Photo-Realistic Rendering**: High-quality ray-traced renders
-- [ ] **Animation Export**: Create walkthrough videos
-- [ ] **360° Panoramas**: Virtual tour images
-- [ ] **Isometric View**: Axonometric projection rendering
+**Goal**: Realistic 3D walkthrough and visualization.
 
-### Advanced Modeling
-- [ ] **Multi-Story Support**: Multiple floors with stairways
-- [ ] **Outdoor Spaces**: Decks, patios, gardens
-- [ ] **Curved Walls**: Non-axis-aligned walls
-- [ ] **Sloped Ceilings**: Vaulted, cathedral ceilings
-- [ ] **Custom Moldings**: Baseboards, crown molding, wainscoting
+**Status**: 🔴 Not Started (0 of 13 tasks)
+**Timeline**: 80-120 hours
+**Priority**: Medium (high impact but not urgent)
 
-### Specialized Tools
-- [ ] **Electrical Plan**: Outlets, switches, light fixtures
-- [ ] **Plumbing Plan**: Water lines, drains
-- [ ] **HVAC**: Vents, ducts, thermostat placement
-- [ ] **Landscape Mode**: Trees, plants, hardscaping
+### 3D Rendering (0/5 tasks)
+- [ ] 3D view toggle (2D ↔ 3D)
+- [ ] Camera controls (orbit, pan, zoom)
+- [ ] Furniture models (extruded 3D)
+- [ ] Wall heights (configurable ceilings)
+- [ ] Realistic materials
+
+### Navigation (0/4 tasks)
+- [ ] First-person mode (walk through)
+- [ ] Preset camera angles
+- [ ] Minimap (2D overview)
+- [ ] VR support (WebXR)
+
+### Advanced 3D (0/4 tasks)
+- [ ] Lighting system
+- [ ] Shadows (real-time)
+- [ ] Reflections
+- [ ] Custom 3D models (GLB/GLTF)
+- [ ] Export 3D
+
+---
+
+## 🔮 Potential Future Features
+
+These features are **exploratory and may or may not be pursued** based on user demand, business model decisions, and strategic fit. Each has dedicated documentation outlining questions, considerations, and trade-offs.
+
+### Collaboration & Sharing
+**What it is:** Real-time collaboration, cloud sync, public sharing, team accounts  
+**Target audience:** Professional teams, agencies, real estate agents  
+**Effort:** 60-100 hours + ongoing infrastructure costs ($100-500/month)  
+**Key question:** Is Floor Plan Studio a local-first tool or cloud platform?  
+
+**📄 Full Analysis:** [docs/POTENTIAL-COLLABORATION.md](docs/POTENTIAL-COLLABORATION.md)
+
+**Key Features:**
+- Real-time multiplayer editing
+- Cloud storage and sync
+- Public gallery and embeds
+- Team workspaces and permissions
+
+**Why Potential:** Requires backend infrastructure, ongoing costs, fundamental architecture change
+
+---
+
+### Integrations
+**What it is:** Import/export with CAD, BIM, 3D tools (DXF, PDF, Blender, SketchUp, Revit)  
+**Target audience:** Architects, designers using professional tools  
+**Effort:** 80-120 hours (full coverage), ongoing maintenance  
+**Key question:** Are professional integrations worth 350+ hours of development?  
+
+**📄 Full Analysis:** [docs/POTENTIAL-INTEGRATIONS.md](docs/POTENTIAL-INTEGRATIONS.md)
+
+**Key Features:**
+- PDF import/export
+- DXF/DWG (AutoCAD)
+- Image to floor plan (AI)
+- Blender/Unity/Unreal export
+- REST API and SDK
+
+**Why Potential:** Extreme complexity, format-specific knowledge required, ongoing maintenance
+
+---
+
+### Community Features
+**What it is:** Public gallery, design challenges, template marketplace, forum  
+**Target audience:** Engaged user base (1,000+ users)  
+**Effort:** 40-80 hours + 10-20 hours/week moderation  
+**Key question:** Is there sufficient user engagement to justify community features?  
+
+**📄 Full Analysis:** [docs/POTENTIAL-COMMUNITY.md](docs/POTENTIAL-COMMUNITY.md)
+
+**Key Features:**
+- Public design gallery
+- Monthly design challenges
+- Template marketplace
+- Plugin system
+- Feature voting
+
+**Why Potential:** Requires critical mass of users, ongoing moderation burden
+
+---
 
 ### Business Features
-- [ ] **Client Portal**: Share plans with clients for approval
-- [ ] **Revision Tracking**: Track client-requested changes
-- [ ] **Proposals**: Generate professional proposals with plans
-- [ ] **Multi-Project Management**: Organize multiple floor plans
-- [ ] **Team Accounts**: Collaborate with team members
+**What it is:** Client portal, team accounts, proposals, white-label, enterprise features  
+**Target audience:** Agencies, architecture firms, real estate professionals  
+**Effort:** 80-150 hours + 30-60 hours/week sales & support  
+**Key question:** Is B2B SaaS the desired business model?  
 
-### Accessibility & WCAG 2.1 AA Compliance
-- [ ] **Color Contrast Fixes**: Meet WCAG AA 4.5:1 ratio for all text
-- [ ] **ARIA Labels**: Add aria-label, aria-expanded, aria-pressed to all interactive elements
-- [ ] **Semantic HTML**: Replace divs with header, main, aside, nav elements
-- [ ] **Focus Indicators**: Visible focus rings on all focusable elements
-- [ ] **Keyboard Navigation**: Arrow keys for menus, Tab navigation for all UI
-- [ ] **Keyboard Drag-Drop**: Space/Enter to grab, arrow keys to move, Enter to drop
-- [ ] **SVG Accessibility**: Add roles, labels, and keyboard access to floor plan canvas
-- [ ] **Screen Reader Support**: aria-live regions for dynamic content announcements
-- [ ] **Form Labels**: Associate all inputs with visible or aria-labels
-- [ ] **Reduced Motion**: Respect prefers-reduced-motion for animations
-- [ ] **Skip Links**: Add skip-to-main-content link
-- [ ] **Heading Hierarchy**: Proper H1-H6 structure throughout app
-- [ ] **High Contrast Mode**: Test and optimize for Windows High Contrast Mode
-- [ ] **200% Zoom**: Ensure app works at 200% text size
-- [ ] **Screen Reader Testing**: Test with NVDA/VoiceOver and fix issues
+**📄 Full Analysis:** [docs/POTENTIAL-BUSINESS.md](docs/POTENTIAL-BUSINESS.md)
 
-### Data & Analytics
-- [ ] **Usage Analytics**: Track popular features
-- [ ] **Plan Statistics**: Average room sizes, furniture density
-- [ ] **Export Analytics**: Most exported formats
-- [ ] **Performance Metrics**: Load times, render performance
+**Key Features:**
+- Client portal and approval workflow
+- Team accounts and permissions
+- Professional proposals
+- Multi-project management
+- White-label embedding
+- API access
+
+**Why Potential:** Requires B2B sales/support commitment, multi-tenant complexity, long sales cycles
 
 ---
 
-## 🌟 Community Features
+## 📊 Priority Order
 
-- [ ] **Forum/Discord**: Community discussion
-- [ ] **Feature Voting**: Let users vote on next features
-- [ ] **Open Plugin System**: Third-party extensions
-- [ ] **Marketplace**: Buy/sell furniture models, templates
-- [ ] **Design Challenges**: Monthly floor plan competitions
+**Current Recommended Order:**
 
----
+1. ✅ **Phase 1: Basic Mobile Support** - COMPLETE
+2. 🔴 **Phase 2: Refactoring** - Code quality, accessibility (NEXT)
+3. 🔴 **Phase 3: Re-implementations** - Performance fixes (NEXT)
+4. 🔴 **Phase 5: WYSIWYG Editor** - Most requested, high value
+5. 🔴 **Phase 4: Full Mobile** - Expand mobile capabilities
+6. 🔴 **Phase 7: Learning & Templates** - Lower barrier to entry
+7. 🔴 **Phase 6: Advanced Tools** - Power user features
+8. 🔴 **Phase 8: Three.js** - High impact visualization (if desired)
+9. 🔮 **Potential Features** - Evaluate based on user demand and business model
 
-## 📊 Priority Order (Tentative)
-
-1. **WYSIWYG Floor Plan Editor** (Phase 1) - Most requested feature
-2. **Mobile Support** (Phase 3) - Expand user base significantly
-3. **3D Visualization** (Phase 2) - High impact on user experience
-4. **Code Refactoring** (Phase 5) - Technical debt reduction, maintainability
-5. **Templates & Presets** (Phase 7) - Lower barrier to entry
-6. **Collaboration** (Phase 4) - Enable professional use cases
-7. **Advanced Tools** (Phase 6) - Serve power users
-8. **Integrations** (Phase 8) - Fit into existing workflows
+**Rationale:**
+- Phases 2-3 (refactoring/performance) create solid foundation for future work
+- Phase 5 (WYSIWYG) is most requested and highest user value
+- Phase 4 (full mobile) builds on completed Phase 1
+- Potential features require strategic decisions before committing
 
 ---
 
 ## Contributing Ideas
 
-Have ideas for Floor Plan Studio? We'd love to hear them!
+Have ideas for Floor Plan Studio?
 
 - **GitHub Issues**: [Report bugs or suggest features](https://github.com/alexanderblackh/floor-plan-studio/issues)
 - **Pull Requests**: Contribute code directly
-- **Discussions**: Share ideas and vote on proposals
 
 ---
 
-*This roadmap is subject to change based on community feedback and development priorities.*
+*This roadmap is subject to change based on user feedback and development priorities.*

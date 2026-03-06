@@ -1264,6 +1264,24 @@
           Import/Export
         </button>
         <div style="height:1px;background:var(--border-secondary);margin:4px 0;" role="separator"></div>
+        <div style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Implementation Proposals</div>
+        <button class="docs-menu-item" onclick="openDocs('potential-collaboration')" role="menuitem">
+          <i data-lucide="users" style="width:16px;height:16px;"></i>
+          Collaboration & Sharing
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('potential-integrations')" role="menuitem">
+          <i data-lucide="puzzle" style="width:16px;height:16px;"></i>
+          Integrations
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('potential-community')" role="menuitem">
+          <i data-lucide="heart" style="width:16px;height:16px;"></i>
+          Community Features
+        </button>
+        <button class="docs-menu-item" onclick="openDocs('potential-business')" role="menuitem">
+          <i data-lucide="briefcase" style="width:16px;height:16px;"></i>
+          Business Features
+        </button>
+        <div style="height:1px;background:var(--border-secondary);margin:4px 0;" role="separator"></div>
         <button class="docs-menu-item" onclick="openDocs('llm-instructions')" role="menuitem">
           <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
           LLM Instructions
@@ -1881,6 +1899,10 @@ async function openDocs(docType) {
     'furniture': 'Furniture Guide',
     'fixtures': 'Fixtures Guide',
     'import-export': 'Import/Export Guide',
+    'potential-collaboration': 'Collaboration & Sharing',
+    'potential-integrations': 'Integrations',
+    'potential-community': 'Community Features',
+    'potential-business': 'Business Features',
     'llm-instructions': 'LLM Instructions'
   };
   title.textContent = titles[docType] || 'Documentation';
@@ -1895,6 +1917,10 @@ async function openDocs(docType) {
       'furniture': 'docs/FURNITURE.md',
       'fixtures': 'docs/FIXTURES.md',
       'import-export': 'docs/IMPORT-EXPORT.md',
+      'potential-collaboration': 'docs/POTENTIAL-COLLABORATION.md',
+      'potential-integrations': 'docs/POTENTIAL-INTEGRATIONS.md',
+      'potential-community': 'docs/POTENTIAL-COMMUNITY.md',
+      'potential-business': 'docs/POTENTIAL-BUSINESS.md',
       'llm-instructions': 'LLM-INSTRUCTIONS.txt'
     };
 
