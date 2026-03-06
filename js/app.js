@@ -374,6 +374,13 @@ function closeAllMenus() {
     if (menu) menu.style.display = 'none';
   });
 
+  // Reset aria-expanded + active on all menu trigger buttons
+  document.querySelectorAll('[aria-haspopup="menu"]').forEach(btn => {
+    btn.setAttribute('aria-expanded', 'false');
+    btn.classList.remove('active');
+  });
+  document.getElementById('zoomLevel')?.setAttribute('aria-expanded', 'false');
+
   // Close any open submenu
   if (currentSubmenu) {
     const submenu = document.getElementById(currentSubmenu);
@@ -433,109 +440,61 @@ function setZoomPreset(zoom) {
   document.getElementById('zoomLevel')?.setAttribute('aria-expanded', 'false');
 }
 
+// ===== MENU OPEN HELPER =====
+function openMenu(menuId, btn, extraCloseCheck) {
+  closeAllMenus();
+  const menu = document.getElementById(menuId);
+  if (!menu || !btn) return;
+  const rect = btn.getBoundingClientRect();
+  menu.style.display = 'block';
+  menu.style.left = rect.left + 'px';
+  menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+  menu.style.top = 'auto';
+  btn.setAttribute('aria-expanded', 'true');
+  btn.classList.add('active');
+  setTimeout(() => {
+    document.addEventListener('click', function closeMenu(e) {
+      if (!e.target.closest('.toolbar-dropdown') && !e.target.closest('.toolbar-menu') && !e.target.closest('.toolbar-submenu') && !(extraCloseCheck && extraCloseCheck(e))) {
+        closeAllMenus();
+        document.removeEventListener('click', closeMenu);
+      }
+    });
+  }, 0);
+}
+
 // ===== VIEW MENU =====
 function toggleViewMenu() {
   const menu = document.getElementById('viewMenu');
   const btn = document.querySelector('[onclick="toggleViewMenu()"]');
-
-  if (menu && btn) {
-    const isVisible = menu.style.display === 'block';
-
-    if (isVisible) {
-      closeAllMenus();
-    } else {
-      // Close all other menus first
-      closeAllMenus();
-
-      // Position menu above the button
-      const rect = btn.getBoundingClientRect();
-      menu.style.display = 'block';
-      menu.style.left = rect.left + 'px';
-      menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-      menu.style.top = 'auto';
-
-      updateViewMenuChecks();
-
-      // Close on click outside
-      setTimeout(() => {
-        document.addEventListener('click', function closeMenu(e) {
-          if (!e.target.closest('.toolbar-dropdown') && !e.target.closest('.toolbar-menu') && !e.target.closest('.toolbar-submenu')) {
-            closeAllMenus();
-            document.removeEventListener('click', closeMenu);
-          }
-        });
-      }, 0);
-    }
-  }
+  if (menu?.style.display === 'block') { closeAllMenus(); return; }
+  openMenu('viewMenu', btn);
+  updateViewMenuChecks();
 }
 
 // ===== EXPORT MENU =====
 function toggleExportMenu() {
   const menu = document.getElementById('exportMenu');
   const btn = document.querySelector('[onclick="toggleExportMenu()"]');
-
-  if (menu && btn) {
-    const isVisible = menu.style.display === 'block';
-
-    if (isVisible) {
-      closeAllMenus();
-    } else {
-      // Close all other menus first
-      closeAllMenus();
-
-      // Position menu above the button
-      const rect = btn.getBoundingClientRect();
-      menu.style.display = 'block';
-      menu.style.left = rect.left + 'px';
-      menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-      menu.style.top = 'auto';
-
-      // Close on click outside
-      setTimeout(() => {
-        document.addEventListener('click', function closeMenu(e) {
-          if (!e.target.closest('.toolbar-dropdown') && !e.target.closest('.toolbar-menu')) {
-            closeAllMenus();
-            document.removeEventListener('click', closeMenu);
-          }
-        });
-      }, 0);
-    }
-  }
+  if (menu?.style.display === 'block') { closeAllMenus(); return; }
+  openMenu('exportMenu', btn);
 }
 
 // ===== IMPORT MENU =====
 function toggleImportMenu() {
   const menu = document.getElementById('importMenu');
   const btn = document.querySelector('[onclick="toggleImportMenu()"]');
-
-  if (menu && btn) {
-    const isVisible = menu.style.display === 'block';
-
-    if (isVisible) {
-      closeAllMenus();
-    } else {
-      // Close all other menus first
-      closeAllMenus();
-
-      // Position menu above the button
-      const rect = btn.getBoundingClientRect();
-      menu.style.display = 'block';
-      menu.style.left = rect.left + 'px';
-      menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-      menu.style.top = 'auto';
-
-      // Close on click outside
-      setTimeout(() => {
-        document.addEventListener('click', function closeMenu(e) {
-          if (!e.target.closest('.toolbar-dropdown') && !e.target.closest('.toolbar-menu')) {
-            closeAllMenus();
-            document.removeEventListener('click', closeMenu);
-          }
-        });
-      }, 0);
-    }
-  }
+  if (menu?.style.display === 'block') { closeAllMenus(); return; }
+  openMenu('importMenu', btn);
 }
+
+// Close export/import menus when a menu item is selected (fires after onclick via bubbling)
+setTimeout(() => {
+  ['exportMenu', 'importMenu'].forEach(id => {
+    document.getElementById(id)?.addEventListener('click', e => {
+      if (e.target.closest('[role="menuitem"]')) closeAllMenus();
+    });
+  });
+}, 0);
 
 // ===== UNIT MANAGEMENT =====
 function toggleUnitMenu() {
