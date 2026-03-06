@@ -103,7 +103,7 @@ const snappedAngle = snapToNearestAngle(angle);
 const radians = degreesToRadians(snappedAngle);
 ```
 
-**Effort:** 2-3 hours
+**Effort:** 20-30 minutes
 **Benefit:** Single source of truth, easier to modify angle snapping behavior
 
 ---
@@ -170,7 +170,7 @@ Import in both `app.js` and `measurement.js`:
 import { getAnchorPoints } from './geometry.js';
 ```
 
-**Effort:** 1 hour
+**Effort:** 10-15 minutes
 **Benefit:** Single definition, easier testing
 
 ---
@@ -258,7 +258,7 @@ function toggleZoomMenu(e) {
 }
 ```
 
-**Effort:** 3 hours
+**Effort:** 30-40 minutes
 **Benefit:** Single implementation, consistent behavior
 
 ---
@@ -322,7 +322,7 @@ const toggleShowAllMeasurements = createToggleFunction('showAllMeasurements', [
 ]);
 ```
 
-**Effort:** 2 hours
+**Effort:** 20-30 minutes
 **Benefit:** Reduced repetition, easier to add new toggles
 
 ---
@@ -381,7 +381,7 @@ function applyCSVColumnsToFurniture(piece, cols, columnMap) {
 }
 ```
 
-**Effort:** 2 hours
+**Effort:** 20-30 minutes
 **Benefit:** Consistent CSV parsing behavior
 
 ---
@@ -448,7 +448,7 @@ export function redo() {
 }
 ```
 
-**Effort:** 1 hour
+**Effort:** 10-15 minutes
 **Benefit:** Consistent render behavior, single place to modify render pipeline
 
 ---
@@ -593,7 +593,7 @@ export function renderFurniture() {
 3. Gradually migrate modules to use events
 4. Remove window._ callbacks once all modules migrated
 
-**Effort:** 2-3 weeks
+**Effort:** 8-12 hours
 **Benefit:** Loose coupling, testable modules, clear dependencies
 
 ---
@@ -697,7 +697,7 @@ renderManager.markAll(['furniture', 'measurement']);
 renderManager.forceRender();
 ```
 
-**Effort:** 1 week
+**Effort:** 3-4 hours
 **Benefit:** Centralized render control, prevents redundant renders, improves performance
 
 ---
@@ -765,7 +765,7 @@ export function addPlacedFurniture(piece) {
 2. Gradually migrate code to use accessors
 3. Eventually make state object private
 
-**Effort:** 2 weeks
+**Effort:** 6-8 hours
 **Benefit:** Controlled state access, side-effect handling, easier debugging
 
 ---
@@ -831,7 +831,7 @@ updateCheckmarks([
 ]);
 ```
 
-**Effort:** 4 hours
+**Effort:** 30-45 minutes
 **Benefit:** Cleaner code, reusable utilities
 
 ---
@@ -879,7 +879,7 @@ export function saveToCache() {
 }
 ```
 
-**Effort:** 3 hours
+**Effort:** 30-40 minutes
 **Benefit:** Better debugging, user feedback on failures
 
 ---
@@ -961,7 +961,7 @@ function attachCanvasEvents() {
 }
 ```
 
-**Effort:** 1.5 weeks
+**Effort:** 4-6 hours
 **Benefit:** Maintainable code, easier testing, clearer responsibilities
 
 ---
@@ -1009,7 +1009,7 @@ function updateViewMenuChecks() {
 }
 ```
 
-**Effort:** 1 hour
+**Effort:** 10-15 minutes
 **Benefit:** Easier to add new checkmarks, cleaner code
 
 ---
@@ -1042,7 +1042,7 @@ svg.addEventListener('click', (e) => {
 });
 ```
 
-**Effort:** 1 week
+**Effort:** 3-4 hours
 **Benefit:** Consistent event handling, better performance
 
 ---
@@ -1076,7 +1076,7 @@ Standardize on ES module exports:
 - Only assign to `window` for functions called from inline HTML event handlers
 - Document why each window assignment exists
 
-**Effort:** 2 hours (documentation)
+**Effort:** 15-20 minutes (documentation)
 **Benefit:** Clearer intent
 
 ---
@@ -1106,7 +1106,7 @@ Consistent pattern:
 - Public state → `export const`
 - Private state → `const` (not exported)
 
-**Effort:** 1 hour
+**Effort:** 10-15 minutes
 **Benefit:** Clear public vs. private state
 
 ---
@@ -1185,7 +1185,7 @@ export function pointToSVG(x, y) {
 }
 ```
 
-**Effort:** 1 day
+**Effort:** 2-3 hours
 **Benefit:** Centralized conversions, easier to modify coordinate system
 
 ---
@@ -1218,7 +1218,7 @@ const accentColor = getCSSVar('--accent-gold') || '#c5975b';
 const dividerColor = getCSSVar('--text-dimmer') || '#666';
 ```
 
-**Effort:** 1 hour
+**Effort:** 10-15 minutes
 **Benefit:** Consistent color access, slight performance improvement
 
 ---
@@ -1256,7 +1256,7 @@ window.toggleGrid = toggleGrid;
 **Action:**
 Audit which functions are actually called from HTML `onclick` handlers. Remove unused window assignments.
 
-**Effort:** 2 hours
+**Effort:** 20-30 minutes
 **Benefit:** Cleaner global namespace
 
 ---
@@ -1335,7 +1335,7 @@ import { ZOOM } from './constants.js';
 state.zoom = Math.min(ZOOM.MAX, state.zoom * ZOOM.IN_FACTOR);
 ```
 
-**Effort:** 4 hours
+**Effort:** 45-60 minutes
 **Benefit:** Self-documenting code, easier to tune values
 
 ---
@@ -1396,7 +1396,7 @@ function isDoubleClick(wallIdx) {
 }
 ```
 
-**Effort:** 4 hours
+**Effort:** 45-60 minutes
 **Benefit:** Improved readability, easier testing
 
 ---
@@ -1431,7 +1431,7 @@ Document preferred patterns:
 - Use early returns for required elements
 - Use nullish coalescing (`??`) for defaults
 
-**Effort:** 1 hour (documentation)
+**Effort:** 10-15 minutes (documentation)
 **Benefit:** Consistent patterns
 
 ---
@@ -1509,7 +1509,7 @@ if (state.selectedMeasurement?.type === MEASUREMENT_TYPES.LOCKED) {
 }
 ```
 
-**Effort:** 2 hours
+**Effort:** 20-30 minutes
 **Benefit:** Autocomplete, typo prevention
 
 ---
@@ -1565,7 +1565,7 @@ export function alignSelection(mode) {
 }
 ```
 
-**Effort:** 1 week for major functions
+**Effort:** 3-4 hours for major functions
 **Benefit:** Testable logic, clearer intent
 
 ---
@@ -1654,168 +1654,170 @@ describe('getAnchorPoints', () => {
 });
 ```
 
-**Effort:** 2 weeks for initial setup + critical function tests
+**Effort:** 4-6 hours for initial setup + critical function tests
 **Benefit:** Confidence in refactoring, prevent regressions
 
 ---
 
 ## 8. Priority Refactoring Roadmap
 
-### Phase 1: Quick Wins (1-2 weeks)
+### Phase 1: Quick Wins (2-3 hours)
 
 **Goal:** Eliminate obvious duplication, improve consistency
 
 **Tasks:**
 1. ✅ Extract 45-degree angle snapping to `utils.js`
    - **Files:** `measurement.js`, `dividers.js` (3 locations)
-   - **Effort:** 3 hours
+   - **Effort:** 20-30 minutes
    - **Impact:** Eliminates 100+ lines of duplication
 
 2. ✅ Consolidate anchor point functions to `geometry.js`
    - **Files:** `app.js`, `measurement.js`
-   - **Effort:** 1 hour
+   - **Effort:** 10-15 minutes
    - **Impact:** Single source of truth
 
 3. ✅ Extract menu closing pattern to `domHelpers.js`
    - **Files:** `app.js`, `io.js` (6 locations)
-   - **Effort:** 3 hours
+   - **Effort:** 30-40 minutes
    - **Impact:** Consistent behavior
 
 4. ✅ Extract re-render orchestration to `renderComplete()`
    - **Files:** `history.js`, potentially others
-   - **Effort:** 1 hour
+   - **Effort:** 10-15 minutes
    - **Impact:** Consistent render pipeline
 
 5. ✅ Create constants file
    - **Files:** All files with magic numbers
-   - **Effort:** 4 hours
+   - **Effort:** 45-60 minutes
    - **Impact:** Self-documenting code
 
-**Total Effort:** ~12 hours (1.5 days)
+**Total Effort:** ~2.5 hours
 **Expected Outcome:** 5-8% code reduction, significantly improved maintainability
 
 ---
 
-### Phase 2: Architectural Improvements (3-4 weeks)
+### Phase 2: Architectural Improvements (16-20 hours)
 
 **Goal:** Improve module communication and code organization
 
 **Tasks:**
 1. ✅ Split `attachCanvasEvents()` into focused modules
    - **File:** `app.js`
-   - **Effort:** 1.5 weeks
+   - **Effort:** 4-6 hours
    - **Impact:** Maintainable event handling
 
 2. ✅ Create EventEmitter for module communication
    - **Files:** All modules using `window._` callbacks
-   - **Effort:** 2 weeks
+   - **Effort:** 8-12 hours
    - **Impact:** Loose coupling, testable modules
 
 3. ✅ Create RenderManager
    - **Files:** All modules calling render functions
-   - **Effort:** 1 week
+   - **Effort:** 3-4 hours
    - **Impact:** Centralized render control, performance improvement
 
 4. ✅ Proper error handling in localStorage operations
    - **Files:** `data.js`, `app.js`
-   - **Effort:** 3 hours
+   - **Effort:** 30-40 minutes
    - **Impact:** Better debugging, user feedback
 
-**Total Effort:** ~4.5 weeks
+**Total Effort:** ~16-23 hours
 **Expected Outcome:** 10-15% code reduction, clearer architecture
 
 ---
 
-### Phase 3: Code Organization (2-3 weeks)
+### Phase 3: Code Organization (10-14 hours)
 
 **Goal:** Organize code into logical modules
 
 **Tasks:**
 1. ✅ Split `measurement.js` into sub-modules
-   - **Effort:** 1 week
+   - **Effort:** 3-4 hours
    - **Impact:** Better organization
 
 2. ✅ Split `io.js` into import/export/validation modules
-   - **Effort:** 3 days
+   - **Effort:** 2-3 hours
    - **Impact:** Focused responsibilities
 
 3. ✅ Create centralized coordinate conversion module
    - **Files:** `data.js`, `render.js`, `measurement.js`, `furniture.js`
-   - **Effort:** 1 day
+   - **Effort:** 2-3 hours
    - **Impact:** Consistent conversions
 
 4. ✅ Standardize event handler attachment
    - **Files:** `furniture.js`, `dividers.js`, `measurement.js`
-   - **Effort:** 1 week
+   - **Effort:** 3-4 hours
    - **Impact:** Consistent patterns
 
-**Total Effort:** ~2.5 weeks
+**Total Effort:** ~10-14 hours
 **Expected Outcome:** Better file organization, easier navigation
 
 ---
 
-### Phase 4: State Management (2-3 weeks)
+### Phase 4: State Management (9-12 hours)
 
 **Goal:** Controlled state access with validation
 
 **Tasks:**
 1. ✅ Create state accessor functions
    - **File:** `data.js`
-   - **Effort:** 2 weeks
+   - **Effort:** 6-8 hours
    - **Impact:** Controlled state access
 
 2. ✅ Migrate code to use accessors
    - **Files:** All modules
-   - **Effort:** 1 week
+   - **Effort:** 3-4 hours
    - **Impact:** Side-effect handling, easier debugging
 
-**Total Effort:** ~3 weeks
+**Total Effort:** ~9-12 hours
 **Expected Outcome:** Predictable state changes, better debugging
 
 ---
 
-### Phase 5: Polish & Testing (3-4 weeks)
+### Phase 5: Polish & Testing (10-14 hours)
 
 **Goal:** Clean up remaining issues, add tests
 
 **Tasks:**
 1. ✅ Refactor deeply nested conditionals
    - **Files:** `app.js`, others
-   - **Effort:** 4 hours
+   - **Effort:** 45-60 minutes
    - **Impact:** Improved readability
 
 2. ✅ Add unit testing framework (Vitest)
-   - **Effort:** 1 week
+   - **Effort:** 1-2 hours
    - **Impact:** Confidence in changes
 
 3. ✅ Write tests for critical functions
-   - **Effort:** 2 weeks
+   - **Effort:** 4-6 hours
    - **Impact:** Prevent regressions
 
 4. ✅ Document preferred patterns
-   - **Effort:** 3 days
+   - **Effort:** 2-3 hours
    - **Impact:** Consistent future development
 
 5. ✅ Audit and remove unused code
    - **Files:** All files
-   - **Effort:** 1 day
+   - **Effort:** 2-3 hours
    - **Impact:** Smaller bundle size
 
-**Total Effort:** ~4 weeks
+**Total Effort:** ~10-14 hours
 **Expected Outcome:** Tested, documented, polished codebase
 
 ---
 
 ## Summary Timeline
 
-| Phase | Duration | Effort | Impact |
+| Phase | Duration (Claude Code) | Effort | Impact |
 |-------|----------|--------|--------|
-| Phase 1: Quick Wins | 1-2 weeks | 12 hours | 5-8% reduction |
-| Phase 2: Architecture | 3-4 weeks | 4.5 weeks | 10-15% reduction |
-| Phase 3: Organization | 2-3 weeks | 2.5 weeks | Better structure |
-| Phase 4: State Management | 2-3 weeks | 3 weeks | Controlled state |
-| Phase 5: Polish & Testing | 3-4 weeks | 4 weeks | Production ready |
-| **Total** | **11-16 weeks** | **~14 weeks** | **Professional codebase** |
+| Phase 1: Quick Wins | 2-3 hours | 2.5 hours | 5-8% reduction |
+| Phase 2: Architecture | 16-20 hours | 16-23 hours | 10-15% reduction |
+| Phase 3: Organization | 10-14 hours | 10-14 hours | Better structure |
+| Phase 4: State Management | 9-12 hours | 9-12 hours | Controlled state |
+| Phase 5: Polish & Testing | 10-14 hours | 10-14 hours | Production ready |
+| **Total** | **47-63 hours** | **~48-66 hours** | **Professional codebase** |
+
+**Note:** These estimates reflect Claude Code implementation time, not human developer time. Each phase can be completed in focused working sessions, with the entire refactoring achievable in 6-8 full working days of Claude Code effort.
 
 ---
 

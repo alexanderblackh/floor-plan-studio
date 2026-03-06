@@ -218,7 +218,7 @@ Everything in Phase 3A, plus:
 
 **Impact**: 5-8% code reduction, improved maintainability
 
-### Phase 5.2: Architectural Improvements (3-4 weeks)
+### Phase 5.2: Architectural Improvements (16-20 hours)
 - [ ] **Split `attachCanvasEvents()`** from 472 lines into 6-8 focused modules
   - `interactions/touch.js` - Touch event handling
   - `interactions/zoom.js` - Mouse wheel zoom
@@ -232,7 +232,7 @@ Everything in Phase 3A, plus:
 
 **Impact**: 10-15% code reduction, clearer architecture
 
-### Phase 5.3: Code Organization (2-3 weeks)
+### Phase 5.3: Code Organization (10-14 hours)
 - [ ] **Split `measurement.js`** into sub-modules (core, render, events)
 - [ ] **Split `io.js`** into import/export/validation modules
 - [ ] **Create coordinate conversion module** for consistent transformations
@@ -240,7 +240,7 @@ Everything in Phase 3A, plus:
 
 **Impact**: Better file organization, easier navigation
 
-### Phase 5.4: State Management (2-3 weeks)
+### Phase 5.4: State Management (9-12 hours)
 - [ ] **Create state accessor functions** in `data.js`
 - [ ] **Migrate direct state access** to use accessors
 - [ ] **Add validation** for state mutations
@@ -248,7 +248,7 @@ Everything in Phase 3A, plus:
 
 **Impact**: Predictable state changes, better debugging
 
-### Phase 5.5: Polish & Testing (3-4 weeks)
+### Phase 5.5: Polish & Testing (10-14 hours)
 - [ ] **Refactor deeply nested conditionals** to use early returns
 - [ ] **Add unit testing framework** (Vitest)
 - [ ] **Write tests** for critical functions (geometry, collision, measurements)
@@ -257,8 +257,10 @@ Everything in Phase 3A, plus:
 
 **Impact**: Tested, documented, production-ready codebase
 
-**Total Timeline**: 11-16 weeks
+**Total Timeline**: 47-63 hours of Claude Code effort (6-8 full working days)
 **Total Impact**: ~20% code reduction, professional-grade architecture
+
+*Note: Time estimates reflect Claude Code implementation speed, not human developer timelines.*
 
 ---
 
