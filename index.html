@@ -1264,7 +1264,12 @@
           Import/Export
         </button>
         <div style="height:1px;background:var(--border-secondary);margin:4px 0;" role="separator"></div>
-        <div style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Implementation Proposals</div>
+        <button class="docs-menu-item" onclick="openDocs('llm-instructions')" role="menuitem">
+          <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
+          AI Instructions
+        </button>
+        <div style="height:1px;background:var(--border-secondary);margin:4px 0;" role="separator"></div>
+        <div style="padding:8px 12px;font-size:11px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Proposals</div>
         <button class="docs-menu-item" onclick="openDocs('potential-collaboration')" role="menuitem">
           <i data-lucide="users" style="width:16px;height:16px;"></i>
           Collaboration & Sharing
@@ -1280,11 +1285,6 @@
         <button class="docs-menu-item" onclick="openDocs('potential-business')" role="menuitem">
           <i data-lucide="briefcase" style="width:16px;height:16px;"></i>
           Business Features
-        </button>
-        <div style="height:1px;background:var(--border-secondary);margin:4px 0;" role="separator"></div>
-        <button class="docs-menu-item" onclick="openDocs('llm-instructions')" role="menuitem">
-          <i data-lucide="sparkles" style="width:16px;height:16px;"></i>
-          LLM Instructions
         </button>
       </div>
     </div>
@@ -1903,7 +1903,7 @@ async function openDocs(docType) {
     'potential-integrations': 'Integrations',
     'potential-community': 'Community Features',
     'potential-business': 'Business Features',
-    'llm-instructions': 'LLM Instructions'
+    'llm-instructions': 'AI Instructions'
   };
   title.textContent = titles[docType] || 'Documentation';
 
