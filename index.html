@@ -214,6 +214,13 @@
     outline: 3px solid var(--accent-gold);
     outline-offset: 2px;
   }
+  /* Rotate chevron when docs menu is open */
+  .docs-trigger svg:last-child {
+    transition: transform 0.2s ease;
+  }
+  .docs-trigger[aria-expanded="true"] svg:last-child {
+    transform: rotate(180deg);
+  }
   .docs-menu {
     display: none;
     position: absolute;
@@ -603,6 +610,16 @@
     font-weight: 400; color: var(--text-secondary); padding-left: 8px;
   }
   .elevation-content { overflow-x: auto; overflow-y: hidden; padding: 10px; }
+  .elev-close-btn {
+    display: none;
+    background: transparent; border: none;
+    color: var(--text-secondary); cursor: pointer;
+    padding: 4px; border-radius: 4px; line-height: 0;
+  }
+  .elev-close-btn:hover { color: var(--accent-gold); }
+  @media (max-width: 768px) {
+    .elev-close-btn { display: flex; align-items: center; }
+  }
 
   /* Floating Toolbar Container (Figma-style) */
   .floating-toolbar-container {
@@ -804,7 +821,9 @@
     color: var(--text-secondary);
     min-width: 45px;
     text-align: center;
+    cursor: pointer;
   }
+  .zoom-display:hover { color: var(--accent-gold); }
 
   /* Top toolbar bars (alignment, save controls) */
   .toolbar-top-bar {
@@ -980,37 +999,98 @@
     .toolbar-divider {
       display: none;
     }
+    /* Toolbar: no horizontal scroll on mobile — content must fit */
     .floating-toolbar {
-      gap: 4px;
-      padding: 6px 8px;
+      gap: 2px;
+      padding: 4px 8px;
+      overflow-x: hidden;
     }
+    /* Metadata bar: bigger and legible */
     .toolbar-metadata {
-      gap: 12px;
-      padding: 4px 12px;
-      font-size: 8px;
+      gap: 16px;
+      padding: 6px 16px;
+      font-size: 12px;
+      overflow-x: hidden;
+    }
+    /* Hide cursor position — meaningless without a mouse */
+    #cursorMeta {
+      display: none;
     }
     /* Hide staging panel — no furniture placement in preview */
     .staging-panel {
       display: none;
     }
-    /* Larger touch targets */
+    /* Header: single line, no wrap */
+    .app-header {
+      padding: 0 16px;
+      overflow: hidden;
+    }
+    .app-title {
+      font-size: 16px;
+      white-space: nowrap;
+    }
+    /* Hide plan name + version inputs — read-only preview mode */
+    .plan-name-input,
+    .plan-version-input {
+      display: none;
+    }
+    /* Toolbar buttons: keep 36px width from 1024px rule, just ensure adequate tap height */
     .toolbar-btn {
       min-height: 44px;
-      min-width: 44px;
+    }
+    /* Hide edit-only toolbar buttons and their whole sections */
+    #btnMeasure,
+    #btnAnchor,
+    #btnDivider,
+    #btnFixtures {
+      display: none;
+    }
+    #undoRedoSection,
+    #resetSection {
+      display: none;
+    }
+    /* Hide zoom level text — save horizontal space */
+    #zoomLevel {
+      display: none;
     }
     /* Canvas area needs position:relative for elevation overlay */
     .canvas-area {
       position: relative;
     }
-    /* Elevation panel as full-width overlay on mobile */
+    /* Elevation panel: taller full-width overlay on mobile */
     .elevation-panel {
       position: absolute;
       bottom: 0;
       left: 0;
       right: 0;
       z-index: 50;
-      max-height: 50vh;
+      max-height: 65vh;
       border-top: 2px solid var(--border-primary);
+    }
+    /* Hide desktop-only view menu settings */
+    #desktopOnlySettings {
+      display: none;
+    }
+    /* Hide alignment bar — editing disabled in Phase 3A */
+    #alignmentBar {
+      display: none !important;
+    }
+    /* Menus: clamp to viewport width, never overflow off either edge */
+    .toolbar-menu {
+      left: 8px !important;
+      right: 8px !important;
+      max-width: calc(100vw - 16px);
+    }
+    /* Submenus: JS handles positioning on mobile, just clamp width */
+    .toolbar-submenu {
+      max-width: calc(100vw - 16px);
+    }
+    /* Show zoom percentage on mobile */
+    #zoomLevel {
+      display: flex;
+      min-width: unset;
+      padding: 0 6px;
+      font-size: 10px;
     }
   }
 
@@ -1265,6 +1345,9 @@
         <span class="elevation-header-title">Elevation View</span>
         <label for="elevWallSelect" class="sr-only">Select wall to view</label>
         <select id="elevWallSelect" aria-label="Select wall to view in elevation"></select>
+        <button class="elev-close-btn" onclick="toggleElevation()" aria-label="Close elevation view">
+          <i data-lucide="x" style="width:16px;height:16px;"></i>
+        </button>
       </div>
       <div class="elevation-content"></div>
     </div>
@@ -1385,7 +1468,7 @@
 
     <div class="toolbar-divider"></div>
 
-    <div class="toolbar-section">
+    <div class="toolbar-section" id="undoRedoSection">
       <button class="toolbar-btn" id="btnUndo" onclick="undoAction()" aria-label="Undo last action">
         <i data-lucide="undo"></i>
       </button>
@@ -1411,7 +1494,7 @@
 
     <div class="toolbar-divider"></div>
 
-    <div class="toolbar-section">
+    <div class="toolbar-section" id="resetSection">
       <button class="toolbar-btn" onclick="confirmReset()" aria-label="Reset layout to default">
         <i data-lucide="rotate-ccw"></i>
       </button>
@@ -1423,7 +1506,7 @@
       <button class="toolbar-btn" onclick="zoomOut()" aria-label="Zoom out">
         <i data-lucide="zoom-out"></i>
       </button>
-      <span class="zoom-display" id="zoomLevel" aria-live="polite" aria-atomic="true">100%</span>
+      <button class="zoom-display toolbar-btn" id="zoomLevel" onclick="toggleZoomMenu()" aria-label="Zoom level — click for presets" aria-haspopup="menu" aria-expanded="false">100%</button>
       <button class="toolbar-btn" onclick="zoomIn()" aria-label="Zoom in">
         <i data-lucide="zoom-in"></i>
       </button>
@@ -1438,7 +1521,7 @@
       <span class="metadata-label">Scale:</span>
       <span class="metadata-value" id="scaleDisplay">1" = 2px</span>
     </div>
-    <div class="metadata-item">
+    <div class="metadata-item" id="cursorMeta">
       <span class="metadata-label">Cursor:</span>
       <span class="metadata-value" id="cursorPos">—</span>
     </div>
@@ -1489,19 +1572,21 @@
     <span>Dividers</span>
     <span id="showAllDividersCheck" aria-hidden="true"></span>
   </button>
-  <div class="menu-divider" role="separator"></div>
-  <button onclick="toggleAlwaysShowAlignment()" id="menuAlwaysShowAlignment" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
-    <span>Always Show Alignment</span>
-    <span id="alwaysShowAlignmentCheck" aria-hidden="true"></span>
-  </button>
-  <button onclick="toggleAlwaysShowSaveControls()" id="menuAlwaysShowSaveControls" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
-    <span>Always Show Save Controls</span>
-    <span id="alwaysShowSaveControlsCheck" aria-hidden="true"></span>
-  </button>
-  <button onclick="toggleAlwaysShowShortcuts()" id="menuAlwaysShowShortcuts" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
-    <span>Always Show Shortcuts</span>
-    <span id="alwaysShowShortcutsCheck" aria-hidden="true"></span>
-  </button>
+  <div id="desktopOnlySettings">
+    <div class="menu-divider" role="separator"></div>
+    <button onclick="toggleAlwaysShowAlignment()" id="menuAlwaysShowAlignment" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
+      <span>Always Show Alignment</span>
+      <span id="alwaysShowAlignmentCheck" aria-hidden="true"></span>
+    </button>
+    <button onclick="toggleAlwaysShowSaveControls()" id="menuAlwaysShowSaveControls" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
+      <span>Always Show Save Controls</span>
+      <span id="alwaysShowSaveControlsCheck" aria-hidden="true"></span>
+    </button>
+    <button onclick="toggleAlwaysShowShortcuts()" id="menuAlwaysShowShortcuts" style="display:flex;align-items:center;justify-content:space-between;" role="menuitemcheckbox" aria-checked="false">
+      <span>Always Show Shortcuts</span>
+      <span id="alwaysShowShortcutsCheck" aria-hidden="true"></span>
+    </button>
+  </div>
   <div class="menu-divider"></div>
   <button class="submenu-trigger" onclick="showSubmenu('gridDensitySubmenu', event)" style="display:flex;align-items:center;justify-content:space-between;">
     <span>Grid Density</span>
@@ -1525,24 +1610,24 @@
 </div>
 
 <div class="toolbar-menu" id="exportMenu" style="display:none;" role="menu" aria-labelledby="btnExport">
-  <button onclick="exportSVG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
+  <button onclick="closeAllMenus();exportSVG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
     <span>Export SVG</span>
     <span class="menu-shortcut">⌘S</span>
   </button>
-  <button onclick="exportPNG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
+  <button onclick="closeAllMenus();exportPNG()" style="display:flex;align-items:center;justify-content:space-between;" role="menuitem">
     <span>Export PNG</span>
     <span class="menu-shortcut">⌘P</span>
   </button>
-  <button onclick="exportFigma()" role="menuitem">Export for Figma</button>
+  <button onclick="closeAllMenus();exportFigma()" role="menuitem">Export for Figma</button>
   <div class="menu-divider" role="separator"></div>
-  <button onclick="exportJSON()" role="menuitem">Export Placement JSON</button>
-  <button onclick="exportFullJSON()" role="menuitem">Export Full Floor Plan</button>
-  <button onclick="exportCSV()" role="menuitem">Export Furniture CSV</button>
+  <button onclick="closeAllMenus();exportJSON()" role="menuitem">Export Placement JSON</button>
+  <button onclick="closeAllMenus();exportFullJSON()" role="menuitem">Export Full Floor Plan</button>
+  <button onclick="closeAllMenus();exportCSV()" role="menuitem">Export Furniture CSV</button>
 </div>
 
 <div class="toolbar-menu" id="importMenu" style="display:none;" role="menu" aria-labelledby="btnImport">
-  <button onclick="importJSON()" role="menuitem">Import JSON</button>
-  <button onclick="importCSV()" role="menuitem">Import Furniture CSV</button>
+  <button onclick="closeAllMenus();importJSON()" role="menuitem">Import JSON</button>
+  <button onclick="closeAllMenus();importCSV()" role="menuitem">Import Furniture CSV</button>
 </div>
 
 <div class="toolbar-submenu" id="gridDensitySubmenu" style="display:none;">
@@ -1615,6 +1700,19 @@
     <span>System</span>
     <span id="themeCheckSystem"></span>
   </button>
+</div>
+
+<!-- Zoom Preset Menu -->
+<div class="toolbar-menu" id="zoomMenu" style="display:none;" role="menu" aria-labelledby="zoomLevel">
+  <button onclick="setZoomPreset(0.25)" role="menuitem">25%</button>
+  <button onclick="setZoomPreset(0.5)" role="menuitem">50%</button>
+  <button onclick="setZoomPreset(0.75)" role="menuitem">75%</button>
+  <button onclick="setZoomPreset(1)" role="menuitem">100%</button>
+  <button onclick="setZoomPreset(1.5)" role="menuitem">150%</button>
+  <button onclick="setZoomPreset(2)" role="menuitem">200%</button>
+  <button onclick="setZoomPreset(3)" role="menuitem">300%</button>
+  <div class="menu-divider" role="separator"></div>
+  <button onclick="fitToView();closeAllMenus();" role="menuitem">Fit to View</button>
 </div>
 
 <!-- Import Confirmation Modal -->

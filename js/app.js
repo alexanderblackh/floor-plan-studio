@@ -20,8 +20,18 @@ import './io.js'; // registers global export/import functions
 
 // ===== ZOOM / PAN =====
 function applyTransform() {
+  const ctr = document.getElementById('canvasContainer');
   const svg = document.getElementById('svgPlan');
-  if (svg) svg.style.transform = `translate(${state.panX}px,${state.panY}px) scale(${state.zoom})`;
+  if (ctr && svg) {
+    // Clamp pan so the floor plan can't be scrolled completely out of view
+    const cW = ctr.clientWidth, cH = ctr.clientHeight;
+    const sW = parseFloat(svg.getAttribute('width') || 680) * state.zoom;
+    const sH = parseFloat(svg.getAttribute('height') || 620) * state.zoom;
+    const margin = Math.min(150, Math.min(cW, cH) * 0.25);
+    state.panX = Math.max(margin - sW, Math.min(cW - margin, state.panX));
+    state.panY = Math.max(margin - sH, Math.min(cH - margin, state.panY));
+    svg.style.transform = `translate(${state.panX}px,${state.panY}px) scale(${state.zoom})`;
+  }
   const zl = document.getElementById('zoomLevel');
   if (zl) zl.textContent = `${Math.round(state.zoom * 100)}%`;
 }
@@ -358,7 +368,7 @@ function resetFurniture() {
 // ===== MENU HELPER =====
 function closeAllMenus() {
   // Close all parent menus
-  const menus = ['viewMenu', 'exportMenu', 'importMenu'];
+  const menus = ['viewMenu', 'exportMenu', 'importMenu', 'zoomMenu'];
   menus.forEach(id => {
     const menu = document.getElementById(id);
     if (menu) menu.style.display = 'none';
@@ -370,6 +380,57 @@ function closeAllMenus() {
     if (submenu) submenu.style.display = 'none';
     currentSubmenu = null;
   }
+}
+
+// ===== ZOOM PRESET MENU =====
+function toggleZoomMenu() {
+  const menu = document.getElementById('zoomMenu');
+  const btn = document.getElementById('zoomLevel');
+  if (!menu || !btn) return;
+
+  const isVisible = menu.style.display === 'block';
+  if (isVisible) {
+    closeAllMenus();
+    btn.setAttribute('aria-expanded', 'false');
+    return;
+  }
+
+  closeAllMenus();
+  const rect = btn.getBoundingClientRect();
+  menu.style.display = 'block';
+  // Position above the button, clamped to viewport
+  const menuW = 160;
+  let leftPos = rect.left;
+  if (leftPos + menuW > window.innerWidth - 8) leftPos = window.innerWidth - menuW - 8;
+  if (leftPos < 8) leftPos = 8;
+  menu.style.left = leftPos + 'px';
+  menu.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+  menu.style.top = 'auto';
+  btn.setAttribute('aria-expanded', 'true');
+
+  setTimeout(() => {
+    document.addEventListener('click', function closeMenu(e) {
+      if (!e.target.closest('#zoomMenu') && !e.target.closest('#zoomLevel')) {
+        closeAllMenus();
+        btn.setAttribute('aria-expanded', 'false');
+        document.removeEventListener('click', closeMenu);
+      }
+    });
+  }, 0);
+}
+
+function setZoomPreset(zoom) {
+  const ctr = document.getElementById('canvasContainer');
+  if (!ctr) return;
+  const r = ctr.getBoundingClientRect();
+  const cx = r.width / 2, cy = r.height / 2;
+  const oz = state.zoom;
+  state.zoom = Math.max(0.15, Math.min(15, zoom));
+  state.panX = cx - (cx - state.panX) * (state.zoom / oz);
+  state.panY = cy - (cy - state.panY) * (state.zoom / oz);
+  applyTransform();
+  closeAllMenus();
+  document.getElementById('zoomLevel')?.setAttribute('aria-expanded', 'false');
 }
 
 // ===== VIEW MENU =====
@@ -597,33 +658,35 @@ function showSubmenu(id, event) {
   submenu.style.opacity = '1';
   currentSubmenu = id;
 
-  // Position submenu directly to the right of the parent menu, aligned with the button
-  const leftPos = parentRect.right + 4;
-
-  // Get submenu height to calculate proper positioning
-  const submenuHeight = submenu.offsetHeight;
-  const viewportHeight = window.innerHeight;
-
-  // Start with button top, but adjust if it goes off screen
-  let topPos = buttonRect.top;
-
-  // If submenu would go below viewport, align bottom with button bottom
-  if (topPos + submenuHeight > viewportHeight) {
-    topPos = Math.max(0, buttonRect.bottom - submenuHeight);
-  }
-
-  // If still too tall, align to bottom of viewport
-  if (topPos + submenuHeight > viewportHeight) {
-    topPos = viewportHeight - submenuHeight - 10;
-  }
-
   submenu.style.position = 'fixed';
-  submenu.style.left = leftPos + 'px';
-  submenu.style.top = topPos + 'px';
-  submenu.style.bottom = 'auto';
-  submenu.style.right = 'auto';
   submenu.style.zIndex = '10001';
   submenu.style.pointerEvents = 'auto';
+
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile) {
+    // Stack submenu above the parent menu, full-width
+    submenu.style.left = '8px';
+    submenu.style.right = '8px';
+    submenu.style.top = 'auto';
+    submenu.style.bottom = (window.innerHeight - parentRect.top + 4) + 'px';
+  } else {
+    // Desktop: open to the right of the parent menu, aligned with button
+    const leftPos = parentRect.right + 4;
+    const submenuHeight = submenu.offsetHeight;
+    const viewportHeight = window.innerHeight;
+    let topPos = buttonRect.top;
+    if (topPos + submenuHeight > viewportHeight) {
+      topPos = Math.max(0, buttonRect.bottom - submenuHeight);
+    }
+    if (topPos + submenuHeight > viewportHeight) {
+      topPos = viewportHeight - submenuHeight - 10;
+    }
+    submenu.style.left = leftPos + 'px';
+    submenu.style.right = 'auto';
+    submenu.style.top = topPos + 'px';
+    submenu.style.bottom = 'auto';
+  }
 }
 
 function hideSubmenu(id) {
@@ -720,6 +783,7 @@ function attachCanvasEvents() {
   let touchInitialPanX = 0, touchInitialPanY = 0;
   let touchStartDist = 0, touchInitialZoom = 1;
   let touchMidX = 0, touchMidY = 0;
+  let touchStartTime = 0;
 
   ctr.addEventListener('touchstart', e => {
     if (e.target.closest('.mobile-hint')) return;
@@ -728,6 +792,7 @@ function attachCanvasEvents() {
     if (e.touches.length === 1) {
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
       touchInitialPanX = state.panX;
       touchInitialPanY = state.panY;
       state.isPanning = true;
@@ -767,10 +832,37 @@ function attachCanvasEvents() {
       state.isPanning = false;
       ctr.classList.remove('panning');
       touchStartDist = 0;
+
+      // Detect tap: short duration + minimal movement → select furniture
+      const touch = e.changedTouches[0];
+      if (touch) {
+        const tapDuration = Date.now() - touchStartTime;
+        const dx = touch.clientX - touchStartX;
+        const dy = touch.clientY - touchStartY;
+        const moved = Math.sqrt(dx * dx + dy * dy);
+        if (tapDuration < 300 && moved < 10) {
+          const el = document.elementFromPoint(touch.clientX, touch.clientY);
+          const piece = el?.closest('.furniture-piece');
+          if (piece) {
+            const idx = parseInt(piece.dataset.idx);
+            if (!isNaN(idx)) {
+              state.selectedFurniture.clear();
+              state.selectedFurniture.add(idx);
+              renderFurniture();
+              if (window._updateAlignToolbar) window._updateAlignToolbar();
+            }
+          } else {
+            if (state.selectedFurniture.size > 0) {
+              clearSelection();
+            }
+          }
+        }
+      }
     } else if (e.touches.length === 1) {
       // Lifted one finger from pinch — resume single-finger pan without a jump
       touchStartX = e.touches[0].clientX;
       touchStartY = e.touches[0].clientY;
+      touchStartTime = Date.now();
       touchInitialPanX = state.panX;
       touchInitialPanY = state.panY;
       state.isPanning = true;
@@ -1281,10 +1373,20 @@ window.selectUnit = selectUnit;
 window.clearAllFurniture = clearAllFurniture;
 window.resetFurniture = resetFurniture;
 window.confirmReset = confirmReset;
-window.toggleElevation = toggleElevation;
+window.toggleElevation = function() {
+  if (state.floorPlan.walls.length === 0) {
+    if (window.showToast) {
+      window.showToast('Import a floor plan to use elevation view', 'error', 4000);
+    }
+    return;
+  }
+  toggleElevation();
+};
 window.fitToView = fitToView;
 window.zoomIn = zoomIn;
 window.zoomOut = zoomOut;
+window.toggleZoomMenu = toggleZoomMenu;
+window.setZoomPreset = setZoomPreset;
 window.toggleTheme = toggleTheme;
 window.selectTheme = selectTheme;
 window.showSubmenu = showSubmenu;
@@ -1294,9 +1396,23 @@ window.savePlanVersion = savePlanVersion;
 window._updateViewMenuChecks = updateViewMenuChecks;
 window._updateAlignmentBarVisibility = updateAlignmentBarVisibility;
 window._updateSaveControlsVisibility = updateSaveControlsVisibility;
+// Phase 3A: Block alignment actions on mobile — hidden via CSS but guard as fallback
+(function() {
+  const mobileGuard = (fn) => function(...args) {
+    if (window.matchMedia('(max-width: 768px)').matches) {
+      if (window.showToast) window.showToast('Editing is not available in preview mode', 'error', 3000);
+      return;
+    }
+    return fn(...args);
+  };
+  window.alignSelection = mobileGuard(window.alignSelection);
+  window.alignToWall = mobileGuard(window.alignToWall);
+})();
+
 window.dismissMobileHint = function() {
   document.getElementById('mobileHint')?.remove();
-  try { localStorage.setItem('mobileHintDismissed', '1'); } catch (_) {}
+  state.mobileHintDismissed = true;
+  savePreferences();
 };
 
 // ===== INITIALIZATION =====
@@ -1335,9 +1451,17 @@ function init() {
   // Reapply transform on resize/orientation change
   window.addEventListener('resize', () => applyTransform());
 
+  // Prevent native browser pinch-to-zoom on the entire page.
+  // Without this, pinches that start on the toolbar/header (outside the canvas)
+  // never hit the canvas touchstart handler, so the browser zooms the page instead.
+  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length >= 2) e.preventDefault();
+  }, { passive: false });
+
   // Mobile hint: show on first visit, hide if dismissed or on desktop
-  if (!window.matchMedia('(max-width: 768px)').matches ||
-      localStorage.getItem('mobileHintDismissed')) {
+  if (!window.matchMedia('(max-width: 768px)').matches || state.mobileHintDismissed) {
     document.getElementById('mobileHint')?.remove();
   }
 

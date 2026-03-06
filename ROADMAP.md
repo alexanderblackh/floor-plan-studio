@@ -95,24 +95,24 @@ Anything that modifies the floor plan: furniture drag, fixture editing, measurem
 #### Technical Work
 
 **Touch & Input**
-- [ ] Add `touchstart` / `touchmove` / `touchend` handlers alongside existing mouse events in `app.js`
+- [x] Add `touchstart` / `touchmove` / `touchend` handlers alongside existing mouse events in `app.js`
 - [ ] Unify coordinate extraction into a helper (`getEventPoint(e)`) that handles both `e.clientX` and `e.touches[0].clientX`
-- [ ] Implement one-finger pan on the canvas (map to existing `panX`/`panY` state)
-- [ ] Implement pinch-to-zoom using two-touch distance delta (map to existing `zoom` state)
-- [ ] Add `touch-action: none` to canvas container so browser doesn't scroll the page during pan/zoom
-- [ ] Add `-webkit-touch-callout: none` to prevent iOS long-press context menus
+- [x] Implement one-finger pan on the canvas (map to existing `panX`/`panY` state)
+- [x] Implement pinch-to-zoom using two-touch distance delta (map to existing `zoom` state)
+- [x] Add `touch-action: none` to canvas container so browser doesn't scroll the page during pan/zoom
+- [x] Add `-webkit-touch-callout: none` to prevent iOS long-press context menus
 
 **Layout & Responsive**
 - [ ] Make canvas SVG size responsive to container width/height instead of fixed pixel values (`render.js`)
-- [ ] Add a mobile breakpoint (≤ 768px) that hides the staging/furniture panel entirely
-- [ ] Collapse the floating toolbar to a minimal icon strip on mobile; move secondary controls into a slide-up sheet or overflow menu
-- [ ] Ensure the elevation panel can be opened as a full-width overlay on small screens
-- [ ] Handle orientation change (`orientationchange` / `resize`) by recalculating SVG dimensions and re-rendering
+- [x] Add a mobile breakpoint (≤ 768px) that hides the staging/furniture panel entirely
+- [x] Collapse the floating toolbar to a minimal icon strip on mobile; move secondary controls into a slide-up sheet or overflow menu
+- [x] Ensure the elevation panel can be opened as a full-width overlay on small screens
+- [x] Handle orientation change (`orientationchange` / `resize`) by recalculating SVG dimensions and re-rendering
 
 **Touch UX**
-- [ ] Increase minimum tap target size to 44px for all toolbar buttons on mobile
-- [ ] Show a brief pan/pinch hint overlay on first mobile load (dismissable)
-- [ ] Disable furniture drag initiation on touch (show a "preview only" tooltip if user tries to drag)
+- [x] Increase minimum tap target size to 44px for all toolbar buttons on mobile
+- [x] Show a brief pan/pinch hint overlay on first mobile load (dismissable)
+- [x] Disable furniture drag initiation on touch (show a "preview only" tooltip if user tries to drag)
 
 ---
 

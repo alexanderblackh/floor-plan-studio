@@ -97,6 +97,7 @@ export const state = {
   alwaysShowAlignment: false,
   alwaysShowSaveControls: false,
   alwaysShowShortcuts: false,
+  mobileHintDismissed: false,
   anchorMode: false,
   anchorSource: null,
   anchorSourcePoint: null, // Which anchor point on source: 'topLeft', 'center', etc.
@@ -211,7 +212,8 @@ export function savePreferences() {
       alwaysShowAlignment: state.alwaysShowAlignment,
       alwaysShowSaveControls: state.alwaysShowSaveControls,
       alwaysShowShortcuts: state.alwaysShowShortcuts,
-      displayUnit: state.displayUnit
+      displayUnit: state.displayUnit,
+      mobileHintDismissed: state.mobileHintDismissed
     };
     localStorage.setItem('fps-preferences', JSON.stringify(prefs));
   } catch(e) { /* quota exceeded or private browsing */ }
@@ -238,6 +240,7 @@ export function loadPreferences() {
       if (prefs.alwaysShowAlignment !== undefined) state.alwaysShowAlignment = prefs.alwaysShowAlignment;
       if (prefs.alwaysShowSaveControls !== undefined) state.alwaysShowSaveControls = prefs.alwaysShowSaveControls;
       if (prefs.alwaysShowShortcuts !== undefined) state.alwaysShowShortcuts = prefs.alwaysShowShortcuts;
+      if (prefs.mobileHintDismissed !== undefined) state.mobileHintDismissed = prefs.mobileHintDismissed;
       if (prefs.displayUnit !== undefined) {
         state.displayUnit = prefs.displayUnit;
       } else {
