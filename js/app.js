@@ -19,14 +19,24 @@ import { importFullPlan, importPlacement } from './io.js';
 import './io.js'; // registers global export/import functions
 
 // ===== ZOOM / PAN =====
+// Extract client point from mouse or touch event
+function getEventPoint(e) {
+  const t = e.touches?.[0] ?? e.changedTouches?.[0] ?? e;
+  return { x: t.clientX, y: t.clientY };
+}
+
 function applyTransform() {
   const ctr = document.getElementById('canvasContainer');
   const svg = document.getElementById('svgPlan');
   if (ctr && svg) {
-    // Clamp pan so the floor plan can't be scrolled completely out of view
+    // Update SVG element size to fill container (viewBox keeps coordinate space fixed)
+    svg.setAttribute('width', ctr.clientWidth);
+    svg.setAttribute('height', ctr.clientHeight);
+    // Use viewBox dimensions for pan bounds — that's the content size
     const cW = ctr.clientWidth, cH = ctr.clientHeight;
-    const sW = parseFloat(svg.getAttribute('width') || 680) * state.zoom;
-    const sH = parseFloat(svg.getAttribute('height') || 620) * state.zoom;
+    const vb = svg.viewBox.baseVal;
+    const sW = (vb?.width || 680) * state.zoom;
+    const sH = (vb?.height || 620) * state.zoom;
     const margin = Math.min(150, Math.min(cW, cH) * 0.25);
     state.panX = Math.max(margin - sW, Math.min(cW - margin, state.panX));
     state.panY = Math.max(margin - sH, Math.min(cH - margin, state.panY));
@@ -62,7 +72,9 @@ function fitToView() {
   const svg = document.getElementById('svgPlan');
   if (!ctr || !svg) return;
   const cw = ctr.clientWidth, ch = ctr.clientHeight;
-  const sw = parseFloat(svg.getAttribute('width')), sh = parseFloat(svg.getAttribute('height'));
+  // Use viewBox dimensions (coordinate space) not element dimensions for zoom calc
+  const vb = svg.viewBox.baseVal;
+  const sw = vb?.width || 680, sh = vb?.height || 620;
   state.zoom = Math.min(cw / sw, ch / sh) * 0.92;
   state.panX = (cw - sw * state.zoom) / 2;
   state.panY = (ch - sh * state.zoom) / 2;
@@ -793,14 +805,14 @@ function attachCanvasEvents() {
       touchStartDist = 0;
 
       // Detect tap: short duration + minimal movement → select furniture
-      const touch = e.changedTouches[0];
+      const touch = getEventPoint(e);
       if (touch) {
         const tapDuration = Date.now() - touchStartTime;
-        const dx = touch.clientX - touchStartX;
-        const dy = touch.clientY - touchStartY;
+        const dx = touch.x - touchStartX;
+        const dy = touch.y - touchStartY;
         const moved = Math.sqrt(dx * dx + dy * dy);
         if (tapDuration < 300 && moved < 10) {
-          const el = document.elementFromPoint(touch.clientX, touch.clientY);
+          const el = document.elementFromPoint(touch.x, touch.y);
           const piece = el?.closest('.furniture-piece');
           if (piece) {
             const idx = parseInt(piece.dataset.idx);
@@ -1407,8 +1419,16 @@ function init() {
   // Attach events
   attachCanvasEvents();
 
-  // Reapply transform on resize/orientation change
-  window.addEventListener('resize', () => applyTransform());
+  // Reapply transform on resize/orientation change; also update SVG container size
+  window.addEventListener('resize', () => {
+    const ctr = document.getElementById('canvasContainer');
+    const svg = document.getElementById('svgPlan');
+    if (ctr && svg) {
+      svg.setAttribute('width', ctr.clientWidth);
+      svg.setAttribute('height', ctr.clientHeight);
+    }
+    applyTransform();
+  });
 
   // Prevent native browser pinch-to-zoom on the entire page.
   // Without this, pinches that start on the toolbar/header (outside the canvas)
@@ -1422,6 +1442,11 @@ function init() {
   // Mobile hint: show on first visit, hide if dismissed or on desktop
   if (!window.matchMedia('(max-width: 768px)').matches || state.mobileHintDismissed) {
     document.getElementById('mobileHint')?.remove();
+  }
+
+  // On mobile, auto-fit the floor plan to fill the screen on load
+  if (window.matchMedia('(max-width: 768px)').matches) {
+    fitToView();
   }
 
   // Load plan name and version

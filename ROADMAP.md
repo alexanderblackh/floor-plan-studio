@@ -96,14 +96,14 @@ Anything that modifies the floor plan: furniture drag, fixture editing, measurem
 
 **Touch & Input**
 - [x] Add `touchstart` / `touchmove` / `touchend` handlers alongside existing mouse events in `app.js`
-- [ ] Unify coordinate extraction into a helper (`getEventPoint(e)`) that handles both `e.clientX` and `e.touches[0].clientX`
+- [x] Unify coordinate extraction into a helper (`getEventPoint(e)`) that handles both `e.clientX` and `e.touches[0].clientX`
 - [x] Implement one-finger pan on the canvas (map to existing `panX`/`panY` state)
 - [x] Implement pinch-to-zoom using two-touch distance delta (map to existing `zoom` state)
 - [x] Add `touch-action: none` to canvas container so browser doesn't scroll the page during pan/zoom
 - [x] Add `-webkit-touch-callout: none` to prevent iOS long-press context menus
 
 **Layout & Responsive**
-- [ ] Make canvas SVG size responsive to container width/height instead of fixed pixel values (`render.js`)
+- [x] Make canvas SVG size responsive to container width/height instead of fixed pixel values (`render.js`)
 - [x] Add a mobile breakpoint (≤ 768px) that hides the staging/furniture panel entirely
 - [x] Collapse the floating toolbar to a minimal icon strip on mobile; move secondary controls into a slide-up sheet or overflow menu
 - [x] Ensure the elevation panel can be opened as a full-width overlay on small screens
@@ -209,7 +209,7 @@ Everything in Phase 3A, plus:
 
 **Status**: Documented in `docs/REFACTORING.md`
 
-### Phase 5.1: Quick Wins (1-2 weeks)
+### Phase 5.1: Quick Wins (2-3 hours)
 - [ ] **Extract 45-degree angle snapping** to `utils.js` (3 locations, ~100 lines duplication)
 - [ ] **Consolidate anchor point functions** to `geometry.js` (2 identical functions)
 - [ ] **Extract menu closing pattern** to `domHelpers.js` (6 locations)

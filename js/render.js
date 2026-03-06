@@ -241,11 +241,14 @@ function renderScaleBar() {
 
 // ===== MAIN BUILD FUNCTION =====
 export function buildSVG() {
+  // Coordinate space is always fixed — viewBox defines it
   const svgW = S(340);
   const svgH = S(310);
   const svg = document.getElementById('svgPlan');
-  svg.setAttribute('width', svgW);
-  svg.setAttribute('height', svgH);
+  // Width/height match container so the SVG fills available space on any screen
+  const ctr = document.getElementById('canvasContainer');
+  svg.setAttribute('width', ctr?.clientWidth || svgW);
+  svg.setAttribute('height', ctr?.clientHeight || svgH);
   svg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
 
   let c = '';
