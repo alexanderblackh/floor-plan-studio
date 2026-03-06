@@ -203,7 +203,66 @@ Everything in Phase 3A, plus:
 
 ---
 
-## 🔧 Phase 5: Advanced Tools
+## 🔨 Phase 5: Code Refactoring & Quality
+
+**Goal**: Improve code maintainability, eliminate duplication, and establish best practices.
+
+**Status**: Documented in `docs/REFACTORING.md`
+
+### Phase 5.1: Quick Wins (1-2 weeks)
+- [ ] **Extract 45-degree angle snapping** to `utils.js` (3 locations, ~100 lines duplication)
+- [ ] **Consolidate anchor point functions** to `geometry.js` (2 identical functions)
+- [ ] **Extract menu closing pattern** to `domHelpers.js` (6 locations)
+- [ ] **Extract re-render orchestration** to `renderComplete()` function
+- [ ] **Create constants file** to replace magic numbers across codebase
+
+**Impact**: 5-8% code reduction, improved maintainability
+
+### Phase 5.2: Architectural Improvements (3-4 weeks)
+- [ ] **Split `attachCanvasEvents()`** from 472 lines into 6-8 focused modules
+  - `interactions/touch.js` - Touch event handling
+  - `interactions/zoom.js` - Mouse wheel zoom
+  - `interactions/doors.js` - Door click handling
+  - `interactions/keyboard.js` - Keyboard shortcuts
+  - `interactions/drag.js` - Drag handlers
+  - `interactions/modes.js` - Mode handlers (divider, anchor, measurement)
+- [ ] **Create EventEmitter** to replace 40+ `window._` global callbacks
+- [ ] **Create RenderManager** for centralized render orchestration
+- [ ] **Add proper error handling** to localStorage operations
+
+**Impact**: 10-15% code reduction, clearer architecture
+
+### Phase 5.3: Code Organization (2-3 weeks)
+- [ ] **Split `measurement.js`** into sub-modules (core, render, events)
+- [ ] **Split `io.js`** into import/export/validation modules
+- [ ] **Create coordinate conversion module** for consistent transformations
+- [ ] **Standardize event handler attachment** across all modules
+
+**Impact**: Better file organization, easier navigation
+
+### Phase 5.4: State Management (2-3 weeks)
+- [ ] **Create state accessor functions** in `data.js`
+- [ ] **Migrate direct state access** to use accessors
+- [ ] **Add validation** for state mutations
+- [ ] **Implement side-effect handling** in state setters
+
+**Impact**: Predictable state changes, better debugging
+
+### Phase 5.5: Polish & Testing (3-4 weeks)
+- [ ] **Refactor deeply nested conditionals** to use early returns
+- [ ] **Add unit testing framework** (Vitest)
+- [ ] **Write tests** for critical functions (geometry, collision, measurements)
+- [ ] **Document preferred patterns** (null checking, error handling, etc.)
+- [ ] **Audit and remove unused code**
+
+**Impact**: Tested, documented, production-ready codebase
+
+**Total Timeline**: 11-16 weeks
+**Total Impact**: ~20% code reduction, professional-grade architecture
+
+---
+
+## 🔧 Phase 6: Advanced Tools
 
 ### Smart Layout
 - [ ] **Auto-Arrange**: AI-powered furniture arrangement suggestions
@@ -224,7 +283,7 @@ Everything in Phase 3A, plus:
 
 ---
 
-## 🎓 Phase 6: Learning & Templates
+## 🎓 Phase 7: Learning & Templates
 
 ### Templates & Presets
 - [ ] **Floor Plan Templates**: Studio, 1BR, 2BR, etc.
@@ -240,7 +299,7 @@ Everything in Phase 3A, plus:
 
 ---
 
-## 🔌 Phase 7: Integrations
+## 🔌 Phase 8: Integrations
 
 ### Import From
 - [ ] **Image to Floor Plan**: Upload image, trace walls
@@ -328,13 +387,14 @@ Everything in Phase 3A, plus:
 
 ## 📊 Priority Order (Tentative)
 
-1. **WYSIWYG Floor Plan Editor** - Most requested feature
-2. **Mobile Support** - Expand user base significantly
-3. **3D Visualization** - High impact on user experience
-4. **Templates & Presets** - Lower barrier to entry
-5. **Collaboration** - Enable professional use cases
-6. **Advanced Tools** - Serve power users
-7. **Integrations** - Fit into existing workflows
+1. **WYSIWYG Floor Plan Editor** (Phase 1) - Most requested feature
+2. **Mobile Support** (Phase 3) - Expand user base significantly
+3. **3D Visualization** (Phase 2) - High impact on user experience
+4. **Code Refactoring** (Phase 5) - Technical debt reduction, maintainability
+5. **Templates & Presets** (Phase 7) - Lower barrier to entry
+6. **Collaboration** (Phase 4) - Enable professional use cases
+7. **Advanced Tools** (Phase 6) - Serve power users
+8. **Integrations** (Phase 8) - Fit into existing workflows
 
 ---
 
