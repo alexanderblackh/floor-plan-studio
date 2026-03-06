@@ -33,7 +33,7 @@ This document outlines the core development phases for Floor Plan Studio.
 - ✅ Pan/pinch hint overlay
 - ✅ Furniture drag disabled (read-only)
 
-**Full details:** [ROADMAP-STATUS.md - Phase 3A](ROADMAP-STATUS.md#-completed-phase-3a---mobile-preview)
+**Full details:** [ROADMAP-STATUS.md - Phase 3A (old numbering)](ROADMAP-STATUS.md#-completed-phase-3a---mobile-preview)
 
 ---
 
@@ -276,9 +276,9 @@ This document outlines the core development phases for Floor Plan Studio.
 These features are **exploratory and may or may not be pursued** based on user demand, business model decisions, and strategic fit. Each has dedicated documentation outlining questions, considerations, and trade-offs.
 
 ### Collaboration & Sharing
-**What it is:** Real-time collaboration, cloud sync, public sharing, team accounts  
-**Target audience:** Professional teams, agencies, real estate agents  
-**Effort:** 60-100 hours + ongoing infrastructure costs ($100-500/month)  
+**What it is:** Real-time collaboration, cloud sync, public sharing, team accounts
+**Target audience:** Professional teams, agencies, real estate agents
+**Effort:** 120-170 hours (full feature set) + ongoing infrastructure costs ($100-500/month)
 **Key question:** Is Floor Plan Studio a local-first tool or cloud platform?  
 
 **📄 Full Analysis:** [docs/PROPOSAL-COLLABORATION.md](docs/PROPOSAL-COLLABORATION.md)
@@ -294,10 +294,10 @@ These features are **exploratory and may or may not be pursued** based on user d
 ---
 
 ### Integrations
-**What it is:** Import/export with CAD, BIM, 3D tools (DXF, PDF, Blender, SketchUp, Revit)  
-**Target audience:** Architects, designers using professional tools  
-**Effort:** 80-120 hours (full coverage), ongoing maintenance  
-**Key question:** Are professional integrations worth 350+ hours of development?  
+**What it is:** Import/export with CAD, BIM, 3D tools (DXF, PDF, Blender, SketchUp, Revit)
+**Target audience:** Architects, designers using professional tools
+**Effort:** 350-490 hours (full suite) + ongoing maintenance
+**Key question:** Are professional integrations worth 350-490 hours of development?  
 
 **📄 Full Analysis:** [docs/PROPOSAL-INTEGRATIONS.md](docs/PROPOSAL-INTEGRATIONS.md)
 
@@ -313,9 +313,9 @@ These features are **exploratory and may or may not be pursued** based on user d
 ---
 
 ### Community Features
-**What it is:** Public gallery, design challenges, template marketplace, forum  
-**Target audience:** Engaged user base (1,000+ users)  
-**Effort:** 40-80 hours + 10-20 hours/week moderation  
+**What it is:** Public gallery, design challenges, template marketplace, forum
+**Target audience:** Engaged user base (1,000+ users)
+**Effort:** 40-100 hours + 10-20 hours/week moderation
 **Key question:** Is there sufficient user engagement to justify community features?  
 
 **📄 Full Analysis:** [docs/PROPOSAL-COMMUNITY.md](docs/PROPOSAL-COMMUNITY.md)
@@ -332,9 +332,9 @@ These features are **exploratory and may or may not be pursued** based on user d
 ---
 
 ### Business Features
-**What it is:** Client portal, team accounts, proposals, white-label, enterprise features  
-**Target audience:** Agencies, architecture firms, real estate professionals  
-**Effort:** 80-150 hours + 30-60 hours/week sales & support  
+**What it is:** Client portal, team accounts, proposals, white-label, enterprise features
+**Target audience:** Agencies, architecture firms, real estate professionals
+**Effort:** 210-300 hours (full B2B platform) + 30-60 hours/week sales & support
 **Key question:** Is B2B SaaS the desired business model?  
 
 **📄 Full Analysis:** [docs/PROPOSAL-BUSINESS.md](docs/PROPOSAL-BUSINESS.md)

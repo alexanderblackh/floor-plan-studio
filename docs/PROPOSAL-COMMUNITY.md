@@ -3,7 +3,7 @@
 **Status:** Potential Future Feature
 **Category:** Community Engagement
 **Complexity:** Medium-High
-**Estimated Effort:** 40-80 hours + ongoing moderation
+**Estimated Effort:** 40-100 hours + ongoing moderation
 
 ---
 

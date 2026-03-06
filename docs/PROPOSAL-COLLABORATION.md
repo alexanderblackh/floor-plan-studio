@@ -3,7 +3,7 @@
 **Status:** Potential Future Feature
 **Category:** Platform Features
 **Complexity:** High
-**Estimated Effort:** 60-100 hours + ongoing backend costs
+**Estimated Effort:** 120-170 hours (full feature set) + ongoing backend costs
 
 ---
 

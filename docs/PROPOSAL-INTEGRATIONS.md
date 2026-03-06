@@ -3,7 +3,7 @@
 **Status:** Potential Future Feature
 **Category:** Professional Workflows
 **Complexity:** Very High
-**Estimated Effort:** 80-120 hours + ongoing maintenance
+**Estimated Effort:** 350-490 hours (full suite) + ongoing maintenance
 
 ---
 

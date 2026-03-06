@@ -3,7 +3,7 @@
 **Status:** Potential Future Feature
 **Category:** B2B / Enterprise
 **Complexity:** High
-**Estimated Effort:** 80-150 hours
+**Estimated Effort:** 210-300 hours (full B2B platform)
 
 ---
 
