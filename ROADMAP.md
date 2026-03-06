@@ -241,36 +241,6 @@ This document outlines the core development phases for Floor Plan Studio.
 
 ---
 
-## 🌐 Phase 8: Three.js 3D Visualization (If Desired)
-
-**Goal**: Realistic 3D walkthrough and visualization.
-
-**Status**: 🔴 Not Started (0 of 13 tasks)
-**Timeline**: 80-120 hours
-**Priority**: Medium (high impact but not urgent)
-
-### 3D Rendering (0/5 tasks)
-- [ ] 3D view toggle (2D ↔ 3D)
-- [ ] Camera controls (orbit, pan, zoom)
-- [ ] Furniture models (extruded 3D)
-- [ ] Wall heights (configurable ceilings)
-- [ ] Realistic materials
-
-### Navigation (0/4 tasks)
-- [ ] First-person mode (walk through)
-- [ ] Preset camera angles
-- [ ] Minimap (2D overview)
-- [ ] VR support (WebXR)
-
-### Advanced 3D (0/4 tasks)
-- [ ] Lighting system
-- [ ] Shadows (real-time)
-- [ ] Reflections
-- [ ] Custom 3D models (GLB/GLTF)
-- [ ] Export 3D
-
----
-
 ## 🔮 Potential Future Features
 
 These features are **exploratory and may or may not be pursued** based on user demand, business model decisions, and strategic fit. Each has dedicated documentation outlining questions, considerations, and trade-offs.
@@ -351,6 +321,26 @@ These features are **exploratory and may or may not be pursued** based on user d
 
 ---
 
+### Three.js 3D Visualization
+**What it is:** Realistic 3D walkthrough with lighting, materials, first-person navigation, VR support
+**Target audience:** Homeowners, real estate agents, interior designers
+**Effort:** 80-120 hours (full 3D system) + ongoing maintenance
+**Key question:** Is immersive 3D worth 5x bundle size and mobile performance trade-offs?
+
+**📄 Full Analysis:** [docs/PROPOSAL-THREE-JS.md](docs/PROPOSAL-THREE-JS.md)
+
+**Key Features:**
+- 3D view toggle and orbit camera
+- Realistic materials and textures
+- Lighting system with shadows
+- First-person walkthrough mode
+- VR support (WebXR)
+- 3D scene export (GLB)
+
+**Why Potential:** 5x bundle size increase (~1MB Three.js), poor mobile performance, high maintenance burden, loses "simple and fast" positioning
+
+---
+
 ## 📊 Priority Order
 
 **Current Recommended Order:**
@@ -362,14 +352,13 @@ These features are **exploratory and may or may not be pursued** based on user d
 5. 🔴 **Phase 4: Full Mobile** - Expand mobile capabilities
 6. 🔴 **Phase 7: Learning & Templates** - Lower barrier to entry
 7. 🔴 **Phase 6: Advanced Tools** - Power user features
-8. 🔴 **Phase 8: Three.js** - High impact visualization (if desired)
-9. 🔮 **Potential Features** - Evaluate based on user demand and business model
+8. 🔮 **Potential Features** - Evaluate based on user demand and business model
 
 **Rationale:**
 - Phases 2-3 (refactoring/performance) create solid foundation for future work
 - Phase 5 (WYSIWYG) is most requested and highest user value
 - Phase 4 (full mobile) builds on completed Phase 1
-- Potential features require strategic decisions before committing
+- Potential features (Collaboration, Integrations, Community, Business, Three.js 3D) require strategic decisions before committing
 
 ---
 

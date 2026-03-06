@@ -1286,6 +1286,10 @@
           <i data-lucide="briefcase" style="width:16px;height:16px;"></i>
           Business Features
         </button>
+        <button class="docs-menu-item" onclick="openDocs('potential-three-js')" role="menuitem">
+          <i data-lucide="box" style="width:16px;height:16px;"></i>
+          Three.js 3D
+        </button>
       </div>
     </div>
 
@@ -1903,6 +1907,7 @@ async function openDocs(docType) {
     'potential-integrations': 'Integrations',
     'potential-community': 'Community Features',
     'potential-business': 'Business Features',
+    'potential-three-js': 'Three.js 3D Visualization',
     'llm-instructions': 'AI Instructions'
   };
   title.textContent = titles[docType] || 'Documentation';
@@ -1921,6 +1926,7 @@ async function openDocs(docType) {
       'potential-integrations': 'docs/PROPOSAL-INTEGRATIONS.md',
       'potential-community': 'docs/PROPOSAL-COMMUNITY.md',
       'potential-business': 'docs/PROPOSAL-BUSINESS.md',
+      'potential-three-js': 'docs/PROPOSAL-THREE-JS.md',
       'llm-instructions': 'LLM-INSTRUCTIONS.txt'
     };
 
